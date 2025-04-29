@@ -18,6 +18,6 @@ class JuspayListAlertsPayload(WithHeaders):
         description="Merchant ID for which alerts are to be listed."
     )
     task_type: Literal["alert"] = Field(
-        ...,
+        "alert", 
         description="Type of monitoring task. Should be 'alert'."
     )

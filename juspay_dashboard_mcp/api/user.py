@@ -35,7 +35,7 @@ async def get_user_juspay(payload: dict) -> dict:
 
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/ec/v1/user?userId={payload['userId']}"
-    return await post(api_url, {})
+    return await post(api_url, payload)
 
 async def get_user_details_juspay(payload: dict) -> dict:
     """
@@ -66,7 +66,7 @@ async def get_user_details_juspay(payload: dict) -> dict:
 
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/ec/v2/user/{payload['userId']}"
-    return await post(api_url, {})
+    return await post(api_url, payload)
 
 async def list_users_v2_juspay(payload: dict) -> dict:
     """
