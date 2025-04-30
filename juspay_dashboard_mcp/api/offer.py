@@ -36,10 +36,6 @@ async def get_offer_details_juspay(payload: dict) -> dict:
         ValueError: If offerId or merchantId is missing.
         Exception: If the API call fails.
     """
-    offer_id = payload.get("offerId")
-    if not offer_id:
-        raise ValueError("'offerId' is required in the payload")
-
     merchant_id = payload.get("merchantId")
     if not merchant_id:
         raise ValueError("'merchantId' is required in the payload")
@@ -47,12 +43,7 @@ async def get_offer_details_juspay(payload: dict) -> dict:
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/offers/dashboard/detail?merchant_id={merchant_id}"
     
-    request_body = {
-        "offer_ids": [offer_id],
-        "merchant_id": merchant_id
-    }
-    
-    return await post(api_url, request_body)
+    return await post(api_url, payload)
 
 async def list_offers_juspay(payload: dict) -> dict:
     """
