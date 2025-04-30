@@ -33,7 +33,7 @@ async def get_offer_details_juspay(payload: dict) -> dict:
         dict: The parsed JSON response containing offer details.
 
     Raises:
-        ValueError: If offerId or merchantId is missing.
+        ValueError: If merchantId is missing.
         Exception: If the API call fails.
     """
     merchant_id = payload.get("merchantId")

@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 class JuspayGetOfferDetailsPayload(WithHeaders):
-    offer_ids: [str] = Field(
+    offer_ids: List[str] = Field(
         ...,
         description="List of unique identifiers of the offers to retrieve details for."
     )
