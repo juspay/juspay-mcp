@@ -85,7 +85,7 @@ async def list_orders_v4_juspay(payload: dict) -> dict:
         request_data["qFilters"]["and"]["order_type"] = payload["orderType"]
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}ec/v4/orders"
+    api_url = f"{host}/ec/v4/orders"
     return await post(api_url, request_data)
 
 
@@ -108,5 +108,5 @@ async def get_order_details_juspay(payload: dict) -> dict:
         raise ValueError("'order_id' is required in the payload")
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/orders/{order_id}"
+    api_url = f"{host}/api/ec/v1/orders/{order_id}"
     return await post(api_url, {})

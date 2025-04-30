@@ -41,7 +41,7 @@ async def get_offer_details_juspay(payload: dict) -> dict:
         raise ValueError("'merchantId' is required in the payload")
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/offers/dashboard/detail?merchant_id={merchant_id}"
+    api_url = f"{host}/api/offers/dashboard/detail?merchant_id={merchant_id}"
     
     return await post(api_url, payload)
 
@@ -83,6 +83,6 @@ async def list_offers_juspay(payload: dict) -> dict:
 
     merchant_id = payload.get("merchant_id")
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
+    api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
     
     return await post(api_url, payload)

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders

@@ -1,5 +1,5 @@
 import httpx
-from juspay_dashboard_mcp.config import get_common_headers
+from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
 
 async def call(api_url: str, additional_headers: dict = None) -> dict:
     headers = get_common_headers({})
@@ -57,4 +57,4 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None) -> s
     Returns:
         str: The Juspay host URL.
     """
-    return "https://portal.juspay.in/"
+    return JUSPAY_BASE_URL

@@ -28,7 +28,7 @@ async def get_conflict_settings_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/conflict"
+    api_url = f"{host}/api/ec/v1/conflict"
     return await post(api_url, {})
 
 async def get_general_settings_juspay(payload: dict) -> dict:
@@ -54,7 +54,7 @@ async def get_general_settings_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/general"
+    api_url = f"{host}/api/ec/v1/general"
     return await post(api_url, {})
 
 async def get_mandate_settings_juspay(payload: dict) -> dict:
@@ -82,7 +82,7 @@ async def get_mandate_settings_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/mandate"
+    api_url = f"{host}/api/ec/v1/mandate"
     
     request_data = {}
     if payload.get("merchantId"):
@@ -114,7 +114,7 @@ async def get_priority_logic_settings_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/priorityLogic"
+    api_url = f"{host}/api/ec/v1/priorityLogic"
     return await post(api_url, {})
 
 async def get_routing_settings_juspay(payload: dict) -> dict:
@@ -141,7 +141,7 @@ async def get_routing_settings_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/routing"
+    api_url = f"{host}/api/ec/v1/routing"
     return await post(api_url, {})
 
 async def get_webhook_settings_juspay(payload: dict) -> dict:
@@ -167,5 +167,5 @@ async def get_webhook_settings_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/webhook"
+    api_url = f"{host}/api/ec/v1/webhook"
     return await post(api_url, {})
