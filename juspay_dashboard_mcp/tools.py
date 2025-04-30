@@ -48,13 +48,6 @@ AVAILABLE_TOOLS = [
         response_schema=None,
     ),
     util.make_api_config(
-        name="juspay_fetch_feature_details",
-        description="This API provides comprehensive information for a specific feature ID, including overview, description, FAQs, usage by other merchants, supported PGs/PMTs/platforms, and related features.",
-        model=api_schema.feature.JuspayFetchFeatureDetailsPayload,
-        handler=feature.fetch_feature_details_juspay,
-        response_schema=None,
-    ),
-    util.make_api_config(
         name="juspay_report_details",
         description="This API returns detailed information for a specific report ID, including data sources, metrics, dimensions, and filters.",
         model=api_schema.report.JuspayReportDetailsPayload,
@@ -143,13 +136,6 @@ AVAILABLE_TOOLS = [
         description="This API retrieves webhook configuration settings for the merchant.",
         model=api_schema.settings.JuspayWebhookSettingsPayload,
         handler=settings.get_webhook_settings_juspay,
-        response_schema=None,
-    ),
-    util.make_api_config(
-        name="juspay_fetch_feature_list",
-        description="Lists all marketplace features with high-level details such as feature summary, supported PMTs and compatible products.",
-        model=api_schema.feature.JuspayFetchFeatureListPayload,
-        handler=feature.fetch_feature_list_juspay,
         response_schema=None,
     ),
     util.make_api_config(
