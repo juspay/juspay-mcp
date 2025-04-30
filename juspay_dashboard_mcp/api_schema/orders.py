@@ -34,37 +34,3 @@ class JuspayGetOrderDetailsPayload(WithHeaders):
         ...,
         description="Order ID for which details are to be fetched."
     )
-
-class JuspayListPayoutOrdersPayload(WithHeaders):
-    createdAt_lte: str = Field(
-        ...,
-        alias="createdAt.lte",
-        description="Upper bound for order creation time (ISO 8601)."
-    )
-    createdAt_gte: str = Field(
-        ...,
-        alias="createdAt.gte",
-        description="Lower bound for order creation time (ISO 8601)."
-    )
-    limit: Optional[int] = Field(
-        None,
-        description="Maximum number of orders to return."
-    )
-    offset: Optional[int] = Field(
-        None,
-        description="Offset for pagination."
-    )
-    order_status: Optional[str] = Field(
-        None,
-        description="Filter by order status."
-    )
-    fulfillment_method: Optional[str] = Field(
-        None,
-        description="Filter by fulfillment method."
-    )
-
-class JuspayPayoutOrderDetailsPayload(WithHeaders):
-    orderId: str = Field(
-        ...,
-        description="Payout order ID for which details are to be fetched."
-    )

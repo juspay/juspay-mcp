@@ -167,20 +167,6 @@ AVAILABLE_TOOLS = [
         response_schema=None,
     ),
     util.make_api_config(
-        name="juspay_list_payout_orders",
-        description="Retrieves a list of payout orders created within a specified time range (mandatory). Supports additional filters from the Q API (payout domain) such as order_status and fulfillment_method.",
-        model=api_schema.orders.JuspayListPayoutOrdersPayload,
-        handler=orders.list_payout_orders_juspay,
-        response_schema=None,
-    ),
-    util.make_api_config(
-        name="juspay_payout_order_details",
-        description="Returns complete details for a given payout order ID.",
-        model=api_schema.orders.JuspayPayoutOrderDetailsPayload,
-        handler=orders.payout_order_details_juspay,
-        response_schema=None,
-    ),
-    util.make_api_config(
         name="juspay_list_payment_links_v1",
         description="Retrieves a list of payment links created within a specified time range (mandatory). Supports filters from the transactions (txns) domain such as payment_status and order_type.",
         model=api_schema.payments.JuspayListPaymentLinksV1Payload,

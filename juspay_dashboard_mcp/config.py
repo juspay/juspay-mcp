@@ -45,7 +45,7 @@ def get_common_headers(payload: dict):
         "x-web-logintoken": f"{JUSPAY_WEB_LOGIN_TOKEN}",
     }
 
-    if payload.get("tentant_id"):
+    if payload.get("tenant_id"):
         default_headers["x-tenant-id"] = payload.pop("tenant_id")
 
     if payload.get("cookie"):
