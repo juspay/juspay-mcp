@@ -2,7 +2,7 @@ import httpx
 from juspay_dashboard_mcp.config import get_common_headers
 
 async def call(api_url: str, additional_headers: dict = None) -> dict:
-    headers = get_common_headers()
+    headers = get_common_headers({})
     
     if additional_headers:
         headers.update(additional_headers)
@@ -24,8 +24,11 @@ async def call(api_url: str, additional_headers: dict = None) -> dict:
             print(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
-async def post(api_url: str, payload: dict) -> dict:
+async def post(api_url: str, payload: dict,additional_headers: dict = None) -> dict:
     headers = get_common_headers(payload) 
+
+    if additional_headers:
+        headers.update(additional_headers)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:

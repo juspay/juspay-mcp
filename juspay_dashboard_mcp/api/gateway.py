@@ -137,41 +137,7 @@ async def list_gateway_scheme_juspay(payload: dict) -> dict:
     api_url = f"{host}api/ec/v2/gateway/scheme/list"
     return await post(api_url, {})
 
-async def get_gateway_downtime(payload: dict) -> dict:
-    """
-    Calls the Juspay Gateway Downtime API to retrieve downtime information.
 
-    Args:
-        payload (dict): A dictionary containing:
-            - order_id: Order ID to query gateway downtime information
-            - merchant_id: Merchant ID associated with the order
-            - txn_uuid: Optional transaction UUID (can be None)
-
-    Returns:
-        dict: The parsed JSON response from the Gateway Downtime API.
-
-    Raises:
-        Exception: If the API call fails.
-    """
-    order_id = payload.get("order_id")
-    merchant_id = payload.get("merchant_id")
-    txn_uuid = payload.get("txn_uuid")
-
-    if not order_id or not merchant_id:
-        raise ValueError("The payload must include 'order_id' and 'merchant_id'.")
-
-    # Assume config.API_ENDPOINTS["gateway_downtime"] gives the base URL
-    host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/gateway/downtime"
-
-    body = {
-        "order_id": order_id,
-        "merchant_id": merchant_id,
-    }
-    if txn_uuid:
-        body["txn_uuid"] = txn_uuid
-
-    return await post(api_url, body)
 
 async def get_merchant_gateways_pm_details_juspay(payload: dict) -> dict:
     """

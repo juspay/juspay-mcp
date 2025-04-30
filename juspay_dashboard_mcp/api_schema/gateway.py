@@ -35,19 +35,6 @@ class JuspayListGatewaySchemePayload(WithHeaders):
     """
     pass
 
-class JuspayGatewayDowntimePayload(WithHeaders):
-    order_id: str = Field(
-        ...,
-        description="Unique identifier for the order to check gateway downtime information."
-    )
-    merchant_id: str = Field(
-        ...,
-        description="Merchant ID associated with the order."
-    )
-    txn_uuid: Optional[str] = Field(
-        None,
-        description="Optional transaction UUID. Can be null."
-    )
 
 class JuspayGetMerchantGatewaysPmDetailsPayload(WithHeaders):
     """
