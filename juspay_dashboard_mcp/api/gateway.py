@@ -62,19 +62,14 @@ async def get_gateway_scheme_juspay(payload: dict) -> dict:
     Raises:
         Exception: If the API call fails.
     """
-    gateway = payload.get("gateway")
-    merchant_id = payload.get("merchantId")
+    gateway = payload.pop("gateway", None)
     if not gateway:
         raise ValueError("The payload must include 'gateway'.")
 
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/ec/v2/gateway/scheme/{gateway}"
 
-    body = {}
-    if merchant_id:
-        body["merchantId"] = merchant_id
-
-    return await post(api_url, body)
+    return await post(api_url, payload)
 
 async def get_gateway_details_juspay(payload: dict) -> dict:
     """
@@ -101,17 +96,14 @@ async def get_gateway_details_juspay(payload: dict) -> dict:
     Raises:
         Exception: If the API call fails.
     """
-    mga_id = payload.get("mga_id")
-    merchant_id = payload.get("merchantId")
+    mga_id = payload.pop("mga_id", None)
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
 
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/ec/v1/gateway/{mga_id}"
 
-    body = {"merchantId": merchant_id}
-
-    return await post(api_url, body)
+    return await post(api_url, payload)
 
 async def list_gateway_scheme_juspay(payload: dict) -> dict:
     """
