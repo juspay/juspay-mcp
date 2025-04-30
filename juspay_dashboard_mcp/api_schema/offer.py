@@ -8,9 +8,9 @@ class JuspayGetOfferDetailsPayload(WithHeaders):
         ...,
         description="The unique identifier of the offer to retrieve details for."
     )
-    merchantId: Optional[str] = Field(
-        None,
-        description="Optional merchant ID associated with the offer."
+    merchantId: str = Field(
+        ...,
+        description="Merchant ID associated with the offer."
     )
     isBatch: Optional[bool] = Field(
         False,
