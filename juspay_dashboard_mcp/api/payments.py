@@ -21,7 +21,7 @@ async def list_payment_links_v1_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/paymentLinks/list"
+    api_url = f"{host}/api/ec/v1/paymentLinks/list"
 
     # Build request_data directly from payload, only including expected keys
     request_data = {}

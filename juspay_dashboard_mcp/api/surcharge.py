@@ -24,5 +24,5 @@ async def list_surcharge_rules_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/rule/list"
+    api_url = f"{host}/api/ec/v1/rule/list"
     return await post(api_url, {})

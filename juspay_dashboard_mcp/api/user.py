@@ -34,7 +34,7 @@ async def get_user_juspay(payload: dict) -> dict:
         raise ValueError("Payload must contain 'userId'.")
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v1/user?userId={payload['userId']}"
+    api_url = f"{host}/api/ec/v1/user?userId={payload['userId']}"
     return await post(api_url, {})
 
 async def get_user_details_juspay(payload: dict) -> dict:
@@ -65,7 +65,7 @@ async def get_user_details_juspay(payload: dict) -> dict:
         raise ValueError("'userId' is required in the payload")
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v2/user/{payload['userId']}"
+    api_url = f"{host}/api/ec/v2/user/{payload['userId']}"
     return await post(api_url, {})
 
 async def list_users_v2_juspay(payload: dict) -> dict:
@@ -93,7 +93,7 @@ async def list_users_v2_juspay(payload: dict) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/ec/v2/user/list"
+    api_url = f"{host}/api/ec/v2/user/list"
     
     request_data = {
         "offset": payload.get("offset", 0)
