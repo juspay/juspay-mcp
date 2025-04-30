@@ -1,11 +1,15 @@
 import logging
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api,call
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
+import os
+import dotenv
 
+dotenv.load_dotenv()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 async def list_orders_v4_juspay(payload: dict) -> dict:
     """
@@ -40,7 +44,9 @@ async def list_orders_v4_juspay(payload: dict) -> dict:
         if date_to_dt.tzinfo is None:
             date_to_dt = date_to_dt.replace(tzinfo=timezone.utc)
     except ValueError:
-        raise ValueError("Invalid ISO 8601 format for 'dateFrom' or 'dateTo'. Use format like 'YYYY-MM-DDTHH:MM:SSZ'")
+        raise ValueError(
+            "Invalid ISO 8601 format for 'dateFrom' or 'dateTo'. Use format like 'YYYY-MM-DDTHH:MM:SSZ'"
+        )
 
     date_from_ts = int(date_from_dt.timestamp())
     date_to_ts = int(date_to_dt.timestamp())
@@ -59,17 +65,17 @@ async def list_orders_v4_juspay(payload: dict) -> dict:
                 "right": {
                     "field": "order_created_at",
                     "condition": "LessThanEqual",
-                    "val": str(date_to_ts)
+                    "val": str(date_to_ts),
                 },
                 "left": {
                     "field": "order_created_at",
                     "condition": "GreaterThanEqual",
-                    "val": str(date_from_ts)
-                }
+                    "val": str(date_from_ts),
+                },
             }
         },
         "domain": payload.get("domain", "ordersELS"),
-        "sortDimension": "order_created_at"
+        "sortDimension": "order_created_at",
     }
 
     if payload.get("paymentStatus"):
@@ -81,6 +87,7 @@ async def list_orders_v4_juspay(payload: dict) -> dict:
     host = await get_juspay_host_from_api()
     api_url = f"{host}ec/v4/orders"
     return await post(api_url, request_data)
+
 
 async def get_order_details_juspay(payload: dict) -> dict:
     """
@@ -104,6 +111,7 @@ async def get_order_details_juspay(payload: dict) -> dict:
     api_url = f"{host}api/ec/v1/orders/{order_id}"
     return await post(api_url, {})
 
+
 async def list_payout_orders_juspay(payload: dict) -> dict:
     """
     Retrieves a list of payout orders created within a specified time range (mandatory). Supports additional filters from the Q API (payout domain) such as order_status and fulfillment_method.
@@ -114,8 +122,10 @@ async def list_payout_orders_juspay(payload: dict) -> dict:
     query_params = {k: v for k, v in payload.items() if v is not None}
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/payout/batch/dashboard/v1/orders?{urlencode(query_params)}"
-    # This endpoint is a GET request
-    return await post(api_url, {})
+    return await call(
+        api_url, {"X-Token-Type": "Euler", "authorization": os.getenv("LOGIN_TOKEN")}
+    )
+
 
 async def payout_order_details_juspay(payload: dict) -> dict:
     """
@@ -133,11 +143,12 @@ async def payout_order_details_juspay(payload: dict) -> dict:
     orderId = payload.get("orderId")
     if not orderId:
         raise ValueError("Payload must contain 'orderId'.")
-    print(f"orderId: {orderId}")
+    # print(f"orderId: {orderId}")
     host = await get_juspay_host_from_api()
     api_url = f"{host}api/payout/batch/dashboard/v1/orders/{orderId}?expand=fulfillment,payment,refund"
     headers = get_common_headers(payload)
     headers["X-Token-Type"] = "Euler"
-    print(f"headers: {headers}")
-    print(f"payload:{payload}")
+    headers["authorization"] = os.getenv("LOGIN_TOKEN")
+    # print(f"headers: {headers}")
+    # print(f"payload:{payload}")
     return await call(api_url, additional_headers=headers)

@@ -41,13 +41,6 @@ AVAILABLE_TOOLS = [
         response_schema=None,
     ),
     util.make_api_config(
-        name="juspay_gateway_downtime",
-        description="This API retrieves downtime information for a gateway using order_id and merchant_id. Optionally accepts txn_uuid.",
-        model=api_schema.gateway.JuspayGatewayDowntimePayload,
-        handler=gateway.get_gateway_downtime,
-        response_schema=None,
-    ),
-    util.make_api_config(
         name="juspay_get_merchant_gateways_pm_details",
         description="This API fetches all gateways and their supported payment methods for the merchant.",
         model=api_schema.gateway.JuspayGetMerchantGatewaysPmDetailsPayload,
