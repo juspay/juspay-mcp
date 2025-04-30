@@ -10,44 +10,49 @@ async def get_offer_details_juspay(payload: dict) -> dict:
     Retrieves detailed information for a specific offer.
 
     The API endpoint is:
-        https://portal.juspay.in/api/offers/dashboard/uploads/{offerId}
+        https://portal.juspay.in/api/offers/dashboard/detail
 
     The call uses URL parameters:
-        - is_batch: Whether it's a batch offer (true/false)
-        - merchant_id: Optional merchant ID for the offer
+        - merchant_id: Merchant identifier
+
+    And JSON body containing:
+        - offer_ids: Array containing the offer ID
+        - merchant_id: Merchant identifier
 
     Headers include:
         - x-tenant-id from payload
         - content-type: application/json
+        - x-web-logintoken from config
 
     Args:
         payload (dict): A dictionary with the following required key:
             - offerId: The unique offer ID to retrieve details for.
-        May include:
-            - merchantId: Optional merchant ID for the offer.
-            - isBatch: Optional boolean to indicate if it's a batch offer (default: False).
+            - merchantId: Merchant ID for the offer.
 
     Returns:
         dict: The parsed JSON response containing offer details.
 
     Raises:
-        ValueError: If offerId is missing.
+        ValueError: If offerId or merchantId is missing.
         Exception: If the API call fails.
     """
     offer_id = payload.get("offerId")
     if not offer_id:
         raise ValueError("'offerId' is required in the payload")
 
-    merchant_id = payload.get("merchantId", "")
-    is_batch = "true" if payload.get("isBatch", False) else "false"
+    merchant_id = payload.get("merchantId")
+    if not merchant_id:
+        raise ValueError("'merchantId' is required in the payload")
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}api/offers/dashboard/uploads/{offer_id}?is_batch={is_batch}"
+    api_url = f"{host}api/offers/dashboard/detail?merchant_id={merchant_id}"
     
-    if merchant_id:
-        api_url += f"&merchant_id={merchant_id}"
+    request_body = {
+        "offer_ids": [offer_id],
+        "merchant_id": merchant_id
+    }
     
-    return await call(api_url, payload)
+    return await post(api_url, request_body)
 
 async def list_offers_juspay(payload: dict) -> dict:
     """
