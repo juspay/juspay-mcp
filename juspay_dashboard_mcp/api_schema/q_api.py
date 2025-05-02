@@ -496,7 +496,6 @@ class ToolQApiPayload(BaseModel):
     filters: Optional[Filter] = None
     dimensions: DimensionList = []
     sortedOn: Optional[SortedOn] = None
-    web_login_token: str
 
 
 

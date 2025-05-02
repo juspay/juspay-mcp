@@ -3,6 +3,7 @@ import json
 from pydantic import Field
 import requests
 import logging
+import os
 from datetime import datetime, timedelta
 
 from juspay_dashboard_mcp.api_schema.q_api import (
@@ -112,13 +113,12 @@ def convert_utc_to_ist_in_qapi_response(
         return response_json
 
 
-def call_query_api(payload: QApiPayload, web_login_token: str) -> dict:
+def call_query_api(payload: QApiPayload) -> dict:
     """
     Utility function to call the query API with the provided payload.
 
     Args:
         payload: The payload to send to the query API (QApiPayload model)
-        web_login_token: Authentication token for the API
 
     Returns:
         The parsed response from the API as QApiResponse (either QApiSuccessResponse or QApiErrorResponse)
@@ -164,6 +164,7 @@ def call_query_api(payload: QApiPayload, web_login_token: str) -> dict:
 
         # Call the internal analytics API
         logging.debug(f"QAPI Call: Sending payload: {serialized_payload}")
+        web_login_token = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
         response = requests.post(
             "https://portal.juspay.in/api/q/query",
             data=json_dumps_with_datetime(serialized_payload),
@@ -232,4 +233,4 @@ async def q_api(payload: dict) -> QApiResponse:
     # Log the payload for debugging
     logging.debug(f"QAPI Tool: Creating payload: {json.dumps(q_api_payload.model_dump())}")
 
-    return await asyncio.to_thread(call_query_api, q_api_payload, payload.get("web_login_token"))
+    return await asyncio.to_thread(call_query_api, q_api_payload)

@@ -36,7 +36,7 @@ async def get_offer_details_juspay(payload: dict) -> dict:
         ValueError: If merchantId is missing.
         Exception: If the API call fails.
     """
-    merchant_id = payload.get("merchantId")
+    merchant_id = payload.get("merchant_id")
     if not merchant_id:
         raise ValueError("'merchantId' is required in the payload")
 
