@@ -10,6 +10,7 @@ import inspect
 import logging
 from mcp.server.lowlevel import Server
 from mcp.server.sse import SseServerTransport
+from pydantic import BaseModel
 
 from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
@@ -238,7 +239,9 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         else:
             payload_dict = arguments 
         
-        meta_info = arguments.pop("juspay_meta_info", None)
+        meta_info = arguments.pop("juspay_meta_info", {})
+        if isinstance(meta_info, BaseModel):
+            meta_info = meta_info.model_dump()
 
         sig = inspect.signature(handler)
         param_count = len(sig.parameters)

@@ -32,8 +32,8 @@ async def call(api_url: str, additional_headers: dict = None) -> dict:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
-async def post(api_url: str, payload: dict,additional_headers: dict = None) -> dict:
-    headers = get_common_headers(payload) 
+async def post(api_url: str, payload: dict,additional_headers: dict = None, meta_info: dict= None) -> dict:
+    headers = get_common_headers(payload, meta_info) 
 
     if additional_headers:
         headers.update(additional_headers)

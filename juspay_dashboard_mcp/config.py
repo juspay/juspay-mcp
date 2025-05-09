@@ -39,18 +39,21 @@ def get_base64_auth():
     """Returns the base64 encoded auth string."""
     pass
     
-def get_common_headers(payload: dict):
+def get_common_headers(payload: dict, meta_info: dict = None):
     """
     Returns common headers used by all API calls.
     Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
     """
-    verify_env_vars()
+    if "x-web-logintoken" not in (meta_info or {}):
+        verify_env_vars()
+
+    token = meta_info.get("x-web-logintoken", JUSPAY_WEB_LOGIN_TOKEN)
 
     default_headers = {
          "Content-Type": "application/json",
         "accept": "*/*",
         "x-request-id": f"mcp-tool-{os.urandom(6).hex()}",
-        "x-web-logintoken": f"{JUSPAY_WEB_LOGIN_TOKEN}",
+        "x-web-logintoken": f"{token}",
     }
 
     if payload.get("tenant_id"):

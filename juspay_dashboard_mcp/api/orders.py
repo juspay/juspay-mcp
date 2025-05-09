@@ -91,7 +91,7 @@ async def list_orders_v4_juspay(payload: dict) -> dict:
     return await post(api_url, request_data)
 
 
-async def get_order_details_juspay(payload: dict) -> dict:
+async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
 
@@ -111,4 +111,4 @@ async def get_order_details_juspay(payload: dict) -> dict:
 
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/orders/{order_id}"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)
