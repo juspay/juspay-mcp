@@ -8,10 +8,14 @@ import os
 import base64
 import dotenv
 import logging 
+import json
+
 
 logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
+
+JUSPAY_DASHBOARD_IGNORE_TOOL = json.loads(os.getenv('DASHBOARD_TOOL_IGNORE_LIST', '[]'))
 
 JUSPAY_ENV = os.getenv("JUSPAY_ENV", "sandbox").lower() 
 JUSPAY_WEB_LOGIN_TOKEN = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
