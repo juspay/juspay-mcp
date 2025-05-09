@@ -18,6 +18,7 @@ dotenv.load_dotenv()
 JUSPAY_DASHBOARD_IGNORE_TOOL = json.loads(os.getenv('DASHBOARD_TOOL_IGNORE_LIST', '["juspay_list_configured_gateway","juspay_get_gateway_scheme","juspay_get_gateway_details","juspay_list_gateway_scheme","juspay_get_merchant_gateways_pm_details","juspay_report_details","juspay_list_report","juspay_get_offer_details","juspay_list_offers","juspay_alert_details","juspay_list_alerts","q_api"]'))
 
 JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
+
 JUSPAY_WEB_LOGIN_TOKEN = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
 
 if JUSPAY_ENV == "production":
