@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
 
-async def list_surcharge_rules_juspay(payload: dict) -> dict:
+async def list_surcharge_rules_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns a list of all configured surcharge rules, including their current status and rule definitions.
 
@@ -27,4 +27,4 @@ async def list_surcharge_rules_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/rule/list"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)

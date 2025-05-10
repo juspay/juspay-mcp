@@ -10,8 +10,8 @@ from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
 
 logger = logging.getLogger(__name__)
 
-async def call(api_url: str, additional_headers: dict = None) -> dict:
-    headers = get_common_headers({})
+async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
+    headers = get_common_headers({}, meta_info)
     
     if additional_headers:
         headers.update(additional_headers)
