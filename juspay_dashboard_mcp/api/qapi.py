@@ -12,7 +12,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 
-from juspay_dashboard_mcp.api_schema.q_api import (
+from juspay_dashboard_mcp.api_schema.qapi import (
     DimensionList,
     Filter,
     Interval,

@@ -193,9 +193,9 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="q_api",
-        description=api_schema.q_api.api_description,
-        model=api_schema.q_api.ToolQApiPayload,
-        handler=q_api.q_api,
+        description=api_schema.qapi.api_description,
+        model=api_schema.qapi.ToolQApiPayload,
+        handler=qapi.q_api,
         response_schema=None,
     ),
 ]
