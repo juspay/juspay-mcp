@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["juspay_mcp", "juspay_mcp.api", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api"] 
+packages = ["juspay_mcp", "juspay_mcp.api", "juspay_mcp.api_schema", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api", "juspay_dashboard_mcp.api_schema"] 
 
 [project.scripts]
 juspay-mcp = "main:main"
