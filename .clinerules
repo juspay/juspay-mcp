@@ -1,0 +1,61 @@
+# Cline Rules: Schema Synchronization Project
+
+## General Principles
+- **Memory Bank First:** Always read and update Memory Bank files as per core instructions. They are the sole source of truth.
+- **SSoT Adherence:** `schema_control.json` is the definitive source for schema definitions. Pydantic models must align with it.
+- **Phased Approach:** Complex tasks like schema synchronization are broken down into manageable phases. Stick to the current phase's scope.
+- **Tool Prioritization:** Use MCP tools as specified (e.g., `edit_block` for file modifications by default).
+- **Atomic Edits:** Group all changes to a single file into one MCP tool operation.
+- **Clarity and Consistency:** Strive for clear, consistent, and maintainable code and documentation.
+
+## Pydantic Model Update Patterns
+- **Import Management:**
+    - Check existing imports in a file before adding new ones.
+    - Standard imports: `from typing import Optional, List, Dict, Any`, `from pydantic import BaseModel, Field`.
+    - Add new imports only if the types/classes are not already imported.
+- **Field Definition:**
+    - **New Fields:**
+        - Type mapping from JSON Schema to Pydantic:
+            - `string` -> `str`
+            - `integer` -> `int`
+            - `number` -> `float` (default, consider `Decimal` if precision is explicitly noted as critical)
+            - `boolean` -> `bool`
+            - `array` -> `List[<type>]` (use `List[Any]` if item type is complex/unknown in Phase 1)
+            - `object` -> `Dict[str, Any]` (use `Dict[str, Any]` if item type is complex/unknown in Phase 1)
+        - **Optionality:**
+            - If required in JSON: `field_name: FieldType`
+            - If optional in JSON: `field_name: Optional[FieldType] = None` (or `Field(default=None)`).
+        - **Descriptions:** Use `Field(description="...")` for new fields if a description exists in JSON Schema.
+        - **Placement:** Add new fields alphabetically within the class, unless another logical grouping is evident in the existing model.
+    - **Modifying Existing Fields (Required Status):**
+        - To make required: `Optional[FieldType] = DefaultValue` -> `FieldType`
+        - To make optional: `FieldType` -> `Optional[FieldType] = None` (or `Field(default=None)`)
+- **File Editing Strategy:**
+    - Default to `edit_block` for targeted changes.
+    - Justify use of `write_to_file` (e.g., extensive changes, new file).
+    - Provide sufficient context for `edit_block`'s `old_string` to ensure uniqueness.
+- **Order of Operations (within a single Pydantic file update):**
+    1. Identify all missing fields to add.
+    2. Identify all existing fields needing `required` status correction.
+    3. Determine necessary import changes.
+    4. Construct all `edit_block` diffs (or the full content for `write_to_file`).
+    5. Apply all changes in one tool call per file.
+
+## Task Management (`currentTask.md`)
+- Keep `currentTask.md` updated with the detailed plan and progress (checklist).
+- Document any new patterns, challenges, or decisions within `currentTask.md` or `activeContext.md` as appropriate.
+
+## Conflict Resolution
+- If conflicting information is found in Memory Bank files, pause and ask the user for clarification.
+- Update all relevant files after clarification.
+
+## User Interaction
+- Explain intent before executing MCP tools.
+- Do not expose internal tool names to the user.
+- Request switch to Plan Mode after Act Mode task completion.
+- Ensure `currentTask.md` is complete before requesting switch to Act Mode.
+
+## Future Considerations (To be noted, not acted on in Phase 1)
+- Automated generation/synchronization of Pydantic models from JSON Schema.
+- More sophisticated type handling (e.g., `datetime`, `UUID`, custom types, nested models beyond `Dict[str, Any]`).
+- Handling of `enum`s, `pattern`s, `minLength`, `maxLength`, etc. from JSON Schema.
