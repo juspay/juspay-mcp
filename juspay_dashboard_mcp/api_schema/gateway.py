@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 class JuspayListConfiguredGatewaysPayload(WithHeaders):
-    merchant_id: str = Field(
-        ...,
+    merchantId: Optional[str] = Field(
+        default=None,
         description="Merchant identifier for which to list configured payment gateways."
     )
 
@@ -20,7 +20,7 @@ class JuspayGetGatewaySchemePayload(WithHeaders):
         ...,
         description="Gateway code (e.g., 'TATA_PA') for which to fetch detailed configuration information."
     )
-    merchant_id: Optional[str] = Field(
+    merchantId: Optional[str] = Field(
         None,
         description="Merchant identifier (optional, but recommended for context)."
     )
@@ -30,7 +30,7 @@ class JuspayGetGatewayDetailsPayload(WithHeaders):
         ...,
         description="The MGA ID of the gateway (from list_configured_gateways)."
     )
-    merchant_id: str = Field(
+    merchantId: str = Field(
         ...,
         description="Merchant identifier for which to get gateway details."
     )
