@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-JUSPAY_DASHBOARD_IGNORE_TOOL = json.loads(os.getenv('DASHBOARD_TOOL_IGNORE_LIST', '["juspay_list_configured_gateway","juspay_get_gateway_scheme","juspay_get_gateway_details","juspay_list_gateway_scheme","juspay_get_merchant_gateways_pm_details","juspay_report_details","juspay_list_report","juspay_get_offer_details","juspay_list_offers","juspay_get_user","juspay_get_user_details","juspay_list_users_v2","juspay_get_conflict_settings","juspay_get_general_settings","juspay_get_mandate_settings","juspay_get_priority_logic_settings","juspay_get_routing_settings","juspay_get_webhook_settings","juspay_alert_details","juspay_list_alerts","juspay_list_orders_v4","juspay_list_payment_links_v1","juspay_list_surcharge_rules","q_api"]'))
+JUSPAY_DASHBOARD_IGNORE_TOOL = json.loads(os.getenv('DASHBOARD_TOOL_IGNORE_LIST', '["juspay_list_configured_gateway","juspay_get_gateway_scheme","juspay_get_gateway_details","juspay_list_gateway_scheme","juspay_get_merchant_gateways_pm_details","juspay_report_details","juspay_list_report","juspay_get_offer_details","juspay_list_offers","juspay_alert_details","juspay_list_alerts","q_api"]'))
 
 JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
 JUSPAY_WEB_LOGIN_TOKEN = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
