@@ -41,8 +41,8 @@ async def list_alerts_juspay(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/monitoring/task/list"
     request_data = {
-        "task_type": payload.get("taskType", "alert")
+        "task_type": payload.get("task_type", "alert")
     }
-    if payload.get("merchantId"):
-        request_data["merchantId"] = payload["merchantId"]
+    if payload.get("merchant_id"):
+        request_data["merchantId"] = payload["merchant_id"]
     return await post(api_url, request_data, None, meta_info)
