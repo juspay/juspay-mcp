@@ -18,7 +18,7 @@ class JuspayGetOfferDetailsPayload(WithHeaders):
         ...,
         description="Merchant ID associated with the offer."
     )
-    isBatch: Optional[bool] = Field(
+    is_batch: Optional[bool] = Field(
         False,
         description="Whether this is a batch offer (default: False)."
     )
@@ -28,6 +28,10 @@ class JuspayListOffersPayload(WithHeaders):
         ...,
         description="Merchant identifier for which to list offers."
     )
+    created_at: Dict[str, str] = Field(
+        ...,
+        description="Created at filter with 'lte' and 'gte' string timestamps (ISO 8601 format)."
+    )
     start_time: str = Field(
         ...,
         description="Start time for filtering offers (ISO format)."
@@ -35,4 +39,12 @@ class JuspayListOffersPayload(WithHeaders):
     end_time: str = Field(
         ...,
         description="End time for filtering offers (ISO format)."
+    )
+    limit: Optional[int] = Field(
+        default=None,
+        description="Limit for number of offers to fetch."
+    )
+    sort_offers: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Sorting options for offers."
     )
