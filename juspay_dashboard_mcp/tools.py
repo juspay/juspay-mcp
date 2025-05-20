@@ -25,35 +25,35 @@ app = Server("juspay-dashboard")
 AVAILABLE_TOOLS = [
     util.make_api_config(
         name="juspay_list_configured_gateway",
-        description="This API gets all the configured gateways for the given merchan",
+        description=" Retrieves a list of all payment gateways (PGs) configured for a merchant, including high-level details such as gateway reference ID, creation/modification dates, configured payment methods (PMs) and configured payment flows. Note: Payment Method Types (PMTs), configured EMI plans, configured mandate/subscriptions payment methods (PMs) and configured TPV PMs are not included in the response.",
         model=api_schema.gateway.JuspayListConfiguredGatewaysPayload,
         handler=gateway.list_configured_gateways_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="juspay_get_gateway_scheme",
-        description="This API provides detailed configuration information for a gateway, including required/optional fields and supported payment methods.",
+        description="This API provides detailed configuration information for a gateway, including required/optional fields, supported payment methods and supported features/payment flows for that gateway.",
         model=api_schema.gateway.JuspayGetGatewaySchemePayload,
         handler=gateway.get_gateway_scheme_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="juspay_get_gateway_details",
-        description="This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id and merchantId.",
+        description="This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from juspay_list_configured_gateway.",
         model=api_schema.gateway.JuspayGetGatewayDetailsPayload,
         handler=gateway.get_gateway_details_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="juspay_list_gateway_scheme",
-        description="This API returns a list of all available payment gateways that can be configured on PGCC.",
+        description="This API returns a list of all available payment gateways that can be configured on PGCC. Doesn't contain any details only a list of available gateways for configuration on PGCC.",
         model=api_schema.gateway.JuspayListGatewaySchemePayload,
         handler=gateway.list_gateway_scheme_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="juspay_get_merchant_gateways_pm_details",
-        description="This API fetches all gateways and their supported payment methods for the merchant.",
+        description="This API fetches all gateways and their supported payment methods configured for the merchant. Only this API will give payment method type (PMT) for each configured payment method. Doesn't include any other details except for gateway wise confirgured payment methods with payment method type.",
         model=api_schema.gateway.JuspayGetMerchantGatewaysPmDetailsPayload,
         handler=gateway.get_merchant_gateways_pm_details_juspay,
         response_schema=None,
@@ -81,7 +81,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_list_offers",
-        description="This API lists all offers configured by the merchant, with details such as status, payment methods, offer codes, and validity periods.",
+        description="This API lists all offers configured by the merchant, with details such as status, payment methods, offer codes, and validity periods. Requires `sort_offers` (e.g., {\"field\": \"CREATED_AT\", \"order\": \"DESCENDING\"}).",
         model=api_schema.offer.JuspayListOffersPayload,
         handler=offer.list_offers_juspay,
         response_schema=None,
@@ -158,7 +158,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_list_orders_v4",
-        description="Retrieves a list of orders created within a specified time range. Supports optional filters for payment status and order type.",
+        description="Retrieves a list of orders created within a specified time range. Supports an optional top-level 'limit' parameter and optional 'qFilters' for payment status and order type.",
         model=api_schema.orders.JuspayListOrdersV4Payload,
         handler=orders.list_orders_v4_juspay,
         response_schema=None,

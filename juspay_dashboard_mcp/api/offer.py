@@ -85,5 +85,12 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
     merchant_id = payload.get("merchant_id")
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
-    
+    created_at =  {
+            "gte": payload.get("start_time"),
+            "lte": payload.get("end_time")
+        }
+    payload = {
+        "created_at": created_at,
+        **payload
+    }
     return await post(api_url, payload, None, meta_info)
