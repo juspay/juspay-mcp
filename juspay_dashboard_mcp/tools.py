@@ -94,13 +94,6 @@ AVAILABLE_TOOLS = [
         response_schema=None,
     ),
     util.make_api_config(
-        name="juspay_get_user_details",
-        description="This API retrieves detailed information for a specific user.",
-        model=api_schema.user.JuspayGetUserDetailsPayload,
-        handler=user.get_user_details_juspay,
-        response_schema=None,
-    ),
-    util.make_api_config(
         name="juspay_list_users_v2",
         description="This API retrieves a list of users associated with a merchant, with optional pagination.",
         model=api_schema.user.JuspayListUsersV2Payload,
