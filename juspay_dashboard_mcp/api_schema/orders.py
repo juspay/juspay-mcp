@@ -54,22 +54,22 @@ class JuspayListOrdersV4Payload(WithHeaders):
                         "order_source_object_id",
                         "order_status", // order status gives high level information about the order status. Possible values are: 'SUCCESS', 'FAILURE', 'PENDING'
                         "order_type", // order type gives information about the type of order. Possible values are: 'MANDATE_PAYMENT', 'ORDER_PAYMENT', 'TPV_MANDATE_REGISTER', 'TPV_PAYMENT', 'MOTO_PAYMENT', 'VAN_PAYMENT', 'MANDATE_REGISTER', 'TPV_MANDATE_PAYMENT'
-                        "full_udf1", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf2", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf3", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf4", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf5", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf6", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf7", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf8", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf9", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf10", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
                         "is_retargeted_order", // boolean, true if order is retargeted
                         "is_retried_order", // boolean, true if order is retried
                         "industry", // industry of the merchant
                         "prev_order_status", // previous order status gives information about the previous status of the order. Possible values are: 'SUCCESS', 'FAILURE', 'PENDING'
                         "order_created_at", // order created at timestamp
                         "merchant_id", // unique identifier for the merchant
+                        "full_udf1", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
+                        "full_udf2", 
+                        "full_udf3",
+                        "full_udf4", 
+                        "full_udf5",
+                        "full_udf6",
+                        "full_udf7",
+                        "full_udf8",
+                        "full_udf9",
+                        "full_udf10"
                  
                      # Example filter for latest orders with actual_order_status as SUCCESS 
                         {
