@@ -39,7 +39,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_get_gateway_details",
-        description="This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from juspay_list_configured_gateway.",
+        description="This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from juspay_list_configured_gateway. This API returns all details of the gateway including payment methods (PM), EMI plans, mandate/subscriptions payment methods (PMs) and TPV PMs along with configured payment flows. Note: This API does not return payment method type (PMT) for each configured payment method.",
         model=api_schema.gateway.JuspayGetGatewayDetailsPayload,
         handler=gateway.get_gateway_details_juspay,
         response_schema=None,
@@ -53,7 +53,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_get_merchant_gateways_pm_details",
-        description="This API fetches all gateways and their supported payment methods configured for the merchant. Only this API will give payment method type (PMT) for each configured payment method. Doesn't include any other details except for gateway wise confirgured payment methods with payment method type.",
+        description="This API fetches all gateways and their supported payment methods configured for the merchant. Only this API will give payment method type (PMT) for each configured payment method. Doesn't include any other details except for gateway wise configured payment methods with payment method type.",
         model=api_schema.gateway.JuspayGetMerchantGatewaysPmDetailsPayload,
         handler=gateway.get_merchant_gateways_pm_details_juspay,
         response_schema=None,
