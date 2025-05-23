@@ -38,38 +38,7 @@ async def get_user_juspay(payload: dict, meta_info: dict = None) -> dict:
     api_url = f"{host}/api/ec/v1/user?userId={payload['userId']}"
     return await post(api_url, {}, None, meta_info)
 
-async def get_user_details_juspay(payload: dict, meta_info: dict = None) -> dict:
-    """
-    Retrieves detailed information for a specific user.
-
-    The API endpoint is:
-        https://portal.juspay.in/api/ec/v2/user/{userId}
-
-    The call is a GET request with the userId as part of the path.
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-
-    Args:
-        payload (dict): A dictionary with the following required key:
-            - userId: Unique identifier for the user.
-
-    Returns:
-        dict: The parsed JSON response containing detailed user information.
-
-    Raises:
-        ValueError: If the userId is missing.
-        Exception: If the API call fails.
-    """
-    if not payload.get("userId"):
-        raise ValueError("'userId' is required in the payload")
-
-    host = await get_juspay_host_from_api()
-    api_url = f"{host}/api/ec/v2/user/{payload['userId']}"
-    return await post(api_url, {}, None, meta_info)
-
-async def list_users_v2_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_users_v2_juspay(payload: dict) -> dict:
     """
     Retrieves a list of users associated with a merchant, with optional pagination.
 

@@ -62,7 +62,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
             }
         },
         "order": [["date_created", "DESC"]],
-        "qFilters": {
+        "qFilters": payload.get("qFilters", {
             "and": {
                 "right": {
                     "field": "order_created_at",
@@ -75,10 +75,13 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
                     "val": str(date_from_ts),
                 },
             }
-        },
+        }),
         "domain": payload.get("domain", "ordersELS"),
         "sortDimension": "order_created_at",
     }
+
+    if payload.get("limit") is not None:
+        request_data["limit"] = payload.get("limit")
 
     if payload.get("paymentStatus"):
         request_data["qFilters"]["and"]["payment_status"] = payload["paymentStatus"]
