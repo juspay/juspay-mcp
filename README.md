@@ -102,6 +102,7 @@ Add the following to your `claude_desktop_config.json` or equivalent configurati
       "command": "docker",
       "args": [
         "run",
+        "--pull=always",
         "--rm",
         "-i",
         "-e",
@@ -134,6 +135,7 @@ Default values for `JUSPAY_ENV` is `sandbox`.
       "command": "docker",
       "args": [
         "run",
+        "--pull=always",
         "--rm",
         "-i",
         "-e",
