@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+import os
 import httpx
 import logging
 from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
@@ -57,12 +58,34 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
 
 async def get_juspay_host_from_api(token: str = None, headers: dict = None) -> str:
     """
-    Returns the appropriate Juspay host URL based on the environment.
-    
-    Note: Previously this validated the token, but now uses JUSPAY_WEB_LOGIN_TOKEN 
-    environment variable directly. The token parameter is kept for backward compatibility.
-
-    Returns:
-        str: The Juspay host URL.
+    Returns the Juspay host URL based on token validation.
+    Calls the validate API and uses the 'validHost' field from the response.
     """
-    return JUSPAY_BASE_URL
+    validate_url = "https://portal.juspay.in/api/ec/v1/validate/token"
+
+    token_to_use = token or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    if not token_to_use:
+        raise Exception("Juspay token not provided.")
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                validate_url,
+                headers={
+                    "accept": "*/*",
+                    "accept-language": "en-US,en;q=0.9",
+                    "content-type": "application/json"
+                },
+                json={"token": token_to_use}
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            valid_host = data.get("validHost")
+            if not valid_host:
+                raise Exception("validHost not found in Juspay token validation response.")
+            if not valid_host.startswith("http"):
+                valid_host = f"https://{valid_host}"
+            return valid_host
+    except Exception as e:
+        logger.error(f"Token validation failed: {e}")
+        raise

@@ -88,7 +88,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
                 },
                 "left": {
                     "field": "actual_order_status",
-                    "condition": "Equals",
+                    "condition": "In",
                     "val": "SUCCESS"
                 }
             }
