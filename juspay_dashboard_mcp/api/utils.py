@@ -61,7 +61,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None) -> s
     Returns the Juspay host URL based on token validation.
     Calls the validate API and uses the 'validHost' field from the response.
     """
-    validate_url = "https://portal.juspay.in/api/ec/v1/validate/token"
+    validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
 
     token_to_use = token or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
     if not token_to_use:
