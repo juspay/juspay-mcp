@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 from juspay_dashboard_mcp.api_schema.qapi import Filter
@@ -27,6 +27,14 @@ class JuspayListOrdersV4Payload(WithHeaders):
         None, # Default to None if not provided
         description="Limit for the number of orders to fetch (optional)."
     )
+    domain: Optional[str] = Field(
+        "txnsELS",
+        description="Domain for query (optional, default is 'txnsELS')."
+    )
+    orderAmount: Optional[int] = Field(
+        0,
+        description="Optional filter for minimum order amount (default is 0)."
+    )
     paymentStatus: Optional[str] = Field(
         None,
         description="Optional filter for payment status (e.g., 'CHARGED', 'PENDING')."
@@ -35,11 +43,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         None,
         description="Optional filter for order type."
     )
-    domain: Optional[str] = Field(
-        "ordersELS",
-        description="Domain for query (optional, default is 'ordersELS')."
-    ),
-    qFilters: Filter = Field(
+    qFilters: Optional[Dict[str, Any]] = Field(
          None,
         description="""A dict representing the 'filters' section with valid field values from the schema.
                 IMPORTANT NOTES:

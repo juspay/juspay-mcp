@@ -15,19 +15,19 @@ dotenv.load_dotenv()
 
 async def list_orders_v4_juspay(payload: dict) -> dict:
     """
-    Calls the Juspay Portal API to retrieve a list of orders within a specified time range.
+    Calls the Juspay internal API to retrieve a list of orders using advanced search.
 
     Args:
         payload (dict): A dictionary containing:
             - dateFrom: Start date/time in ISO format (e.g., '2025-04-15T18:30:00Z')
             - dateTo: End date/time in ISO format (e.g., '2025-04-16T15:06:00Z')
             - offset: Pagination offset (optional, default 0)
-            - domain: Domain for query (optional, default 'ordersELS')
-            - paymentStatus: Optional filter for payment status
-            - orderType: Optional filter for order type
+            - limit: Number of records to fetch (optional)
+            - domain: Domain for query (optional, default 'txnsELS')
+            - orderAmount: Optional filter for minimum order amount
 
     Returns:
-        dict: The parsed JSON response from the List Orders API.
+        dict: The parsed JSON response from the Advanced Search API.
 
     Raises:
         ValueError: If required parameters are missing or date formats are invalid.
@@ -53,44 +53,52 @@ async def list_orders_v4_juspay(payload: dict) -> dict:
     date_from_ts = int(date_from_dt.timestamp())
     date_to_ts = int(date_to_dt.timestamp())
 
-    request_data = {
-        "offset": payload.get("offset", 0),
-        "filters": {
-            "dateCreated": {
-                "lte": date_to_str,
-                "gte": date_from_str,
+    filters = {
+        "and": {
+            "right": {
+                "and": {
+                    "right": {
+                        "field": "date_created",
+                        "condition": "GreaterThanEqual",
+                        "val": str(date_from_ts)
+                    },
+                    "left": {
+                        "field": "date_created",
+                        "condition": "LessThanEqual",
+                        "val": str(date_to_ts)
+                    }
+                }
+            },
+            "left": {
+                "field": "order_amount",
+                "condition": "GreaterThanEqual",
+                "val": payload.get("orderAmount", 0)
             }
-        },
-        "order": [["date_created", "DESC"]],
-        "qFilters": payload.get("qFilters", {
-            "and": {
-                "right": {
-                    "field": "order_created_at",
-                    "condition": "LessThanEqual",
-                    "val": str(date_to_ts),
-                },
-                "left": {
-                    "field": "order_created_at",
-                    "condition": "GreaterThanEqual",
-                    "val": str(date_from_ts),
-                },
-            }
-        }),
-        "domain": payload.get("domain", "ordersELS"),
-        "sortDimension": "order_created_at",
+        }
     }
 
+    request_data = {
+        "metric": "order_id",
+        "dimensions": [],
+        "domain": payload.get("domain", "txnsELS"),
+        "interval": {
+            "start": date_from_str,
+            "end": date_to_str
+        },
+        "filters": filters,
+        "sortedOn": {
+            "sortDimension": "date_created",
+            "ordering": "Desc"
+        }
+    }
+
+    if payload.get("offset") is not None:
+        request_data["offset"] = payload["offset"]
     if payload.get("limit") is not None:
-        request_data["limit"] = payload.get("limit")
-
-    if payload.get("paymentStatus"):
-        request_data["qFilters"]["and"]["payment_status"] = payload["paymentStatus"]
-
-    if payload.get("orderType"):
-        request_data["qFilters"]["and"]["order_type"] = payload["orderType"]
+        request_data["limit"] = payload["limit"]
 
     host = await get_juspay_host_from_api()
-    api_url = f"{host}/ec/v4/orders"
+    api_url = f"{host}/api/q/advsearch/query"
     return await post(api_url, request_data)
 
 

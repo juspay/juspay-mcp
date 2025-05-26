@@ -464,61 +464,52 @@ list_offers_response_schema = {
 list_orders_v4_response_schema = {
     "type": "object",
     "properties": {
-        "summary": {
+        "took": {"type": "integer"},
+        "timed_out": {"type": "boolean"},
+        "_shards": {
             "type": "object",
             "properties": {
-                "count": {"type": "integer"},
-                "sum": {"type": "integer"},
-                "totalCount": {"type": "integer"}
+                "total": {"type": "integer"},
+                "successful": {"type": "integer"},
+                "skipped": {"type": "integer"},
+                "failed": {"type": "integer"}
             },
-            "required": ["count", "sum", "totalCount"]
+            "required": ["total", "successful", "skipped", "failed"]
         },
-        "rows": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "status": {"type": "string"},
-                    "amount": {"type": "number"},
-                    "merchantId": {"type": "string"},
-                    "paymentGateway": {"type": "string"},
-                    "paymentMethodType": {"type": "string"},
-                    "partitionKey": {"type": "string"},
-                    "billingAddressId": {"type": "string"},
-                    "orderUuid": {"type": "string"},
-                    "refundedEntirely": {"type": "boolean"},
-                    "amountRefunded": {"type": "number"},
-                    "orderType": {"type": "string"},
-                    "udf1": {"type": "string"},
-                    "customerId": {"type": "string"},
-                    "returnUrl": {"type": "string"},
-                    "dateCreated": {"type": "string"},
-                    "currency": {"type": "string"},
-                    "version": {"type": "integer"},
-                    "mandateFeature": {"type": "string"},
-                    "metadata": {"type": "string"},
-                    "preferredGateway": {"type": "string"},
-                    "id": {"type": "string"},
-                    "customerPhone": {"type": "string"},
-                    "customerEmail": {"type": "string"},
-                    "orderId": {"type": "string"},
-                    "lastModified": {"type": "string"},
-                    "description": {"type": "string"},
-                    "udf6": {"type": "string"},
-                    "respCode": {"type": "string"}
+        "hits": {
+            "type": "object",
+            "properties": {
+                "total": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "integer"},
+                        "relation": {"type": "string"}
+                    },
+                    "required": ["value", "relation"]
                 },
-                "required": [
-                    "status", "amount", "merchantId", "paymentGateway", "paymentMethodType",
-                    "partitionKey", "billingAddressId", "orderUuid", "refundedEntirely",
-                    "amountRefunded", "orderType", "udf1", "customerId", "returnUrl",
-                    "dateCreated", "currency", "version", "mandateFeature", "metadata",
-                    "preferredGateway", "id", "customerPhone", "customerEmail", "orderId",
-                    "lastModified", "description", "udf6", "respCode"
-                ]
-            }
+                "max_score": {"anyOf": [{"type": "number"}, {"type": "null"}]},
+                "hits": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "_index": {"type": "string"},
+                            "_id": {"type": "string"},
+                            "_score": {"anyOf": [{"type": "number"}, {"type": "null"}]},
+                            "_source": {"type": "object"},  # You can further expand this if you want strict validation
+                            "sort": {
+                                "type": "array",
+                                "items": {"type": "number"}
+                            }
+                        },
+                        "required": ["_index", "_id", "_score", "_source", "sort"]
+                    }
+                }
+            },
+            "required": ["total", "max_score", "hits"]
         }
     },
-    "required": ["summary", "rows"]
+    "required": ["took", "timed_out", "_shards", "hits"]
 }
 
 get_order_details_response_schema = {
