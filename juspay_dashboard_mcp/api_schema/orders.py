@@ -4,11 +4,10 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 from juspay_dashboard_mcp.api_schema.qapi import Filter
-
 
 class JuspayListOrdersV4Payload(WithHeaders):
     dateFrom: str = Field(
@@ -39,7 +38,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         "ordersELS",
         description="Domain for query (optional, default is 'ordersELS')."
     ),
-    qFilters: Filter = Field(
+    qFilters: Optional[Dict[str, Any]] = Field(
          None,
         description="""A dict representing the 'filters' section with valid field values from the schema.
                 IMPORTANT NOTES:

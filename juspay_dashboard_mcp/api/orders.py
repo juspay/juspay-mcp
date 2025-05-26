@@ -53,29 +53,33 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     date_from_ts = int(date_from_dt.timestamp())
     date_to_ts = int(date_to_dt.timestamp())
 
+    # Build qFilters as per your latest request
+    qFilters = payload.get("qFilters", {
+        "and": {
+            "right": {
+                "field": "order_created_at",
+                "condition": "LessThanEqual",
+                "val": str(date_to_ts),
+            },
+            "left": {
+                "field": "order_created_at",
+                "condition": "GreaterThanEqual",
+                "val": str(date_from_ts),
+            },
+        }
+    })
+
     request_data = {
         "offset": payload.get("offset", 0),
         "filters": {
             "dateCreated": {
                 "lte": date_to_str,
                 "gte": date_from_str,
+                "opt": "last_30_mins"
             }
         },
         "order": [["date_created", "DESC"]],
-        "qFilters": payload.get("qFilters", {
-            "and": {
-                "right": {
-                    "field": "order_created_at",
-                    "condition": "LessThanEqual",
-                    "val": str(date_to_ts),
-                },
-                "left": {
-                    "field": "order_created_at",
-                    "condition": "GreaterThanEqual",
-                    "val": str(date_from_ts),
-                },
-            }
-        }),
+        "qFilters": qFilters,
         "domain": payload.get("domain", "ordersELS"),
         "sortDimension": "order_created_at",
     }

@@ -483,37 +483,28 @@ list_orders_v4_response_schema = {
                     "merchantId": {"type": "string"},
                     "paymentGateway": {"type": "string"},
                     "paymentMethodType": {"type": "string"},
-                    "partitionKey": {"type": "string"},
-                    "billingAddressId": {"type": "string"},
                     "orderUuid": {"type": "string"},
                     "refundedEntirely": {"type": "boolean"},
                     "amountRefunded": {"type": "number"},
                     "orderType": {"type": "string"},
-                    "udf1": {"type": "string"},
                     "customerId": {"type": "string"},
-                    "returnUrl": {"type": "string"},
                     "dateCreated": {"type": "string"},
                     "currency": {"type": "string"},
-                    "version": {"type": "integer"},
                     "mandateFeature": {"type": "string"},
-                    "metadata": {"type": "string"},
                     "preferredGateway": {"type": "string"},
-                    "id": {"type": "string"},
                     "customerPhone": {"type": "string"},
                     "customerEmail": {"type": "string"},
                     "orderId": {"type": "string"},
                     "lastModified": {"type": "string"},
-                    "description": {"type": "string"},
-                    "udf6": {"type": "string"},
-                    "respCode": {"type": "string"}
+                    "respCode": {"type": "string"},
+                    "respMessage": {"type": "string"},
+                    "sourceObject": {"type": "string"},
+                    "sourceObjectId": {"type": "string"}
                 },
                 "required": [
-                    "status", "amount", "merchantId", "paymentGateway", "paymentMethodType",
-                    "partitionKey", "billingAddressId", "orderUuid", "refundedEntirely",
-                    "amountRefunded", "orderType", "udf1", "customerId", "returnUrl",
-                    "dateCreated", "currency", "version", "mandateFeature", "metadata",
-                    "preferredGateway", "id", "customerPhone", "customerEmail", "orderId",
-                    "lastModified", "description", "udf6", "respCode"
+                    "status", "amount", "merchantId", "orderUuid", "refundedEntirely",
+                    "amountRefunded", "orderType", "dateCreated", "currency", "mandateFeature",
+                    "customerPhone", "customerEmail", "orderId", "lastModified"
                 ]
             }
         }
