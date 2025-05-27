@@ -62,4 +62,9 @@ def get_common_headers(payload: dict, meta_info: dict = None):
     if payload.get("cookie"):
         default_headers["cookie"] = payload.pop("cookie")
         
+    if payload.get("x-source-id"):
+        default_headers["x-source-id"] = payload.pop("x-source-id")
+    else:
+        default_headers["x-source-id"] = "juspay-mcp"        
+        
     return default_headers
