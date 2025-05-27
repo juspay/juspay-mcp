@@ -56,24 +56,15 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     qFilters = payload.get("qFilters", {
         "and": {
             "right": {
-                "and": {
-                    "right": {
-                        "field": "date_created",
-                        "condition": "GreaterThanEqual",
-                        "val": str(date_from_ts)
-                    },
-                    "left": {
-                        "field": "date_created",
-                        "condition": "LessThanEqual",
-                        "val": str(date_to_ts)
-                    }
-                }
+                "field": "order_created_at",
+                "condition": "LessThanEqual",
+                "val": str(date_to_ts),
             },
             "left": {
-                "field": "order_amount",
+                "field": "order_created_at",
                 "condition": "GreaterThanEqual",
-                "val": payload.get("orderAmount", 0)
-            }
+                "val": str(date_from_ts),
+            },
         }
     })
 

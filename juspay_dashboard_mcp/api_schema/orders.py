@@ -59,6 +59,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
                         "prev_order_status", // previous order status gives information about the previous status of the order. Possible values are: 'SUCCESS', 'FAILURE', 'PENDING'
                         "order_created_at", // order created at timestamp
                         "merchant_id", // unique identifier for the merchant
+                        "order_amount",// order amount for filtering orders based on amount
                         "full_udf1", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
                         "full_udf2", 
                         "full_udf3",
