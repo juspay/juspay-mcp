@@ -10,10 +10,12 @@ import uvicorn
 import dotenv
 import asyncio
 import logging
+import anyio
 
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http import StreamableHTTPServerTransport
 if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
 else:
@@ -50,11 +52,17 @@ def main(host: str, port: int, mode: str):
     message_endpoint_path = "/messages/"
     if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
         sse_endpoint_path = "/juspay-dashboard"
+        streamable_endpoint_path = "/juspay-dashboard-stream"
     else:
         sse_endpoint_path = "/juspay"
+        streamable_endpoint_path = "/juspay-stream"
     
-    # Create the SSE transport handler.
     sse_transport_handler = SseServerTransport(message_endpoint_path)
+    
+    streamable_transport = StreamableHTTPServerTransport(
+        mcp_session_id=None,
+        is_json_response_enabled=True
+    )
     
     async def handle_sse_connection(request):
         """Handles a single client SSE connection and runs the MCP session."""
@@ -75,17 +83,48 @@ def main(host: str, port: int, mode: str):
             finally:
                 logging.info(f"MCP Session ended for {request.client}")
 
-    # Create a Starlette application with the desired routes.
+    async def handle_streamable_http(request):
+        """Handles StreamableHTTP requests."""
+        logging.info(f"New StreamableHTTP request: {request.method} {request.url.path}")
+        
+        await streamable_transport.handle_request(request.scope, request.receive, request._send)
+
     starlette_app = Starlette(
         debug=False,
         routes=[
             Route(sse_endpoint_path, endpoint=handle_sse_connection),
             Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
+            Route(streamable_endpoint_path, endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE"]),
         ],
     )
 
+    async def run_server():
+        """Run the server with the MCP session for streamable HTTP."""
+        async with anyio.create_task_group() as tg:
+            async def start_streamable_mcp():
+                async with streamable_transport.connect() as streams:
+                    logging.info("StreamableHTTP MCP Session starting")
+                    try:
+                        await app.run(
+                            streams[0],
+                            streams[1],
+                            app.create_initialization_options()
+                        )
+                    except Exception as e:
+                        logging.error(f"Error during StreamableHTTP MCP session: {e}")
+                    finally:
+                        logging.info("StreamableHTTP MCP Session ended")
+            
+            tg.start_soon(start_streamable_mcp)
+            
+            config = uvicorn.Config(app=starlette_app, host=host, port=port, log_level="info")
+            server = uvicorn.Server(config)
+            await server.serve()
+
     logger.info(f"Starting MCP server on http://{host}:{port}{sse_endpoint_path}")
-    uvicorn.run(starlette_app, host=host, port=port)
+    logger.info(f"StreamableHTTP endpoint available at http://{host}:{port}{streamable_endpoint_path}")
+    
+    asyncio.run(run_server())
 
 if __name__ == "__main__":
     main()
