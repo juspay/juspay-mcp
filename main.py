@@ -52,10 +52,10 @@ def main(host: str, port: int, mode: str):
     message_endpoint_path = "/messages/"
     if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
         sse_endpoint_path = "/juspay-dashboard"
-        streamable_endpoint_path = "/juspay-dashboard-streamable"
+        streamable_endpoint_path = "/juspay-dashboard-stream"
     else:
         sse_endpoint_path = "/juspay"
-        streamable_endpoint_path = "/juspay-streamable"
+        streamable_endpoint_path = "/juspay-stream"
     
     sse_transport_handler = SseServerTransport(message_endpoint_path)
     
