@@ -15,7 +15,6 @@ import contextlib
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from mcp.server.sse import SseServerTransport
-from mcp.server.streamable_http import StreamableHTTPServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
