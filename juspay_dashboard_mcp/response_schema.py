@@ -45,6 +45,47 @@ alert_details_response_schema = {
     }
 }
 
+list_emi_plans_response_schema = {
+    "type": "object",
+    "properties": {
+        "summary": {
+            "type": "object",
+            "properties": {
+                "count": {"type": "integer"},
+                "totalCount": {"type": "integer"}
+            },
+            "required": ["count", "totalCount"]
+        },
+        "rows": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tenure": {"type": "integer"},
+                    "paymentMethodType": {"type": "string"},
+                    "gateway": {"type": "string"},
+                    "gatewayPlanId": {"type": ["string", "null"]},
+                    "minAmount": {"type": "number"},
+                    "emiType": {"type": "string"},
+                    "cardType": {"type": "string"},
+                    "interestRate": {"type": "number"},
+                    "juspayBankCodeId": {"type": "integer"},
+                    "id": {"type": "integer"},
+                    "paymentMethod": {"type": "string"},
+                    "bankCode": {"type": "string"},
+                    "merchantAccountId": {"type": "integer"}
+                },
+                "required": [
+                    "tenure", "paymentMethodType", "gateway", "minAmount",
+                    "emiType", "cardType", "interestRate", "juspayBankCodeId",
+                    "id", "paymentMethod", "bankCode", "merchantAccountId"
+                ]
+            }
+        }
+    },
+    "required": ["summary", "rows"]
+}
+
 list_alerts_response_schema = {
     "type": "array",
     "items": {
@@ -1368,4 +1409,3 @@ list_surcharge_rules_response_schema = {
         ]
     }
 }
-

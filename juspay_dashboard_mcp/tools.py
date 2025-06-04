@@ -189,6 +189,13 @@ AVAILABLE_TOOLS = [
         handler=qapi.q_api,
         response_schema=None,
     ),
+    util.make_api_config(
+        name="juspay_list_emi_plans",
+        description="Retrieves a list of EMI plans configured for a merchant. Response includes a list of EMI plans with plan details like tenure, payment method, gateway, interest rate, min and max amount (operating range), bank name (bankCode), card type (CREDIT/DEBIT), emi type (Standard_EMI/NO_COST/LOW_COST).",
+        model=api_schema.emi_plans.ListEmiPlansPayload, # Adjusted to use existing api_schema import
+        handler=emi_plans.list_emi_plans, # Relies on 'from juspay_dashboard_mcp.api import *'
+        response_schema=response_schema.list_emi_plans_response_schema # Adjusted to use existing response_schema import
+    ),
 ]
 
 @app.list_tools()
