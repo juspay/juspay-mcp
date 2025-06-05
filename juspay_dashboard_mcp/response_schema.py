@@ -1369,3 +1369,43 @@ list_surcharge_rules_response_schema = {
     }
 }
 
+list_outages_response_schema = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "issuerName": {"type": "string"},
+            "status": {"type": "string"},
+            "juspayBankCode": {"type": "string"},
+            "merchantId": {"type": "string"},
+            "paymentMethodType": {"type": "string"},
+            "paymentMethod": {"type": "string"},
+            "stage": {"type": "string"},
+            "outagePeriods": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "startTime": {"type": "string"},
+                        "endTime": {"type": "string"},
+                        "duration": {"type": "integer"}
+                    },
+                    "required": [
+                        "startTime",
+                        "endTime", 
+                        "duration"
+                    ]
+                }
+            }
+        },
+        "required": [
+            "issuerName",
+            "status",
+            "juspayBankCode",
+            "merchantId",
+            "paymentMethodType",
+            "paymentMethod",
+            "outagePeriods"
+        ]
+    }
+}
