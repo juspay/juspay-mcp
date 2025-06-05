@@ -32,7 +32,7 @@ async def list_configured_gateways_juspay(payload: dict, meta_info: dict = None)
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/gateway/list"
     return await post(api_url, payload, None, meta_info)
 
@@ -67,7 +67,7 @@ async def get_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> di
     if not gateway:
         raise ValueError("The payload must include 'gateway'.")
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v2/gateway/scheme/{gateway}"
 
     return await post(api_url, payload, None, meta_info)
@@ -103,7 +103,7 @@ async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> d
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/gateway/{mga_id}"
 
     return await post(api_url, payload, None, meta_info)
@@ -128,7 +128,7 @@ async def list_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> d
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v2/gateway/scheme/list"
     return await post(api_url, {}, None, meta_info)
 
@@ -145,6 +145,6 @@ async def get_merchant_gateways_pm_details_juspay(payload: dict, meta_info: dict
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/gateway/paymentMethods"
     return await post(api_url, {}, None, meta_info)

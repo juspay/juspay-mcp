@@ -78,7 +78,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
         },
         "order": [["date_created", "DESC"]],
         "qFilters": qFilters,
-        "domain": payload.get("domain", "txnsELS"),
+        "domain": "txnsELS",
         "sortDimension": "order_created_at",
     }
 
@@ -91,7 +91,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     if payload.get("orderType"):
         request_data["qFilters"]["and"]["order_type"] = payload["orderType"]
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/ec/v4/orders"
     return await post(api_url, request_data, None, meta_info)
 
@@ -114,6 +114,6 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     if not order_id:
         raise ValueError("'order_id' is required in the payload")
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/orders/{order_id}"
     return await post(api_url, {}, None, meta_info)

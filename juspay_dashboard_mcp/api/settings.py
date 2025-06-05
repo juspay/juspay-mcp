@@ -28,7 +28,7 @@ async def get_conflict_settings_juspay(payload: dict, meta_info: dict = None) ->
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/conflict"
     return await post(api_url, {}, None, meta_info)
 
@@ -54,7 +54,7 @@ async def get_general_settings_juspay(payload: dict, meta_info: dict = None) -> 
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/general"
     return await post(api_url, {}, None, meta_info)
 
@@ -82,7 +82,7 @@ async def get_mandate_settings_juspay(payload: dict, meta_info: dict = None) -> 
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/mandate"
     
     request_data = {}
@@ -114,7 +114,7 @@ async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = No
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/priorityLogic"
     return await post(api_url, {}, None, meta_info)
 
@@ -141,7 +141,7 @@ async def get_routing_settings_juspay(payload: dict, meta_info: dict = None) -> 
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/routing"
     return await post(api_url, {}, None, meta_info)
 
@@ -167,6 +167,6 @@ async def get_webhook_settings_juspay(payload: dict, meta_info: dict = None) -> 
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/webhook"
     return await post(api_url, {}, None, meta_info)

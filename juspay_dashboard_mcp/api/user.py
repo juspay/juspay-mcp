@@ -34,7 +34,7 @@ async def get_user_juspay(payload: dict, meta_info: dict = None) -> dict:
     if "userId" not in payload:
         raise ValueError("Payload must contain 'userId'.")
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/user?userId={payload['userId']}"
     return await post(api_url, {}, None, meta_info)
 
@@ -62,7 +62,7 @@ async def list_users_v2_juspay(payload: dict, meta_info: dict = None) -> dict:
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v2/user/list"
     
     request_data = {

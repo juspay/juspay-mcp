@@ -41,7 +41,7 @@ async def get_offer_details_juspay(payload: dict, meta_info: dict = None) -> dic
     if not merchant_id:
         raise ValueError("'merchantId' is required in the payload")
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/offers/dashboard/detail?merchant_id={merchant_id}"
     
     return await post(api_url, payload, None, meta_info)
@@ -83,7 +83,7 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
         raise ValueError("Payload must contain 'merchant_id', 'start_time', and 'end_time'.")
 
     merchant_id = payload.get("merchant_id")
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
     created_at =  {
             "gte": payload.get("start_time"),

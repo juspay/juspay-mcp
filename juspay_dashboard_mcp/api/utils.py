@@ -56,27 +56,29 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
             raise Exception(f"Failed to call Juspay API: {e}") from e
         
 
-async def get_juspay_host_from_api(token: str = None, headers: dict = None) -> str:
+async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta_info: dict = None) -> str:
     """
     Returns the Juspay host URL based on token validation.
     Calls the validate API and uses the 'validHost' field from the response.
     """
     validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
 
-    token_to_use = token or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    logger.info(f"Using token for validation: {token_to_use}")  
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 
     try:
+        json_payload = {"token": token_to_use}
+        request_api_headers = get_common_headers(json_payload, meta_info)
+        if headers: # headers from function signature
+            request_api_headers.update(headers)
+
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 validate_url,
-                headers={
-                    "accept": "*/*",
-                    "accept-language": "en-US,en;q=0.9",
-                    "content-type": "application/json"
-                },
-                json={"token": token_to_use}
+                headers=request_api_headers,
+                json=json_payload
             )
             resp.raise_for_status()
             data = resp.json()

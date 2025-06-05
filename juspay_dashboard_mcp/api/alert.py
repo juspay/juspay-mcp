@@ -19,7 +19,7 @@ async def alert_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/monitoring/task?task_uid={payload['task_uid']}&user_name={payload['user_name']}"
     return await call(api_url, {}, meta_info)
 
@@ -38,7 +38,7 @@ async def list_alerts_juspay(payload: dict, meta_info: dict = None) -> dict:
     Raises:
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/monitoring/task/list"
     request_data = {
         "task_type": payload.get("task_type", "alert")
