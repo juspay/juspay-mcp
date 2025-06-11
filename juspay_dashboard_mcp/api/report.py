@@ -4,9 +4,9 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.utils import post,call, get_juspay_host_from_api
 
-async def report_details_juspay(payload: dict) -> dict:
+async def report_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns detailed information for a specific report ID, including data sources, 
     metrics, dimensions, and filters.
@@ -44,9 +44,9 @@ async def report_details_juspay(payload: dict) -> dict:
     api_url = f"{host}/api/monitoring/task?task_uid={task_uid}&user_name={user_name}"
     
     # Empty body since parameters are in URL
-    return await post(api_url, {})
+    return await call(api_url, None, meta_info)
 
-async def list_report_juspay(payload: dict) -> dict:
+async def list_report_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Lists all reports configured by the merchant, along with their status, recipients, 
     thresholds, and monitoring intervals.
@@ -82,4 +82,4 @@ async def list_report_juspay(payload: dict) -> dict:
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/monitoring/task/list"
     
-    return await post(api_url, payload)
+    return await post(api_url, payload, None, meta_info)

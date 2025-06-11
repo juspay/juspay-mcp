@@ -30,23 +30,31 @@ def verify_env_vars():
 
     if not JUSPAY_WEB_LOGIN_TOKEN:
         raise ValueError("JUSPAY_WEB_LOGIN_TOKEN environment variable must be set.")
-    
+
+
 def get_base64_auth():
     """Returns the base64 encoded auth string."""
     pass
-    
-def get_common_headers(payload: dict):
+
+
+def get_common_headers(payload: dict, meta_info: dict = None):
     """
     Returns common headers used by all API calls.
     Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
     """
-    verify_env_vars()
+    if "x-web-logintoken" not in (meta_info or {}):
+        verify_env_vars()
+
+    if meta_info:
+        token = meta_info.get("x-web-logintoken", JUSPAY_WEB_LOGIN_TOKEN)
+    else:
+        token = JUSPAY_WEB_LOGIN_TOKEN
 
     default_headers = {
-         "Content-Type": "application/json",
+        "Content-Type": "application/json",
         "accept": "*/*",
         "x-request-id": f"mcp-tool-{os.urandom(6).hex()}",
-        "x-web-logintoken": f"{JUSPAY_WEB_LOGIN_TOKEN}",
+        "x-web-logintoken": f"{token}",
     }
 
     if payload.get("tenant_id"):
@@ -54,10 +62,10 @@ def get_common_headers(payload: dict):
 
     if payload.get("cookie"):
         default_headers["cookie"] = payload.pop("cookie")
-        
+
     if payload.get("x-source-id"):
         default_headers["x-source-id"] = payload.pop("x-source-id")
     else:
-        default_headers["x-source-id"] = "juspay-mcp"        
-        
+        default_headers["x-source-id"] = "juspay-mcp"
+
     return default_headers

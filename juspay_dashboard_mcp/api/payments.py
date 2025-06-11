@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
 
-async def list_payment_links_v1_juspay(payload: dict) -> dict:
+async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Portal API to retrieve a list of payment links within a specified time range.
 
@@ -34,4 +34,4 @@ async def list_payment_links_v1_juspay(payload: dict) -> dict:
     if "offset" in payload:
         request_data["offset"] = payload["offset"]
 
-    return await post(api_url, request_data)
+    return await post(api_url, request_data, None, meta_info)
