@@ -20,7 +20,7 @@ if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
 else:
     from juspay_mcp.tools import app
-from stdio import run_stdio
+from juspay_mcp.stdio import run_stdio
 
 # Load environment variables.
 dotenv.load_dotenv()

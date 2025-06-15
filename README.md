@@ -65,6 +65,19 @@ Model Context Protocol is an emerging standard for enabling AI models and agents
 
 ### Installation
 
+#### Nix
+```bash
+# 1. Clone the repository
+git clone https://github.com/juspay/juspay-mcp.git
+cd juspay-mcp
+
+# 2. Installing dependencies and setting up the environment
+nix develop
+
+```
+
+#### Normal Installation
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/juspay/juspay-mcp.git
@@ -82,11 +95,17 @@ pip install .     # For standard installation
 2. Start the server:
 
 ```bash
-# For standard HTTP server
-python main.py
+# With Nix to run the MCP server
+nix run
 
-# For STDIO mode (used with direct integrations)
-python stdio.py
+# For standard HTTP server (normally)
+python ./juspay_mcp/main.py
+
+# For STDIO mode via nix
+nix run .#stdio
+
+# For STDIO mode via nix (standard method)
+python ./juspay_mcp/stdio.py
 ```
 
 ## Usage with Claude and Other AI Assistants
@@ -367,6 +386,19 @@ We welcome contributions to the Juspay MCP server! Here's how you can contribute
 
 ### Development Environment
 
+#### Nix
+```bash
+# Enter in the development shell (with all dependencies)
+nix develop
+
+# Run tests
+nix run .#test
+
+# Run juspay-mcp
+nix run
+````
+
+#### Normal Flow
 ```bash
 # Create a virtual environment
 python -m venv venv

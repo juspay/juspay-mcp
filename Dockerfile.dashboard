@@ -24,4 +24,4 @@ USER appuser
 
 RUN pip install --no-cache-dir --no-build-isolation . --root-user-action=ignore
 
-ENTRYPOINT ["python", "stdio.py"]
+ENTRYPOINT ["python", "juspay_mcp/stdio.py"]
