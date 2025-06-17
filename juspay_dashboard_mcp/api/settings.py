@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
 
-async def get_conflict_settings_juspay(payload: dict) -> dict:
+async def get_conflict_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves conflict settings configuration.
 
@@ -30,9 +30,9 @@ async def get_conflict_settings_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/conflict"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)
 
-async def get_general_settings_juspay(payload: dict) -> dict:
+async def get_general_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves general configuration settings.
 
@@ -56,9 +56,9 @@ async def get_general_settings_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/general"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)
 
-async def get_mandate_settings_juspay(payload: dict) -> dict:
+async def get_mandate_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves mandate-related settings.
 
@@ -89,9 +89,9 @@ async def get_mandate_settings_juspay(payload: dict) -> dict:
     if payload.get("merchantId"):
         request_data["merchantId"] = payload["merchantId"]
         
-    return await post(api_url, request_data)
+    return await post(api_url, request_data, None, meta_info)
 
-async def get_priority_logic_settings_juspay(payload: dict) -> dict:
+async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches a list of all configured priority logic rules, including their current 
     status and full logic definition.
@@ -116,9 +116,9 @@ async def get_priority_logic_settings_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/priorityLogic"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)
 
-async def get_routing_settings_juspay(payload: dict) -> dict:
+async def get_routing_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides details of success rate–based routing thresholds defined by the merchant, 
     including enablement status and downtime-based switching thresholds.
@@ -143,9 +143,9 @@ async def get_routing_settings_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/routing"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)
 
-async def get_webhook_settings_juspay(payload: dict) -> dict:
+async def get_webhook_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves webhook configuration settings.
 
@@ -169,4 +169,4 @@ async def get_webhook_settings_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/webhook"
-    return await post(api_url, {})
+    return await post(api_url, {}, None, meta_info)

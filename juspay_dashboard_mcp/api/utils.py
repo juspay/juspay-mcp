@@ -11,8 +11,8 @@ from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
 
 logger = logging.getLogger(__name__)
 
-async def call(api_url: str, additional_headers: dict = None) -> dict:
-    headers = get_common_headers({})
+async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
+    headers = get_common_headers({}, meta_info)
     
     if additional_headers:
         headers.update(additional_headers)
@@ -33,8 +33,8 @@ async def call(api_url: str, additional_headers: dict = None) -> dict:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
-async def post(api_url: str, payload: dict,additional_headers: dict = None) -> dict:
-    headers = get_common_headers(payload) 
+async def post(api_url: str, payload: dict,additional_headers: dict = None, meta_info: dict= None) -> dict:
+    headers = get_common_headers(payload, meta_info) 
 
     if additional_headers:
         headers.update(additional_headers)
@@ -56,14 +56,14 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None) -> d
             raise Exception(f"Failed to call Juspay API: {e}") from e
         
 
-async def get_juspay_host_from_api(token: str = None, headers: dict = None) -> str:
+async def get_juspay_host_from_api(token: str = None, headers: dict = None ,meta_info: dict = None) -> str:
     """
     Returns the Juspay host URL based on token validation.
     Calls the validate API and uses the 'validHost' field from the response.
     """
     validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
 
-    token_to_use = token or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    token_to_use = token or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN") or meta_info.get("x-web-logintoken")
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 

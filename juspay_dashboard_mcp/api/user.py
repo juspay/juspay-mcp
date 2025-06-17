@@ -4,9 +4,10 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api
 
-async def get_user_juspay(payload: dict) -> dict:
+
+async def get_user_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches details for a specific user, identified by user ID.
 
@@ -36,9 +37,10 @@ async def get_user_juspay(payload: dict) -> dict:
 
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v1/user?userId={payload['userId']}"
-    return await post(api_url, {})
+    return await call(api_url, None, meta_info)
 
-async def list_users_v2_juspay(payload: dict) -> dict:
+
+async def list_users_v2_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of users associated with a merchant, with optional pagination.
 
@@ -64,9 +66,7 @@ async def list_users_v2_juspay(payload: dict) -> dict:
     """
     host = await get_juspay_host_from_api()
     api_url = f"{host}/api/ec/v2/user/list"
-    
-    request_data = {
-        "offset": payload.get("offset", 0)
-    }
-    
-    return await post(api_url, request_data)
+
+    request_data = {"offset": payload.get("offset", 0)}
+
+    return await post(api_url, request_data, None, meta_info)
