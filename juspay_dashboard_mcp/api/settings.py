@@ -128,7 +128,7 @@ async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = No
 
     user_query = meta_info.get("query") if meta_info else None
     should_summarize, token_count, item_count = should_summarize_response(
-        response, user_query, token_threshold=50000  # Higher threshold
+        response, token_threshold=50000 
     )
 
     if not should_summarize:

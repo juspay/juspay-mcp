@@ -347,7 +347,7 @@ Focus on answering the user's specific query about {active_description} rules.""
         current_max_tokens = 1000  # Increased to allow for detailed breakdown
 
         logging.info(
-            f"Summarizing: {total_items} items ({breakdown_details}), {active_items} active, max_tokens: {current_max_tokens}"
+            f"Summarizing: {total_items} items ({breakdown_details}), {active_items}, max_tokens: {current_max_tokens}"
         )
 
         # Reduced retries for speed
@@ -883,18 +883,14 @@ def tool_output_summarizer(response: Any, query: str) -> str:  # Synchronous wra
 
 
 def should_summarize_response(
-    response: Any, user_query: str, token_threshold: int = 25000
+    response: Any, token_threshold: int = 25000
 ) -> tuple[bool, int, int]:
     """
     Universal function to determine if ANY API response should be summarized.
-    Works for orders, offers, transactions, merchants, settings, disputes, refunds, etc.
+    Based purely on token count - no user query dependency.
 
     Returns: (should_summarize, token_count, item_count)
     """
-    if user_query is None:
-        logging.info("User query is None. Skipping summarization for any API.")
-        return False, 0, 0
-
     token_count = count_tokens_in_response(response)
 
     # Count items universally - works for any API response
@@ -907,8 +903,9 @@ def should_summarize_response(
         item_count = len(response)
 
     should_summarize = token_count >= token_threshold
+
     logging.info(
-        f"Universal API response analysis: {token_count} tokens, {item_count} items, summarize: {should_summarize}"
+        f"API response analysis: {token_count} tokens, {item_count} items, summarize: {should_summarize}"
     )
 
     return should_summarize, token_count, item_count
@@ -1024,4 +1021,3 @@ def compress_json_for_llm(data: Dict[str, Any], max_tokens: int = 900000) -> str
 
     logging.info(f"JSON compressed to {token_count} tokens - ALL DATA PRESERVED")
     return compact_json
-
