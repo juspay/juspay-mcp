@@ -34,14 +34,14 @@ class JuspayListOrdersV4Payload(WithHeaders):
         None,
         description="Optional filter for order type."
     )
-    qFilters: Optional[Dict[str, Any]] = Field(
-         None,
+    qFilters: Filter = Field(
+        None,
         description="""MANDATORY: This qFilters block MUST include 'order_created_at'/'date_created' conditions using epoch timestamp strings for 'val'. 'date_created' to be used where domain selected is txnsELS and 'order_created_at'to be used where domain selected is ordersELS (see example below for structure, where date_from_ts and date_to_ts are epoch seconds. Structure remains the same for both 'date_created' and 'order_created_at').
                 A dict representing the 'filters' section with valid field values from the schema.
                 IMPORTANT NOTES:
                   - DO NOT pass limit in qFilters. It is already handled in the payload.
                   - Only pass the supported filters in the qFilters. DO NOT pass anyother filters in qFilter. The supported filters are:
-
+                  - Domain is a mandatory field in the payload. 
                   Filters supported by 'ordersELS' domain :
                         "customer_id", // unique identifier for the customer
                         "business_region", 
@@ -124,8 +124,8 @@ class JuspayListOrdersV4Payload(WithHeaders):
                  - When asked about orders processed through a specific wallet, set payment_method_type filter on WALLET and the wallet name is stored in "bank" field."""
     )
     domain: str = Field(
-        ...,
-        description="Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'."
+        "txnsELS",
+        description="Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'.",
     )
 
 class JuspayGetOrderDetailsPayload(WithHeaders):

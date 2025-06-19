@@ -53,32 +53,44 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     date_from_ts = int(date_from_dt.timestamp())
     date_to_ts = int(date_to_dt.timestamp())
 
-    qFilters = payload.get("qFilters", {
-        "and": {
-            "right": {
-                "field": "date_created",
-                "condition": "LessThanEqual",
-                "val": str(date_to_ts),
-            },
-            "left": {
-                "field": "date_created",
-                "condition": "GreaterThanEqual",
-                "val": str(date_from_ts),
-            },
-        }
-    })
+    if payload.get("domain") and payload["domain"] == "ordersELS":
+        qFilters ={
+                "and": {
+                    "right": {
+                        "field": "order_created_at",
+                        "condition": "LessThanEqual",
+                        "val": str(date_to_ts),
+                    },
+                    "left": {
+                        "field": "order_created_at",
+                        "condition": "GreaterThanEqual",
+                        "val": str(date_from_ts),
+                    },
+                }
+            }
+    else:
+        qFilters = {
+                "and": {
+                    "right": {
+                        "field": "date_created",
+                        "condition": "LessThanEqual",
+                        "val": str(date_to_ts),
+                    },
+                    "left": {
+                        "field": "date_created",
+                        "condition": "GreaterThanEqual",
+                        "val": str(date_from_ts),
+                    },
+                }
+            }
+        
 
     request_data = {
         "offset": payload.get("offset", 0),
-        "filters": {
-            "dateCreated": {
-                "lte": date_to_str,
-                "gte": date_from_str
-            }
-        },
+        "filters": {"dateCreated": {"lte": date_to_str, "gte": date_from_str}},
         "order": [["date_created", "DESC"]],
         "qFilters": qFilters,
-        "domain": "txnsELS",
+        "domain": payload.get("domain", "txnsELS"),
         "sortDimension": "order_created_at",
     }
 
