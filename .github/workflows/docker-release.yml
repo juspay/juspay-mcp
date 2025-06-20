@@ -1,38 +1,78 @@
-name: Release Docker Images
+name: Multi-arch Nix2Container CI
+
 on:
   push:
     tags:
       - "v*"
+
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            system: x86_64-linux
+            tag_suffix: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            system: aarch64-linux
+            tag_suffix: arm64
+
+    runs-on: ${{ matrix.runner }}
+    env:
+      IMAGE1: ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-mcp
+      IMAGE2: ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-dashboard-mcp
+
     steps:
       - name: 📦 Checkout Code
         uses: actions/checkout@v4
-      - name: ⚙️ Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
       - name: 🔐 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - name: 🛠️ Build & Push `juspay-dashboard-mcp` (Multi-Arch)
-        uses: docker/build-push-action@v5
+
+      - name: Build and push juspay-mcp image
+        run: |
+          nix run .#docker.copyToDockerDaemon --system ${{ matrix.system }}
+          docker tag juspay-mcp:latest $IMAGE1:${{ github.ref_name }}-${{ matrix.tag_suffix }}
+          docker push $IMAGE1:${{ github.ref_name }}-${{ matrix.tag_suffix }}
+
+      - name: Build and push juspay-dashboard-mcp image
+        run: |
+          nix run .#docker-dashboard.copyToDockerDaemon --system ${{ matrix.system }}
+          docker tag juspay-dashboard-mcp:latest $IMAGE2:${{ github.ref_name }}-${{ matrix.tag_suffix }}
+          docker push $IMAGE2:${{ github.ref_name }}-${{ matrix.tag_suffix }}
+
+  manifest:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      IMAGE1: ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-mcp
+      IMAGE2: ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-dashboard-mcp
+
+    steps:
+      - name: 🔐 Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          context: .
-          file: Dockerfile.dashboard
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-dashboard-mcp:latest
-            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-dashboard-mcp:${{ github.ref_name }}
-      - name: 🛠️ Build & Push `juspay-mcp` (Multi-Arch)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-mcp:latest
-            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-mcp:${{ github.ref_name }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Create and push multi-arch manifest for juspay-mcp
+        run: |
+          docker manifest create $IMAGE1:latest \
+            --amend $IMAGE1:${{ github.ref_name }}-amd64 \
+            --amend $IMAGE1:${{ github.ref_name }}-arm64
+          docker manifest push $IMAGE1:latest
+
+      - name: Create and push multi-arch manifest for juspay-dashboard-mcp
+        run: |
+          docker manifest create $IMAGE2:latest \
+            --amend $IMAGE2:${{ github.ref_name }}-amd64 \
+            --amend $IMAGE2:${{ github.ref_name }}-arm64
+          docker manifest push $IMAGE2:latest
