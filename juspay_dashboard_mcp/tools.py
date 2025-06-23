@@ -191,6 +191,13 @@ AVAILABLE_TOOLS = [
         handler=qapi.q_api,
         response_schema=None,
     ),
+    util.make_api_config(
+        name="list_outages_juspay",
+        description="Returns a list of outages within a specified time range.",
+        model=api_schema.outages.JuspayListOutagesPayload,
+        handler=outages.list_outages_juspay,
+        response_schema=response_schema.list_outages_response_schema,
+    ),
 ]
 
 @app.list_tools()
