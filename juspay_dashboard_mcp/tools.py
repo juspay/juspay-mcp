@@ -15,7 +15,6 @@ from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
-
 logger = logging.getLogger(__name__)
 
 app = Server("juspay-dashboard")
@@ -187,6 +186,79 @@ AVAILABLE_TOOLS = [
         description=api_schema.qapi.api_description,
         model=api_schema.qapi.ToolQApiPayload,
         handler=qapi.q_api,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_merchant_products",
+        description="""
+        STEP 1 of 3: Get merchant's available products/integrations.
+        
+        MANDATORY FIRST STEP: Always call this tool first to get the list of products available to the merchant.
+        This validates the merchant's token and returns products like ['Hypercheckout', 'Echeadless', 'Paymentlink'].
+        
+        WORKFLOW REQUIREMENT:
+        1. Call THIS tool first (juspay_get_merchant_products)
+        2. Then call juspay_discover_docs with the products from this response
+        3. Finally call juspay_read_doc with URLs from discover_docs
+        
+        Returns: List of products based on merchant's integration types (PP→Hypercheckout, EC_API/EC_SDK→Echeadless, PL→Paymentlink, etc.)
+        """,
+        model=api_schema.tesseract.JuspayGetMerchantProductsPayload,
+        handler=tesseract.get_merchant_products_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_discover_docs",
+        description="""
+        STEP 2 of 3: Find relevant documentation URLs (ONLY brief snippets provided).
+        
+        ⚠️ CRITICAL: This tool provides ONLY SHORT SNIPPETS (40-50 characters). You MUST call juspay_read_doc afterwards to get complete content.
+        
+        WORKFLOW REQUIREMENT:
+        1. First call juspay_get_merchant_products to get available products
+        2. Call THIS tool with products from step 1
+        3. MANDATORY: Call juspay_read_doc with URLs from this response
+        
+        IMPORTANT: The summaries returned are intentionally brief and incomplete. To provide proper answers to users, you MUST follow up with juspay_read_doc.
+        
+        This tool searches documentation and returns:
+        - URLs of relevant documentation pages
+        - Very short snippets (insufficient for complete answers)
+        - Platform detection (Android/iOS/Web)
+        - Relevance scores
+        
+        Use case: When users ask about payment integration, SDK setup, API usage, features, or technical documentation.
+        """,
+        model=api_schema.tesseract.JuspayDiscoverDocsPayload,
+        handler=tesseract.discover_docs_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_read_doc",
+        description="""
+        STEP 3 of 3: Get COMPLETE documentation content (REQUIRED after discover_docs).
+        
+        ⚠️ MANDATORY: This tool MUST be called after juspay_discover_docs to get full documentation content.
+        The discover_docs tool only provides 40-50 character snippets - insufficient for proper answers.
+        
+        WORKFLOW REQUIREMENT:
+        1. First call juspay_get_merchant_products
+        2. Then call juspay_discover_docs  
+        3. ALWAYS call THIS tool with URLs from discover_docs
+        
+        This tool:
+        - Fetches complete documentation content from URLs
+        - Converts TipTap JSON to readable markdown
+        - Provides comprehensive implementation details
+        - Returns full step-by-step guides and examples
+        
+        INPUT: Use the URLs returned by juspay_discover_docs
+        OUTPUT: Complete markdown documentation content
+        
+        NEVER skip this step - users need complete documentation, not just snippets.
+        """,
+        model=api_schema.tesseract.JuspayReadDocPayload,
+        handler=tesseract.read_doc_juspay,
         response_schema=None,
     ),
 ]
