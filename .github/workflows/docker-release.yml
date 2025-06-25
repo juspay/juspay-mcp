@@ -36,3 +36,23 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-mcp:latest
             ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-mcp:${{ github.ref_name }}
+      - name: 🛠️ Build & Push `juspay-dashboard-mcp for sse` (Multi-Arch)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.dashboard-sse
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-dashboard-sse-mcp:latest
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-dashboard-sse-mcp:${{ github.ref_name }}
+      - name: 🛠️ Build & Push `juspay-mcp-sse` (Multi-Arch)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.sse
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-sse-mcp:latest
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/juspay-sse-mcp:${{ github.ref_name }}
