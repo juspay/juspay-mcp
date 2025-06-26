@@ -1369,3 +1369,62 @@ list_surcharge_rules_response_schema = {
     }
 }
 
+rag_query_response_schema = {
+    "type": "object",
+    "properties": {
+        "response": {
+            "type": "string",
+            "description": "The generated answer from the RAG system",
+        },
+        "query": {"type": "string", "description": "The original query that was asked"},
+        "model": {
+            "type": "string",
+            "description": "The model used for generation (e.g., gemini-2.5-flash-lite-preview-06-17)",
+        },
+        "sources": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of source URLs from the retrieved documents",
+        },
+        "metrics": {
+            "type": "object",
+            "properties": {
+                "client_init_time": {
+                    "type": "number",
+                    "description": "Time taken to initialize the client (seconds)",
+                },
+                "time_to_first_chunk": {
+                    "type": "number",
+                    "description": "Time to receive first response chunk (seconds)",
+                },
+                "total_generation_time": {
+                    "type": "number",
+                    "description": "Total time for response generation (seconds)",
+                },
+                "total_execution_time": {
+                    "type": "number",
+                    "description": "Total execution time (seconds)",
+                },
+                "chunk_count": {
+                    "type": "integer",
+                    "description": "Number of response chunks received",
+                },
+                "response_length": {
+                    "type": "integer",
+                    "description": "Length of the response in characters",
+                },
+                "avg_chunks_per_second": {
+                    "type": "number",
+                    "description": "Average chunks processed per second",
+                },
+                "avg_chars_per_second": {
+                    "type": "number",
+                    "description": "Average characters generated per second",
+                },
+            },
+            "description": "Performance metrics (optional, included when include_metrics=true)",
+        },
+    },
+    "required": ["response", "query", "model", "sources"],
+    "additionalProperties": False,
+}

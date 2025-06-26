@@ -189,6 +189,14 @@ AVAILABLE_TOOLS = [
         handler=qapi.q_api,
         response_schema=None,
     ),
+    util.make_api_config(
+    name="rag_tool_juspay",
+    description="Query the RAG (Retrieval Augmented Generation) system using Vertex AI for intelligent document retrieval and question answering. Requires a 'query' parameter with the question to ask the RAG system. Optional 'similarity_top_k' parameter controls the number of similar documents to retrieve (default: 20).",
+    model=api_schema.rag_tool.JuspayRagQueryPayload,
+    handler=rag_tool.rag_tool_juspay,
+    response_schema=response_schema.rag_query_response_schema,
+    ),
+    
 ]
 
 @app.list_tools()
