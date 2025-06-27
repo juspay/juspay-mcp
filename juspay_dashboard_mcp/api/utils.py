@@ -91,3 +91,47 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     except Exception as e:
         logger.error(f"Token validation failed: {e}")
         raise
+
+async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dict = None) -> tuple[str, bool]:
+    """
+    Returns the Juspay host URL based on token validation and a boolean indicating if context is JUSPAY.
+    Calls the validate API and uses the 'validHost' field from the response.
+    
+    Returns:
+        tuple: (valid_host, isadmin)
+            - valid_host: The host URL string
+            - isadmin: True if context is "JUSPAY", False otherwise
+    """
+    validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
+
+    token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    if not token_to_use:
+        raise Exception("Juspay token not provided.")
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                validate_url,
+                headers={
+                    "accept": "*/*",
+                    "accept-language": "en-US,en;q=0.9",
+                    "content-type": "application/json"
+                },
+                json={"token": token_to_use}
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            context = data.get("context")
+            # Check if context is JUSPAY
+            isadmin = context == "JUSPAY" 
+            
+            valid_host = data.get("validHost")
+            if not valid_host:
+                raise Exception("validHost not found in Juspay token validation response.")
+            if not valid_host.startswith("http"):
+                valid_host = f"https://{valid_host}"
+            
+            return valid_host, isadmin
+    except Exception as e:
+        logger.error(f"Token validation failed: {e}")
+        raise
