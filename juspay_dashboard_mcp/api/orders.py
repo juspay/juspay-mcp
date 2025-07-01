@@ -191,6 +191,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
 async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
+    Note : The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
 
     Args:
         payload (dict): A dictionary containing:
