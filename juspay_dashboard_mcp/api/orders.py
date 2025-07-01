@@ -8,10 +8,55 @@ from datetime import datetime, timezone
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
+from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
+from typing import Dict, Any
 import os
 import dotenv
+import re
 
 dotenv.load_dotenv()
+
+
+def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
+    """
+    Convert a FlatFilter (with .clauses: List[Clause], .logic: string like "(0 AND 1 AND 2)")
+    into a nested AND/OR tree of plain dicts.
+    """
+    from pydantic import BaseModel
+
+    def clause_to_dict(clause: Clause) -> Dict[str, Any]:
+        val = clause.val
+        # If it's a Pydantic model, dump it to primitives:
+        if isinstance(val, BaseModel):
+            val = val.model_dump(mode="json")
+        return {
+            "field": clause.field,
+            "condition": clause.condition,
+            "val": val,
+        }
+
+    clauses = flat.clauses
+    # split on AND/OR, keep the operators
+    tokens = re.split(r"\s+(AND|OR)\s+", flat.logic)
+    # tokens might be e.g. ["(0", "AND", "1)", "OR", "2"]
+    # strip parentheses from each token
+    cleaned = [tok.strip("()") for tok in tokens if tok.strip("()") != ""]
+    # cleaned = ["0", "AND", "1", "OR", "2"]
+
+    # start with the first clause
+    current = clause_to_dict(clauses[int(cleaned[0])])
+
+    # fold left-associatively over the rest
+    i = 1
+    while i < len(cleaned):
+        op = cleaned[i].lower()  # "and" or "or"
+        idx = int(cleaned[i + 1])  # next clause index
+        right = clause_to_dict(clauses[idx])
+        current = {op: {"left": current, "right": right}}
+        i += 2
+
+    return current
+
 
 async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -25,6 +70,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
             - domain: Domain for query (default 'txnsELS')
             - paymentStatus: Optional filter for payment status
             - orderType: Optional filter for order type
+            - flatFilters: Optional flat filter structure that gets converted to qFilters
 
     Returns:
         dict: The parsed JSON response from the List Orders API.
@@ -53,20 +99,75 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     date_from_ts = int(date_from_dt.timestamp())
     date_to_ts = int(date_to_dt.timestamp())
 
-    qFilters = payload.get("qFilters", {
-        "and": {
-            "right": {
-                "field": "date_created",
-                "condition": "LessThanEqual",
-                "val": str(date_to_ts),
-            },
-            "left": {
-                "field": "date_created",
-                "condition": "GreaterThanEqual",
-                "val": str(date_from_ts),
-            },
-        }
-    })
+    time_field = (
+        "order_created_at" if payload.get("domain") == "ordersELS" else "date_created"
+    )
+
+    if payload.get("flatFilters"):
+        try:
+            enhanced_clauses = [
+                Clause(
+                    field=time_field,
+                    condition="GreaterThanEqual",
+                    val=str(date_from_ts),
+                ),
+                Clause(
+                    field=time_field,
+                    condition="LessThanEqual",
+                    val=str(date_to_ts),
+                ),
+            ]
+
+            original_clauses = payload["flatFilters"]["clauses"]
+            enhanced_clauses.extend(original_clauses)
+
+            original_logic = payload["flatFilters"]["logic"]
+
+            def shift_indices(match):
+                return str(int(match.group(0)) + 2)
+
+            shifted_logic = re.sub(r"\d+", shift_indices, original_logic)
+            enhanced_logic = f"0 AND 1 AND ({shifted_logic})"
+
+            enhanced_flat_filter = FlatFilter(
+                clauses=enhanced_clauses, logic=enhanced_logic
+            )
+
+            qFilters = flat_filter_to_tree(enhanced_flat_filter)
+
+        except Exception as e:
+            raise ValueError(f"Invalid flatFilters format: {str(e)}")
+    else:
+        if payload.get("domain") and payload["domain"] == "ordersELS":
+            qFilters = {
+                "and": {
+                    "right": {
+                        "field": "order_created_at",
+                        "condition": "LessThanEqual",
+                        "val": str(date_to_ts),
+                    },
+                    "left": {
+                        "field": "order_created_at",
+                        "condition": "GreaterThanEqual",
+                        "val": str(date_from_ts),
+                    },
+                }
+            }
+        else:
+            qFilters = {
+                "and": {
+                    "right": {
+                        "field": "date_created",
+                        "condition": "LessThanEqual",
+                        "val": str(date_to_ts),
+                    },
+                    "left": {
+                        "field": "date_created",
+                        "condition": "GreaterThanEqual",
+                        "val": str(date_from_ts),
+                    },
+                }
+            }
 
     request_data = {
         "offset": payload.get("offset", 0),
@@ -78,18 +179,9 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
         },
         "order": [["date_created", "DESC"]],
         "qFilters": qFilters,
-        "domain": "txnsELS",
+        "domain": payload.get("domain", "txnsELS"),
         "sortDimension": "order_created_at",
     }
-
-    if payload.get("limit") is not None:
-        request_data["limit"] = payload.get("limit")
-
-    if payload.get("paymentStatus"):
-        request_data["qFilters"]["and"]["payment_status"] = payload["paymentStatus"]
-
-    if payload.get("orderType"):
-        request_data["qFilters"]["and"]["order_type"] = payload["orderType"]
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/ec/v4/orders"
