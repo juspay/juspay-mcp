@@ -26,31 +26,29 @@ def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
 
     def clause_to_dict(clause: Clause) -> Dict[str, Any]:
         val = clause.val
-        # If it's a Pydantic model, dump it to primitives:
         if isinstance(val, BaseModel):
             val = val.model_dump(mode="json")
+
+        field = clause.field
+        if field.startswith("udf"):
+            field = f"full_{field}"
+
         return {
-            "field": clause.field,
+            "field": field,
             "condition": clause.condition,
             "val": val,
         }
 
     clauses = flat.clauses
-    # split on AND/OR, keep the operators
     tokens = re.split(r"\s+(AND|OR)\s+", flat.logic)
-    # tokens might be e.g. ["(0", "AND", "1)", "OR", "2"]
-    # strip parentheses from each token
     cleaned = [tok.strip("()") for tok in tokens if tok.strip("()") != ""]
-    # cleaned = ["0", "AND", "1", "OR", "2"]
 
-    # start with the first clause
     current = clause_to_dict(clauses[int(cleaned[0])])
 
-    # fold left-associatively over the rest
     i = 1
     while i < len(cleaned):
-        op = cleaned[i].lower()  # "and" or "or"
-        idx = int(cleaned[i + 1])  # next clause index
+        op = cleaned[i].lower()  
+        idx = int(cleaned[i + 1])  
         right = clause_to_dict(clauses[idx])
         current = {op: {"left": current, "right": right}}
         i += 2
@@ -67,7 +65,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
             - dateFrom: Start date/time in ISO format (e.g., '2025-04-15T18:30:00Z')
             - dateTo: End date/time in ISO format (e.g., '2025-04-16T15:06:00Z')
             - offset: Pagination offset (optional, default 0)
-            - domain: Domain for query (default 'txnsELS')
+            - domain: Domain for query (default 'txnsELS').Domain is a mandatory field.
             - paymentStatus: Optional filter for payment status
             - orderType: Optional filter for order type
             - flatFilters: Optional flat filter structure that gets converted to qFilters
@@ -171,12 +169,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
 
     request_data = {
         "offset": payload.get("offset", 0),
-        "filters": {
-            "dateCreated": {
-                "lte": date_to_str,
-                "gte": date_from_str
-            }
-        },
+        "filters": {"dateCreated": {"lte": date_to_str, "gte": date_from_str}},
         "order": [["date_created", "DESC"]],
         "qFilters": qFilters,
         "domain": payload.get("domain", "txnsELS"),
