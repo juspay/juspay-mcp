@@ -25,16 +25,16 @@ FilterFieldDimensionEnum = Literal[
     "prev_order_status",
     "order_created_at",
     "merchant_id",
-    "full_udf1",
-    "full_udf2",
-    "full_udf3",
-    "full_udf4",
-    "full_udf5",
-    "full_udf6",
-    "full_udf7",
-    "full_udf8",
-    "full_udf9",
-    "full_udf10",
+    "udf1",
+    "udf2",
+    "udf3",
+    "udf4",
+    "udf5",
+    "udf6",
+    "udf7",
+    "udf8",
+    "udf9",
+    "udf10",
     "order_amount",
     "card_brand",
     "auth_type",
@@ -119,6 +119,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         description="""SIMPLIFIED FILTERS: Use this field instead of qFilters. Provide a flat list of filter conditions with simple logic.
         
         NOTE: Time range filters are automatically added by the handler - DO NOT include them manually.
+        NOTE: Domain is a mandatory field and must always be sent with payload.
         
         SUPPORTED CONDITIONS:
         - "In": value is in the provided list
@@ -143,7 +144,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - prev_order_status: previous order status. Values: 'SUCCESS', 'FAILURE', 'PENDING'
         - order_created_at: order created timestamp (epoch seconds)
         - merchant_id: unique identifier for the merchant (lowercase, no spaces)
-        - full_udf1 through full_udf10: user-defined fields for additional order information
+        - udf1 through udf10: user-defined fields for additional order information
         
         For 'txnsELS' domain:
         - order_amount: order amount for filtering by amount
@@ -204,7 +205,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
     )
     domain: str = Field(
         ...,
-        description="Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'."
+        description="Domain is a mandatory field always and must always be sent with payload.Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'."
     )
 
 
