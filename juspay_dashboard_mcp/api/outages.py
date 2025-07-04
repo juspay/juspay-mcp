@@ -106,8 +106,7 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
     if payload.get("merchantId"):
         request_data["merchantId"] = payload["merchantId"]
     
-    # Get host and admin status
-    host, isadmin = await get_admin_host()
+    host, isadmin = await get_admin_host(meta_info=meta_info)
     
     
     if isadmin:
