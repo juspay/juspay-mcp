@@ -25,21 +25,21 @@ app = Server("juspay-dashboard")
 AVAILABLE_TOOLS = [
     util.make_api_config(
         name="juspay_list_configured_gateway",
-        description=" Retrieves a list of all payment gateways (PGs) configured for a merchant, including high-level details such as gateway reference ID, creation/modification dates, configured payment methods (PMs) and configured payment flows. Note: Payment Method Types (PMTs), configured EMI plans, configured mandate/subscriptions payment methods (PMs) and configured TPV PMs are not included in the response.",
+        description="Use this tool when asked about the list of payment gateways . Retrieves a list of all payment gateways (PGs) configured for a merchant, including high-level details such as gateway reference ID, creation/modification dates, configured payment methods (PMs) and configured payment flows. Note: Payment Method Types (PMTs), configured EMI plans, configured mandate/subscriptions payment methods (PMs) and configured TPV PMs are not included in the response.",
         model=api_schema.gateway.JuspayListConfiguredGatewaysPayload,
         handler=gateway.list_configured_gateways_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="juspay_get_gateway_scheme",
-        description="This API provides detailed configuration information for a gateway, including required/optional fields, supported payment methods and supported features/payment flows for that gateway.",
+        description="Use this tool when asked about configuration information about a particular gateway . This API provides detailed configuration information for a gateway, including required/optional fields, supported payment methods and supported features/payment flows for that gateway.",
         model=api_schema.gateway.JuspayGetGatewaySchemePayload,
         handler=gateway.get_gateway_scheme_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="juspay_get_gateway_details",
-        description="This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from juspay_list_configured_gateway. This API returns all details of the gateway including payment methods (PM), EMI plans, mandate/subscriptions payment methods (PMs) and TPV PMs along with configured payment flows. Note: This API does not return payment method type (PMT) for each configured payment method.",
+        description="Use this tool when asked about detailed information about any gateway and mga_id is provided.This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from juspay_list_configured_gateway. This API returns all details of the gateway including payment methods (PM), EMI plans, mandate/subscriptions payment methods (PMs) and TPV PMs along with configured payment flows. Note: This API does not return payment method type (PMT) for each configured payment method.",
         model=api_schema.gateway.JuspayGetGatewayDetailsPayload,
         handler=gateway.get_gateway_details_juspay,
         response_schema=None,
