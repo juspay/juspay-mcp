@@ -97,9 +97,17 @@ async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> d
     Raises:
         Exception: If the API call fails.
     """
+
     mga_id = payload.pop("mga_id", None)
     merchant_id = payload.get("merchant_id")
-
+    
+    if not merchant_id and meta_info:
+        token_response = meta_info.get("token_response", {})
+        merchant_id = token_response.get("merchantId") or meta_info.get("merchantId")
+        
+        if merchant_id:
+            payload["merchantId"] = merchant_id
+   
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
 
