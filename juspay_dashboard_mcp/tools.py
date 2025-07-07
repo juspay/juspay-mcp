@@ -158,7 +158,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_list_orders_v4",
-        description="Retrieves a list of orders created within a specified time range. Supports an optional top-level 'limit' parameter and optional 'qFilters' for payment status and order type.",
+        description="Retrieves a list of orders created within a specified time range. Supports an optional top-level 'limit' parameter and optional 'flatFilters' for payment status and order type.Domain is a mandatory field for this tool and should always be provided . If unsure about the domain, use 'txnsELS' as the default value.",
         model=api_schema.orders.JuspayListOrdersV4Payload,
         handler=orders.list_orders_v4_juspay,
         response_schema=None,
