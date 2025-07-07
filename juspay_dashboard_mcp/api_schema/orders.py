@@ -105,10 +105,6 @@ class JuspayListOrdersV4Payload(WithHeaders):
         None,
         description="Limit for the number of orders to fetch (optional).",
     )
-    status: Optional[List[str]] = Field(
-        None,
-        description="Optional list of order statuses to filter by (e.g., ['SUCCESS'], ['AUTHENTICATION_FAILED', 'AUTHORIZATION_FAILED']).",
-    )
     order: Optional[List[List[str]]] = Field(
         None,
         description="Optional sort order specification as array of [field, direction] pairs (e.g., [['date_created', 'DESC']]).",
