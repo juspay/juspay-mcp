@@ -1,7 +1,5 @@
 {
   description = "Flake for Juspay-mcp python project.";
-  # TODO: Simplify juspay/python-nix-template.
-  # Modularize it and use that to make this more simpler.
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -17,6 +15,8 @@
     uv2nix.url = "github:pyproject-nix/uv2nix";
     uv2nix.inputs.pyproject-nix.follows = "pyproject-nix";
     uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    nix2container.url = "github:nlewo/nix2container";
 
     pyproject-build-systems.url = "github:pyproject-nix/build-system-pkgs";
     pyproject-build-systems.inputs.pyproject-nix.follows = "pyproject-nix";

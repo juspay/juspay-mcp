@@ -14,6 +14,7 @@ A Model Context Protocol (MCP) server to interact with Juspay APIs. This package
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
     - [Quick Start](#quick-start)
+    - [Docker Images](#docker-images)
   - [Usage with Claude and Other AI Assistants](#usage-with-claude-and-other-ai-assistants)
     - [Juspay Payments MCP](#juspay-payments-mcp)
     - [Juspay Dashboard MCP](#juspay-dashboard-mcp)
@@ -58,11 +59,6 @@ Model Context Protocol is an emerging standard for enabling AI models and agents
 
 ## Getting Started
 
-### Prerequisites
-
-- Python 3.13+
-- pip
-
 ### Installation
 
 #### Nix
@@ -74,19 +70,6 @@ cd juspay-mcp
 # 2. Installing dependencies and setting up the environment
 nix develop
 
-```
-
-#### Normal Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/juspay/juspay-mcp.git
-cd juspay-mcp
-
-# 2. Install dependencies
-pip install -e .  # For development (editable install)
-# or
-pip install .     # For standard installation
 ```
 
 ### Quick Start
@@ -106,6 +89,59 @@ nix run .#stdio
 
 # For STDIO mode via nix (standard method)
 python ./juspay_mcp/stdio.py
+```
+
+### Docker Images
+> Nix will build the docker image and copy it to the Docker Registry.
+
+```bash
+# Build main MCP image
+nix run .#docker.copyToDockerDaemon
+
+# Build SSE-enabled MCP image
+nix run .#docker-sse.copyToDockerDaemon
+
+# Build dashboard MCP image
+nix run .#docker-dashboard.copyToDockerDaemon
+
+# Build dashboard SSE-enabled MCP image
+nix run .#docker-dashboard-sse.copyToDockerDaemon
+```
+
+#### Viewing Images
+
+```bash
+# List all juspay images
+docker images | grep juspay
+
+# List all Docker images
+docker images
+```
+
+#### Running Images
+
+```bash
+# Run main MCP server
+docker run -it juspay-mcp:latest
+
+# Run SSE-enabled MCP server
+docker run -it juspay-mcp-sse:latest
+
+# Run dashboard MCP server
+docker run -it juspay-dashboard-mcp:latest
+
+# Run dashboard SSE-enabled MCP server
+docker run -it juspay-dashboard-mcp-sse:latest
+
+# Run with port mapping (example)
+docker run -it -p 8080:8080 juspay-mcp-sse:latest
+```
+
+#### Clean Up
+
+```bash
+# Remove specific image
+docker rmi juspay-mcp:latest
 ```
 
 ## Usage with Claude and Other AI Assistants
@@ -210,7 +246,7 @@ The server runs _either_ Core _or_ Dashboard tools per instance, controlled by `
 
 ```bash
 # Terminal 1: Run Core API server
-JUSPAY_MCP_TYPE=CORE python main.py --port 8000
+JUSPAY_MCP_TYPE=CORE python main.py --port 8080
 
 # Terminal 2: Run Dashboard API server
 JUSPAY_MCP_TYPE=DASHBOARD python main.py --port 8001
@@ -397,21 +433,6 @@ nix run .#test
 # Run juspay-mcp
 nix run
 ````
-
-#### Normal Flow
-```bash
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate  # Windows
-
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-```
 
 ## License
 

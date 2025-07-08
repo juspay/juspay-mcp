@@ -70,7 +70,7 @@ in
           name = "stdio";
           runtimeInputs = [ venv ];
           text = ''
-            exec "${venv}/bin/python" ${inputs.self}/juspay_mcp/stdio.py "$@"
+            exec "${lib.getExe' self'.packages.default "python"}" ${inputs.self}/juspay_mcp/stdio.py "$@"
           '';
         };
       };
