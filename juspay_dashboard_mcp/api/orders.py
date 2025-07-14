@@ -194,9 +194,14 @@ def extract_order_id_from_txn_id(txn_id: str) -> str:
     pattern = r"-\d+(?:-\d+)?$"
     without_suffix = re.sub(pattern, "", txn_id)
 
-    parts = without_suffix.split("-")
-    if len(parts) > 1:
-        return parts[-1]
+   
+    if without_suffix.startswith("zee5-"):
+        return without_suffix[5:]  
+
+    else :
+        parts = without_suffix.split("-")
+        without_suffix = parts[-1] if len(parts) > 1 else without_suffix
+        
     return without_suffix
 
 
