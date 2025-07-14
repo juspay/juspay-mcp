@@ -165,7 +165,23 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_get_order_details",
-        description="Returns complete details for a given order ID.",
+        description="""Returns complete details for a given order ID. 
+
+CRITICAL RETRY LOGIC: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID is likely a transaction ID (txn_id) instead of an order ID. You MUST extract the order_id from the txn_id and retry the call.
+
+Extraction patterns (ALWAYS follow these steps):
+1. Remove the last '-' and number (e.g., '-1', '-2') from the end
+2. If there's still a '-' and number at the end, remove that too (for silent retries)  
+3. Take the part after the merchant prefix (usually after the first or second hyphen)
+
+Examples:
+- creditmantri-22087705-1 → 22087705
+- paypal-juspay-JP_1752481545-1 → JP_1752481545
+- zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
+- 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817
+- merchant-ORDER123-1-1 → ORDER123
+
+MANDATORY: When you get "does not exist" error, immediately extract order_id using above patterns and call this tool again with the extracted order_id.""",
         model=api_schema.orders.JuspayGetOrderDetailsPayload,
         handler=orders.get_order_details_juspay,
         response_schema=None,
