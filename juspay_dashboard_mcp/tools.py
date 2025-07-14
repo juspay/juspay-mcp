@@ -81,7 +81,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_list_offers",
-        description="This API lists all offers configured by the merchant, with details such as status, payment methods, offer codes, and validity periods. Requires `sort_offers` (e.g., {\"field\": \"CREATED_AT\", \"order\": \"DESCENDING\"}).",
+        description='This API lists all offers configured by the merchant, with details such as status, payment methods, offer codes, and validity periods. Requires `sort_offers` (e.g., {"field": "CREATED_AT", "order": "DESCENDING"}).',
         model=api_schema.offer.JuspayListOffersPayload,
         handler=offer.list_offers_juspay,
         response_schema=None,
@@ -165,7 +165,27 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="juspay_get_order_details",
-        description="Returns complete details for a given order ID.",
+        description="""Returns complete details for a given order ID. 
+
+IMPORTANT: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID might be a transaction ID (txn_id) instead of an order ID. In such cases, you should extract the order_id from the txn_id using these patterns and retry the call:
+
+Common txn_id to order_id patterns:
+- Standard pattern: merchant-orderID-retryCount → orderID
+  Example: paypal-juspay-JP_1752481545-1 → JP_1752481545
+- Multiple hyphens in order ID: merchant-orderID-with-hyphens-retryCount → orderID-with-hyphens
+  Example: zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
+- Non-standard merchant prefix: prefix-orderID-retryCount → orderID
+  Example: 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817 (GoIndigo)
+- Silent retries: merchant-orderID-retryCount-silentRetryCount → orderID
+  Example: merchant-ORDER123-1-1 → ORDER123
+
+Pattern recognition guide:
+1. Remove the last numeric suffix (e.g., -1, -2, etc.)
+2. If there's still a numeric suffix, remove it too (for silent retries)
+3. Take the part after the merchant prefix (usually after the first or second hyphen)
+4. Some merchants like zee5 have hyphens within their order IDs, so be careful to preserve the order ID structure
+
+If the first attempt fails with "does not exist" error, extract the order_id using the above patterns and retry the call with the extracted order_id.""",
         model=api_schema.orders.JuspayGetOrderDetailsPayload,
         handler=orders.get_order_details_juspay,
         response_schema=None,
@@ -200,6 +220,7 @@ AVAILABLE_TOOLS = [
     ),
 ]
 
+
 @app.list_tools()
 async def list_my_tools() -> list[types.Tool]:
     return [
@@ -208,14 +229,23 @@ async def list_my_tools() -> list[types.Tool]:
             description=tool["description"],
             inputSchema=tool["schema"],
         )
-        for tool in AVAILABLE_TOOLS if tool["name"] not in JUSPAY_DASHBOARD_IGNORE_TOOL
+        for tool in AVAILABLE_TOOLS
+        if tool["name"] not in JUSPAY_DASHBOARD_IGNORE_TOOL
     ]
+
 
 @app.call_tool()
 async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
     logger.info(f"Tool called: {name} with arguments: {arguments}")
     try:
-        tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name and t["name"] not in JUSPAY_DASHBOARD_IGNORE_TOOL), None)
+        tool_entry = next(
+            (
+                t
+                for t in AVAILABLE_TOOLS
+                if t["name"] == name and t["name"] not in JUSPAY_DASHBOARD_IGNORE_TOOL
+            ),
+            None,
+        )
         if not tool_entry:
             raise ValueError(f"Unknown tool: {name}")
 
@@ -230,15 +260,15 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
             raise ValueError(f"No handler defined for tool: {name}")
 
         model_cls = tool_entry.get("model")
-        if (model_cls):
+        if model_cls:
             try:
-                payload = model_cls(**arguments)  
-                payload_dict = payload.dict(exclude_none=True) 
+                payload = model_cls(**arguments)
+                payload_dict = payload.dict(exclude_none=True)
             except Exception as e:
                 raise ValueError(f"Validation error: {str(e)}")
         else:
-            payload_dict = arguments 
-        
+            payload_dict = arguments
+
         meta_info = arguments.pop("juspay_meta_info", {})
         if isinstance(meta_info, BaseModel):
             meta_info = meta_info.model_dump()
@@ -259,9 +289,15 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
             response = await handler(arguments, meta_info)
 
         else:
-            raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
+            raise ValueError(
+                f"Unsupported number of parameters in tool handler: {param_count}"
+            )
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
         logger.error(f"Error in tool execution: {e}")
-        return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]
+        return [
+            types.TextContent(
+                type="text", text=f"ERROR: Tool execution failed: {str(e)}"
+            )
+        ]

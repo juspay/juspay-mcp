@@ -47,8 +47,8 @@ def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
 
     i = 1
     while i < len(cleaned):
-        op = cleaned[i].lower()  
-        idx = int(cleaned[i + 1])  
+        op = cleaned[i].lower()
+        idx = int(cleaned[i + 1])
         right = clause_to_dict(clauses[idx])
         current = {op: {"left": current, "right": right}}
         i += 2
@@ -184,11 +184,31 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
 async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
-    Note : The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
+    Note: The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
+
+    IMPORTANT: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID might be a transaction ID (txn_id) instead of an order ID. In such cases, you should extract the order_id from the txn_id using these patterns:
+
+    Common txn_id to order_id patterns:
+    - Standard pattern: merchant-orderID-retryCount → orderID
+      Example: paypal-juspay-JP_1752481545-1 → JP_1752481545
+    - Multiple hyphens in order ID: merchant-orderID-with-hyphens-retryCount → orderID-with-hyphens
+      Example: zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
+    - Non-standard merchant prefix: prefix-orderID-retryCount → orderID
+      Example: 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817 (GoIndigo)
+    - Silent retries: merchant-orderID-retryCount-silentRetryCount → orderID
+      Example: merchant-ORDER123-1-1 → ORDER123
+
+    Pattern recognition guide:
+    1. Remove the last numeric suffix (e.g., -1, -2, etc.)
+    2. If there's still a numeric suffix, remove it too (for silent retries)
+    3. Take the part after the merchant prefix (usually after the first or second hyphen)
+    4. Some merchants like zee5 have hyphens within their order IDs, so be careful to preserve the order ID structure
+
+    If the first attempt fails with "does not exist" error, extract the order_id using the above patterns and retry the call.
 
     Args:
         payload (dict): A dictionary containing:
-            - order_id: The unique order ID to retrieve details for
+            - order_id: The unique order ID to retrieve details for (can also be a txn_id that will be automatically processed if the first attempt fails)
 
     Returns:
         dict: The parsed JSON response containing order details.
