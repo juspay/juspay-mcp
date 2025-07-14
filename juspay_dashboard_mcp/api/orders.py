@@ -13,6 +13,7 @@ from typing import Dict, Any
 import os
 import dotenv
 import re
+import logging
 
 dotenv.load_dotenv()
 
@@ -181,6 +182,24 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     return await post(api_url, request_data, None, meta_info)
 
 
+def extract_order_id_from_txn_id(txn_id: str) -> str:
+    """
+    Extract order_id from txn_id by removing suffix patterns.
+
+    Examples:
+    - creditmantri-22087705-1 → 22087705
+    - paypal-juspay-JP_1752481545-1 → JP_1752481545
+    - zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
+    """
+    pattern = r"-\d+(?:-\d+)?$"
+    without_suffix = re.sub(pattern, "", txn_id)
+
+    parts = without_suffix.split("-")
+    if len(parts) > 1:
+        return parts[-1]
+    return without_suffix
+
+
 async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
@@ -221,5 +240,35 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
         raise ValueError("'order_id' is required in the payload")
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
+
     api_url = f"{host}/api/ec/v1/orders/{order_id}"
-    return await post(api_url, {}, None, meta_info)
+
+    try:
+        logging.info(f"Attempting to get order details for order_id: {order_id}")
+        return await post(api_url, {}, None, meta_info)
+
+    except Exception as e:
+        error_str = str(e)
+        logging.warning(f"First attempt failed: {error_str}")
+
+        if "does not exist" in error_str or "invalid_request_error" in error_str:
+
+            extracted_order_id = extract_order_id_from_txn_id(order_id)
+
+            if extracted_order_id != order_id:
+                logging.info(f"Retrying with extracted order_id: {extracted_order_id}")
+                try:
+                    retry_api_url = f"{host}/api/ec/v1/orders/{extracted_order_id}"
+                    result = await post(retry_api_url, {}, None, meta_info)
+                    logging.info(
+                        f"Success with extracted order_id: {extracted_order_id}"
+                    )
+                    return result
+                except Exception as retry_error:
+                    logging.error(f"Retry also failed: {str(retry_error)}")
+                    raise e
+            else:
+                logging.info("Extracted order_id same as original, not retrying")
+                raise e
+        else:
+            raise e

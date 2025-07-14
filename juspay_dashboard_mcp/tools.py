@@ -167,25 +167,21 @@ AVAILABLE_TOOLS = [
         name="juspay_get_order_details",
         description="""Returns complete details for a given order ID. 
 
-IMPORTANT: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID might be a transaction ID (txn_id) instead of an order ID. In such cases, you should extract the order_id from the txn_id using these patterns and retry the call:
+CRITICAL RETRY LOGIC: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID is likely a transaction ID (txn_id) instead of an order ID. You MUST extract the order_id from the txn_id and retry the call.
 
-Common txn_id to order_id patterns:
-- Standard pattern: merchant-orderID-retryCount → orderID
-  Example: paypal-juspay-JP_1752481545-1 → JP_1752481545
-- Multiple hyphens in order ID: merchant-orderID-with-hyphens-retryCount → orderID-with-hyphens
-  Example: zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
-- Non-standard merchant prefix: prefix-orderID-retryCount → orderID
-  Example: 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817 (GoIndigo)
-- Silent retries: merchant-orderID-retryCount-silentRetryCount → orderID
-  Example: merchant-ORDER123-1-1 → ORDER123
-
-Pattern recognition guide:
-1. Remove the last numeric suffix (e.g., -1, -2, etc.)
-2. If there's still a numeric suffix, remove it too (for silent retries)
+Extraction patterns (ALWAYS follow these steps):
+1. Remove the last '-' and number (e.g., '-1', '-2') from the end
+2. If there's still a '-' and number at the end, remove that too (for silent retries)  
 3. Take the part after the merchant prefix (usually after the first or second hyphen)
-4. Some merchants like zee5 have hyphens within their order IDs, so be careful to preserve the order ID structure
 
-If the first attempt fails with "does not exist" error, extract the order_id using the above patterns and retry the call with the extracted order_id.""",
+Examples:
+- creditmantri-22087705-1 → 22087705
+- paypal-juspay-JP_1752481545-1 → JP_1752481545
+- zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
+- 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817
+- merchant-ORDER123-1-1 → ORDER123
+
+MANDATORY: When you get "does not exist" error, immediately extract order_id using above patterns and call this tool again with the extracted order_id.""",
         model=api_schema.orders.JuspayGetOrderDetailsPayload,
         handler=orders.get_order_details_juspay,
         response_schema=None,
