@@ -64,7 +64,7 @@ class Clause(BaseModel):
 
     field: FilterFieldDimensionEnum
     condition: FilterCondition
-    val: Union[str, bool, float, None, List[Union[str, bool, None]]]
+    val: Union[str, bool, float, int, None, List[Union[str, bool, int, float, None]]]
 
 
 class FlatFilter(BaseModel):
@@ -143,7 +143,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - udf1 through udf10: user-defined fields for additional order information
         
         For 'txnsELS' domain:
-        - order_amount: order amount for filtering by amount
+        - order_amount: order amount for filtering by amount , always apply this filter's value in an array
         - card_brand: card brand for filtering by card brand
         - auth_type: type of authentication used
         - is_cvv_less_txn: boolean, true if CVV-less transaction
@@ -201,7 +201,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
     )
     domain: str = Field(
         ...,
-        description="Domain is a mandatory field always and must always be sent with payload.Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'."
+        description="Domain is a mandatory field always and must always be sent with payload.Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'.",
     )
 
 
