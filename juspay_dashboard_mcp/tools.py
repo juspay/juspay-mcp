@@ -392,6 +392,21 @@ Use this tool to check for any service disruptions or performance degradation is
         handler=outages.list_outages_juspay,
         response_schema=response_schema.list_outages_response_schema,
     ),
+    util.make_api_config(
+        name="create_payment_link_juspay",
+        description="Use this tool when asked to create a payment link. IMPORTANT: You must ask the user for the required fields (amount, payment_page_client_id). Do not assume these values - always prompt the user to provide them explicitly.",
+        model=api_schema.payments.JuspayCreatePaymentLinkPayload,
+        handler=payments.create_payment_link_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="create_autopay_link_juspay",
+        description="Use this tool when asked to create an autopay payment link or recurring payment link. IMPORTANT: You must ask the user for ALL required fields (amount, payment_page_client_id, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency). Do not assume or auto-generate these values - always prompt the user to provide them explicitly.",
+        model=api_schema.payments.JuspayCreateAutopayLinkPayload,
+        handler=payments.create_autopay_link_juspay,
+        response_schema=None,
+    ),
+  
 ]
 
 @app.list_tools()

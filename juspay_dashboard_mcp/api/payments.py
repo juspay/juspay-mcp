@@ -6,6 +6,57 @@
 
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, ist_to_utc
 
+import random
+import string
+import time
+
+OPTIONAL_PAYMENT_FIELDS = [
+    "currency",
+    "mobile_country_code",
+    "customer_email",
+    "customer_phone",
+    "customer_id",
+    "return_url",
+    "gateway_id",
+    "merchant_id",
+    "walletCheckBox",
+    "cardsCheckBox",
+    "netbankingCheckBox",
+    "upiCheckBox",
+    "consumerFinanceCheckBox",
+    "otcCheckBox",
+    "virtualAccountCheckBox",
+    "shouldSendMail",
+    "shouldSendSMS",
+    "shouldSendWhatsapp",
+    "showEmiOption",
+    "standardEmi",
+    "standard_credit",
+    "standard_debit",
+    "standard_cardless",
+    "lowCostEmi",
+    "low_cost_credit",
+    "low_cost_debit",
+    "low_cost_cardless",
+    "noCostEmi",
+    "no_cost_credit",
+    "no_cost_debit",
+    "no_cost_cardless",
+    "showOnlyEmiOption",
+    "mandate_max_amount",
+    "mandate_frequency",
+    "mandate_start_date",
+    "mandate.revokable_by_customer",
+    "mandate.block_funds",
+    "mandate.frequency",
+    "mandate.start_date",
+    "mandate.end_date",
+    "subventionAmount",
+    "selectUDF",
+    "offer_details",
+    "options.create_mandate",
+]
+
 
 async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -55,3 +106,309 @@ async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) ->
     }
 
     return await post(api_url, request_payload, None, meta_info)
+
+
+def generate_order_id() -> str:
+    """
+    Generate a unique order ID with the following rules:
+    - Alphanumeric characters only
+    - Alphabets should be capital always
+    - Length should be less than 21 characters
+
+    Returns:
+        str: Generated order ID
+    """
+    timestamp = str(int(time.time()))[-8:]
+    random_chars = "".join(random.choices(string.ascii_uppercase + string.digits, k=12))
+    order_id = f"{timestamp}{random_chars}"
+
+    if len(order_id) >= 21:
+        order_id = order_id[:20]
+
+    return order_id
+
+
+async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> dict:
+    """
+    Creates a payment link using the Juspay Portal API.
+
+    Args:
+        payload (dict): Should contain payment link creation parameters:
+            Required:
+            - amount: Payment amount (required)
+            - payment_page_client_id: Client ID for payment page (required)
+
+            Optional:
+            - currency: Payment currency (default: "INR")
+            - customer_email: Customer email address
+            - customer_phone: Customer phone number
+            - customer_id: Unique customer identifier
+            - order_id: Unique order identifier (auto-generated if not provided)
+            - return_url: URL to redirect after payment
+            - gateway_id: Gateway identifier
+            - merchant_id: Merchant identifier
+            - mobile_country_code: Country code (default: "+91")
+            - payment_filter: Payment method filters with emiOptions
+            - metaData: Additional metadata
+
+            Note: If any EMI option is enabled in payment_filter.emiOptions,
+                  at least one card type (credit/debit/cardless) must be enabled within that EMI type.
+
+    Returns:
+        dict: The parsed JSON response from the Create Payment Link API.
+
+    Raises:
+        Exception: If the API call fails or EMI validation fails.
+    """
+    host = "https://portal.juspay.in"
+    api_url = f"{host}/ec/v1/paymentLinks"
+
+    request_data = {}
+
+    if "amount" in payload:
+        request_data["amount"] = payload["amount"]
+    if "payment_page_client_id" in payload:
+        request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+
+    user_provided_order_id = "order_id" in payload and payload["order_id"]
+
+    if user_provided_order_id:
+        request_data["order_id"] = payload["order_id"]
+    else:
+        request_data["order_id"] = generate_order_id()
+
+    if "payment_filter" in payload and "emiOptions" in payload["payment_filter"]:
+        emi_options = payload["payment_filter"]["emiOptions"]
+
+        for emi_type in ["standardEmi", "lowCostEmi", "noCostEmi"]:
+            if emi_type in emi_options and emi_options[emi_type].get("enable", False):
+                card_types_enabled = []
+                emi_config = emi_options[emi_type]
+
+                if emi_config.get("credit", {}).get("enable", False):
+                    card_types_enabled.append("credit")
+                if emi_config.get("debit", {}).get("enable", False):
+                    card_types_enabled.append("debit")
+                if emi_config.get("cardless", {}).get("enable", False):
+                    card_types_enabled.append("cardless")
+
+                if not card_types_enabled:
+                    raise Exception(
+                        f"EMI validation failed: {emi_type} is enabled but no card types (credit/debit/cardless) are enabled within it"
+                    )
+
+    for field in OPTIONAL_PAYMENT_FIELDS:
+        if field in payload:
+            request_data[field] = payload[field]
+
+    if "options" in payload:
+        request_data["options"] = payload["options"]
+
+    if "payment_filter" in payload:
+        request_data["payment_filter"] = payload["payment_filter"]
+
+    if "metaData" in payload:
+        request_data["metaData"] = payload["metaData"]
+
+    max_retries = 3
+    retry_count = 0
+
+    while retry_count <= max_retries:
+        try:
+            return await post(api_url, request_data, None, meta_info)
+
+        except Exception as e:
+            error_message = str(e).lower()
+
+            order_id_conflict = any(
+                keyword in error_message
+                for keyword in [
+                    "order_id already exists",
+                    "order id already exists",
+                    "duplicate order",
+                    "order already exists",
+                    "orderid already exists",
+                ]
+            )
+
+            # Only retry if:
+            # 1. It's an order ID conflict
+            # 2. The order ID was generated (not user-provided)
+            # 3. We haven't exceeded max retries
+            if (
+                order_id_conflict
+                and not user_provided_order_id
+                and retry_count < max_retries
+            ):
+                retry_count += 1
+                request_data["order_id"] = generate_order_id()
+                continue
+            else:
+                raise e
+
+    raise Exception(f"Failed to create payment link after {max_retries} retries")
+
+
+async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> dict:
+    """
+    Creates an autopay payment link using the Juspay Portal API.
+
+    Autopay registration involves customers providing consent to initiate recurring payments.
+    The registration of autopay and the debit of the actual order amount occur simultaneously.
+
+    IMPORTANT: All required fields must be explicitly provided by the user. Do not assume or auto-generate these values.
+
+    Args:
+        payload (dict): Should contain autopay link creation parameters:
+            Required (USER MUST PROVIDE ALL OF THESE):
+            - amount: One-time payment amount (REQUIRED - ask user for specific amount)
+            - payment_page_client_id: Client ID for payment page (REQUIRED - ask user for this)
+            - mandate_max_amount: Max mandate amount for future payments (REQUIRED - ask user to specify this amount)
+            - mandate_start_date: Mandate creation date in YYYY-MM-DD format (REQUIRED - ask user for specific date)
+            - mandate_end_date: Future date after which mandate stops in YYYY-MM-DD format (REQUIRED - ask user for specific end date)
+            - mandate_frequency: Payment frequency (REQUIRED - ask user to choose from: ONETIME, DAILY, WEEKLY, FORTNIGHTLY, BIMONTHLY, MONTHLY, QUARTERLY, HALFYEARLY, YEARLY, ASPRESENTED)
+
+            Optional:
+            - currency: Payment currency (default: "INR")
+            - customer_email: Customer email address
+            - customer_phone: Customer phone number
+            - customer_id: Unique customer identifier
+            - order_id: Unique order identifier (auto-generated if not provided)
+            - return_url: URL to redirect after payment
+            - gateway_id: Gateway identifier
+            - merchant_id: Merchant identifier
+            - mobile_country_code: Country code (default: "+91")
+            - mandate.revokable_by_customer: Whether mandate is revokable by customer
+            - mandate.block_funds: Whether to block funds for mandate
+            - payment_filter: Payment method filters with emiOptions
+            - options: Additional options (should include create_mandate)
+            - metaData: Additional metadata
+
+            Note: If any EMI option is enabled in payment_filter.emiOptions,
+                  at least one card type (credit/debit/cardless) must be enabled within that EMI type.
+
+    Returns:
+        dict: The parsed JSON response from the Create Autopay Link API.
+
+    Raises:
+        Exception: If the API call fails or required autopay fields are missing.
+    """
+    required_autopay_fields = [
+        "amount",
+        "payment_page_client_id",
+        "mandate_max_amount",
+        "mandate_start_date",
+        "mandate_end_date",
+        "mandate_frequency",
+    ]
+
+    missing_fields = [
+        field for field in required_autopay_fields if field not in payload
+    ]
+    if missing_fields:
+        raise Exception(
+            f"Missing required autopay fields. Please ask the user to provide: {', '.join(missing_fields)}"
+        )
+
+    valid_frequencies = [
+        "ONETIME",
+        "DAILY",
+        "WEEKLY",
+        "FORTNIGHTLY",
+        "BIMONTHLY",
+        "MONTHLY",
+        "QUARTERLY",
+        "HALFYEARLY",
+        "YEARLY",
+        "ASPRESENTED",
+    ]
+    if payload["mandate_frequency"] not in valid_frequencies:
+        raise Exception(
+            f"Invalid mandate_frequency '{payload['mandate_frequency']}'. Please ask user to choose from: {', '.join(valid_frequencies)}"
+        )
+        
+    host = "https://portal.juspay.in"
+    api_url = f"{host}/ec/v1/paymentLinks"
+
+    request_data = {}
+
+    for field in required_autopay_fields:
+        request_data[field] = payload[field]
+
+    user_provided_order_id = "order_id" in payload and payload["order_id"]
+    if user_provided_order_id:
+        request_data["order_id"] = payload["order_id"]
+    else:
+        request_data["order_id"] = generate_order_id()
+
+    if "payment_filter" in payload and "emiOptions" in payload["payment_filter"]:
+        emi_options = payload["payment_filter"]["emiOptions"]
+
+        for emi_type in ["standardEmi", "lowCostEmi", "noCostEmi"]:
+            if emi_type in emi_options and emi_options[emi_type].get("enable", False):
+                card_types_enabled = []
+                emi_config = emi_options[emi_type]
+
+                if emi_config.get("credit", {}).get("enable", False):
+                    card_types_enabled.append("credit")
+                if emi_config.get("debit", {}).get("enable", False):
+                    card_types_enabled.append("debit")
+                if emi_config.get("cardless", {}).get("enable", False):
+                    card_types_enabled.append("cardless")
+
+                if not card_types_enabled:
+                    raise Exception(
+                        f"EMI validation failed: {emi_type} is enabled but no card types (credit/debit/cardless) are enabled within it"
+                    )
+
+    if "options" not in payload:
+        request_data["options"] = {"create_mandate": "REQUIRED"}
+    else:
+        options = payload["options"].copy()
+        if "create_mandate" not in options:
+            options["create_mandate"] = "REQUIRED"
+        request_data["options"] = options
+
+    for field in OPTIONAL_PAYMENT_FIELDS:
+        if field in payload:
+            request_data[field] = payload[field]
+
+    if "payment_filter" in payload:
+        request_data["payment_filter"] = payload["payment_filter"]
+
+    if "metaData" in payload:
+        request_data["metaData"] = payload["metaData"]
+
+    max_retries = 3
+    retry_count = 0
+
+    while retry_count <= max_retries:
+        try:
+            return await post(api_url, request_data, None, meta_info)
+
+        except Exception as e:
+            error_message = str(e).lower()
+
+            order_id_conflict = any(
+                keyword in error_message
+                for keyword in [
+                    "order_id already exists",
+                    "order id already exists",
+                    "duplicate order",
+                    "order already exists",
+                    "orderid already exists",
+                ]
+            )
+
+            if (
+                order_id_conflict
+                and not user_provided_order_id
+                and retry_count < max_retries
+            ):
+                retry_count += 1
+                request_data["order_id"] = generate_order_id()
+                continue
+            else:
+                raise e
+
+    raise Exception(f"Failed to create autopay link after {max_retries} retries")
