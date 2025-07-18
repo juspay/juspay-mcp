@@ -14,7 +14,6 @@ FilterFieldDimensionEnum = Literal[
     "business_region",
     "actual_order_status",
     "ord_currency",
-    "order_refunded_entirely",
     "order_source_object",
     "order_source_object_id",
     "order_status",
@@ -44,7 +43,7 @@ FilterFieldDimensionEnum = Literal[
     "emi_type",
     "emi_tenure",
     "payment_method_type",
-    "payment_method_subtype",
+    "source_object",
     "error_code",
     "error_message",
     "error_category",
@@ -52,6 +51,7 @@ FilterFieldDimensionEnum = Literal[
     "payment_gateway",
     "bank",
     "date_created",
+    "payment_status",
 ]
 
 FilterCondition = Literal[
@@ -117,6 +117,8 @@ class JuspayListOrdersV4Payload(WithHeaders):
         NOTE: Time range filters are automatically added by the handler - DO NOT include them manually.
         NOTE: Domain is a mandatory field and must always be sent with payload.
         
+        MANDATORY: In case of domain 'txnsELS', always use 'payment_status' instead of 'order_status' for filtering.
+        
         SUPPORTED CONDITIONS:
         - "In": value is in the provided list
         - "NotIn": value is not in the provided list  
@@ -129,7 +131,6 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - business_region: business region information
         - actual_order_status: granular order status. Values: 'COD_INITIATED', 'AUTHORIZED', 'AUTO_REFUNDED', 'AUTHENTICATION_FAILED', 'CAPTURE_INITIATED', 'CAPTURE_FAILED', 'AUTHORIZING', 'VOIDED', 'NEW', 'SUCCESS', 'PENDING_AUTHENTICATION', 'AUTHORIZATION_FAILED', 'PARTIAL_CHARGED', 'JUSPAY_DECLINED', 'TO_BE_CHARGED'
         - ord_currency: order currency
-        - order_refunded_entirely: boolean, true if order is refunded entirely
         - order_source_object: source object information
         - order_source_object_id: source object ID
         - order_status: high-level order status. Values: 'SUCCESS', 'FAILURE', 'PENDING'
@@ -143,6 +144,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - udf1 through udf10: user-defined fields for additional order information
         
         For 'txnsELS' domain:
+        - payment_status :In case of the domain txnsELS always use payment_status filter instead of order_status. Proxy for order_status when txnsELS domain is selected. Always use  Values: 'SUCCESS', 'FAILURE', 'PENDING'
         - order_amount: order amount for filtering by amount , always apply this filter's value in an array
         - card_brand: card brand for filtering by card brand
         - auth_type: type of authentication used
@@ -152,7 +154,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - emi_type: EMI type. Values: 'STANDARD_EMI', 'NO_COST_EMI', 'LOW_COST_EMI'
         - emi_tenure: EMI tenure in months
         - payment_method_type: payment method type. Values: 'CARD', 'UPI', 'WALLET', 'NB', 'CONSUMER_FINANCE', 'REWARD', 'CASH', 'RTP', 'MERCHANT_CONTAINER', 'AADHAAR'
-        - payment_method_subtype: payment method subtype (e.g., 'UPI_COLLECT', 'UPI_INTENT', 'UPI_QR')
+        - source_object: use this field when payment method subtype filter is to be applied . Values: 'MANDATE', 'REDIRECT_WALLET_DEBIT', 'UPI_COLLECT', 'UPI_PAY', 'UPI_QR', 'DIRECT_WALLET_DEBIT', 'DIRECT_WALLET_LINK_AND_DEBIT', 'DECIDER_FALLBACK_TO_THREE_DS', 'UPI_INAPP', 'PG_FAILURE_FALLBACK_TO_THREE_DS', 'PAYMENT_CHANNEL_FALLBACK_TO_THREE_DS', 'CUSTOMER_FALLBACK_TO_THREE_DS'
         - error_code: error code during order processing
         - error_message: error message during order processing
         - error_category: error category based on error code
@@ -164,7 +166,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         IMPORTANT FILTERING RULES:
         - ALWAYS filter out null values when querying top values: use "condition": "NotIn", "val": [null]
         - When asked to filter on order success/failure, always use "order_status" by default. If the user wants more fine grained filtering then use actual_order_status otherwise always default to "order_status". Supported values for order_status: ["SUCCESS", "FAILURE", "PENDING"]
-        - When asked about payments through UPI handle/VPA/UPI ID/UPI Address (eg. @icici, @okicici, @okhdfcbank, @ptyes), set payment_method_subtype filter on UPI_COLLECT. UPI handle is stored in "bank" field. (example - 'paytm handle' in the query refers to "Paytm" in the "bank" field and set payment_method_subtype filter on UPI_COLLECT)
+        - When asked about payments through UPI handle/VPA/UPI ID/UPI Address (eg. @icici, @okicici, @okhdfcbank, @ptyes), set source_object filter on UPI_COLLECT. UPI handle is stored in "bank" field. (example - 'paytm handle' in the query refers to "Paytm" in the "bank" field and set source_object filter on UPI_COLLECT)
         - When asked about orders processed through a specific wallet, set payment_method_type filter on WALLET and the wallet name is stored in "bank" field
         - If the query asks details about a specific merchant, add the filter for merchant_id. (Note: merchant_id should be lowercase and without spaces)
         - Consider Conversational Context: Carefully examine if the current user query is a continuation or refinement of a previous query within the ongoing conversation. If the current query lacks specific filter details but appears to build upon earlier messages, actively infer the necessary filters from the established conversational context. For example, if the user first asks "Give me the most recent orders" and then follows up with "Break it down by payment method type", the second query implicitly requires the payment_method dimension for the orders from the first query.
@@ -184,7 +186,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         EXAMPLE - UPI Paytm handle orders:
         {
             "clauses": [
-                {"field": "payment_method_subtype", "condition": "In", "val": ["UPI_COLLECT"]},
+                {"field": "source_object", "condition": "In", "val": ["UPI_COLLECT"]},
                 {"field": "bank", "condition": "In", "val": ["Paytm"]}
             ],
             "logic": "0 AND 1"
