@@ -32,9 +32,9 @@ class JuspayListOffersPayload(WithHeaders):
         ...,
         description="Merchant identifier for which to list offers."
     )
-    created_at: Dict[str, str] = Field(
-        ...,
-        description="Created at filter with 'lte' and 'gte' string timestamps (ISO 8601 format)."
+    created_at: Optional[Dict[str, str]] = Field(
+        None,
+        description="Created at filter with 'lte' and 'gte' string timestamps (ISO 8601 format). Auto-generated from start_time and end_time if not provided.",
     )
     start_time: str = Field(
         ...,
