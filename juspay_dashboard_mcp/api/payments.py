@@ -170,6 +170,30 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     if "payment_page_client_id" in payload:
         request_data["payment_page_client_id"] = payload["payment_page_client_id"]
 
+    request_data["walletCheckBox"] = True
+    request_data["cardsCheckBox"] = True
+    request_data["netbankingCheckBox"] = True
+    request_data["upiCheckBox"] = True
+    request_data["consumerFinanceCheckBox"] = True
+    request_data["otcCheckBox"] = True
+    request_data["virtualAccountCheckBox"] = True
+
+    if "payment_filter" not in payload:
+        request_data["payment_filter"] = {}
+    else:
+        request_data["payment_filter"] = payload["payment_filter"].copy()
+
+    request_data["payment_filter"]["allowDefaultOptions"] = True
+    request_data["payment_filter"]["options"] = [
+        {"paymentMethodType": "UPI", "enable": True},
+        {"paymentMethodType": "WALLET", "enable": True},
+        {"paymentMethodType": "CARD", "enable": True},
+        {"paymentMethodType": "NB", "enable": True},
+        {"paymentMethodType": "OTC", "enable": True},
+        {"paymentMethodType": "VIRTUAL_ACCOUNT", "enable": True},
+        {"paymentMethodType": "CONSUMER_FINANCE", "enable": True},
+    ]
+
     user_provided_order_id = "order_id" in payload and payload["order_id"]
 
     if user_provided_order_id:
@@ -177,25 +201,43 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     else:
         request_data["order_id"] = generate_order_id()
 
-    if "payment_filter" in payload and "emiOptions" in payload["payment_filter"]:
-        emi_options = payload["payment_filter"]["emiOptions"]
+    request_data["showEmiOption"] = payload.get("showEmiOption", False)
+    request_data["standardEmi"] = payload.get("standardEmi", False)
+    request_data["standard_credit"] = payload.get("standard_credit", False)
+    request_data["standard_debit"] = payload.get("standard_debit", False)
+    request_data["standard_cardless"] = payload.get("standard_cardless", False)
+    request_data["lowCostEmi"] = payload.get("lowCostEmi", False)
+    request_data["low_cost_credit"] = payload.get("low_cost_credit", False)
+    request_data["low_cost_debit"] = payload.get("low_cost_debit", False)
+    request_data["low_cost_cardless"] = payload.get("low_cost_cardless", False)
+    request_data["noCostEmi"] = payload.get("noCostEmi", False)
+    request_data["no_cost_credit"] = payload.get("no_cost_credit", False)
+    request_data["no_cost_debit"] = payload.get("no_cost_debit", False)
+    request_data["no_cost_cardless"] = payload.get("no_cost_cardless", False)
 
-        for emi_type in ["standardEmi", "lowCostEmi", "noCostEmi"]:
-            if emi_type in emi_options and emi_options[emi_type].get("enable", False):
-                card_types_enabled = []
-                emi_config = emi_options[emi_type]
+    if "emiOptions" not in request_data["payment_filter"]:
+        request_data["payment_filter"]["emiOptions"] = {}
 
-                if emi_config.get("credit", {}).get("enable", False):
-                    card_types_enabled.append("credit")
-                if emi_config.get("debit", {}).get("enable", False):
-                    card_types_enabled.append("debit")
-                if emi_config.get("cardless", {}).get("enable", False):
-                    card_types_enabled.append("cardless")
+    request_data["payment_filter"]["emiOptions"]["standardEmi"] = {
+        "enable": request_data["standardEmi"],
+        "credit": {"enable": request_data["standard_credit"]},
+        "debit": {"enable": request_data["standard_debit"]},
+        "cardless": {"enable": request_data["standard_cardless"]},
+    }
+    request_data["payment_filter"]["emiOptions"]["lowCostEmi"] = {
+        "enable": request_data["lowCostEmi"],
+        "credit": {"enable": request_data["low_cost_credit"]},
+        "debit": {"enable": request_data["low_cost_debit"]},
+        "cardless": {"enable": request_data["low_cost_cardless"]},
+    }
+    request_data["payment_filter"]["emiOptions"]["noCostEmi"] = {
+        "enable": request_data["noCostEmi"],
+        "credit": {"enable": request_data["no_cost_credit"]},
+        "debit": {"enable": request_data["no_cost_debit"]},
+        "cardless": {"enable": request_data["no_cost_cardless"]},
+    }
+    request_data["payment_filter"]["emiOptions"]["showOnlyEmi"] = False
 
-                if not card_types_enabled:
-                    raise Exception(
-                        f"EMI validation failed: {emi_type} is enabled but no card types (credit/debit/cardless) are enabled within it"
-                    )
 
     for field in OPTIONAL_PAYMENT_FIELDS:
         if field in payload:
@@ -204,8 +246,6 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     if "options" in payload:
         request_data["options"] = payload["options"]
 
-    if "payment_filter" in payload:
-        request_data["payment_filter"] = payload["payment_filter"]
 
     if "metaData" in payload:
         request_data["metaData"] = payload["metaData"]
@@ -335,31 +375,74 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
     for field in required_autopay_fields:
         request_data[field] = payload[field]
 
+    request_data["walletCheckBox"] = True
+    request_data["cardsCheckBox"] = True
+    request_data["netbankingCheckBox"] = True
+    request_data["upiCheckBox"] = True
+    request_data["consumerFinanceCheckBox"] = True
+    request_data["otcCheckBox"] = True
+    request_data["virtualAccountCheckBox"] = True
+
+    if "payment_filter" not in payload:
+        request_data["payment_filter"] = {}
+    else:
+        request_data["payment_filter"] = payload["payment_filter"].copy()
+
+    request_data["payment_filter"]["allowDefaultOptions"] = True
+    request_data["payment_filter"]["options"] = [
+        {"paymentMethodType": "UPI", "enable": True},
+        {"paymentMethodType": "WALLET", "enable": True},
+        {"paymentMethodType": "CARD", "enable": True},
+        {"paymentMethodType": "NB", "enable": True},
+        {"paymentMethodType": "OTC", "enable": True},
+        {"paymentMethodType": "VIRTUAL_ACCOUNT", "enable": True},
+        {"paymentMethodType": "CONSUMER_FINANCE", "enable": True},
+    ]
+
     user_provided_order_id = "order_id" in payload and payload["order_id"]
     if user_provided_order_id:
         request_data["order_id"] = payload["order_id"]
     else:
         request_data["order_id"] = generate_order_id()
 
-    if "payment_filter" in payload and "emiOptions" in payload["payment_filter"]:
-        emi_options = payload["payment_filter"]["emiOptions"]
+    request_data["showEmiOption"] = payload.get("showEmiOption", False)
+    request_data["standardEmi"] = payload.get("standardEmi", False)
+    request_data["standard_credit"] = payload.get("standard_credit", False)
+    request_data["standard_debit"] = payload.get("standard_debit", False)
+    request_data["standard_cardless"] = payload.get("standard_cardless", False)
+    request_data["lowCostEmi"] = payload.get("lowCostEmi", False)
+    request_data["low_cost_credit"] = payload.get("low_cost_credit", False)
+    request_data["low_cost_debit"] = payload.get("low_cost_debit", False)
+    request_data["low_cost_cardless"] = payload.get("low_cost_cardless", False)
+    request_data["noCostEmi"] = payload.get("noCostEmi", False)
+    request_data["no_cost_credit"] = payload.get("no_cost_credit", False)
+    request_data["no_cost_debit"] = payload.get("no_cost_debit", False)
+    request_data["no_cost_cardless"] = payload.get("no_cost_cardless", False)
 
-        for emi_type in ["standardEmi", "lowCostEmi", "noCostEmi"]:
-            if emi_type in emi_options and emi_options[emi_type].get("enable", False):
-                card_types_enabled = []
-                emi_config = emi_options[emi_type]
+    if "emiOptions" not in request_data["payment_filter"]:
+        request_data["payment_filter"]["emiOptions"] = {}
 
-                if emi_config.get("credit", {}).get("enable", False):
-                    card_types_enabled.append("credit")
-                if emi_config.get("debit", {}).get("enable", False):
-                    card_types_enabled.append("debit")
-                if emi_config.get("cardless", {}).get("enable", False):
-                    card_types_enabled.append("cardless")
+    request_data["payment_filter"]["emiOptions"]["standardEmi"] = {
+        "enable": request_data["standardEmi"],
+        "credit": {"enable": request_data["standard_credit"]},
+        "debit": {"enable": request_data["standard_debit"]},
+        "cardless": {"enable": request_data["standard_cardless"]},
+    }
+    request_data["payment_filter"]["emiOptions"]["lowCostEmi"] = {
+        "enable": request_data["lowCostEmi"],
+        "credit": {"enable": request_data["low_cost_credit"]},
+        "debit": {"enable": request_data["low_cost_debit"]},
+        "cardless": {"enable": request_data["low_cost_cardless"]},
+    }
+    request_data["payment_filter"]["emiOptions"]["noCostEmi"] = {
+        "enable": request_data["noCostEmi"],
+        "credit": {"enable": request_data["no_cost_credit"]},
+        "debit": {"enable": request_data["no_cost_debit"]},
+        "cardless": {"enable": request_data["no_cost_cardless"]},
+    }
+    request_data["payment_filter"]["emiOptions"]["showOnlyEmi"] = False
 
-                if not card_types_enabled:
-                    raise Exception(
-                        f"EMI validation failed: {emi_type} is enabled but no card types (credit/debit/cardless) are enabled within it"
-                    )
+
 
     if "options" not in payload:
         request_data["options"] = {"create_mandate": "REQUIRED"}
@@ -373,8 +456,6 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
         if field in payload:
             request_data[field] = payload[field]
 
-    if "payment_filter" in payload:
-        request_data["payment_filter"] = payload["payment_filter"]
 
     if "metaData" in payload:
         request_data["metaData"] = payload["metaData"]
