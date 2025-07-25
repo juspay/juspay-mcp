@@ -4,7 +4,13 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.utils import (
+    post,
+    call,
+    get_juspay_host_from_api,
+    ist_to_utc,
+)
+
 
 async def get_offer_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -83,14 +89,22 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
         raise ValueError("Payload must contain 'merchant_id', 'start_time', and 'end_time'.")
 
     merchant_id = payload.get("merchant_id")
+    start_time = payload.get("start_time")
+    end_time = payload.get("end_time")
+
+    start_time_utc = ist_to_utc(start_time)
+    end_time_utc = ist_to_utc(end_time)
+
     host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
-    created_at =  {
-            "gte": payload.get("start_time"),
-            "lte": payload.get("end_time")
-        }
-    payload = {
+
+    created_at = {"gte": start_time_utc, "lte": end_time_utc}
+
+    payload_updated = {
+        **payload,
+        "start_time": start_time_utc,
+        "end_time": end_time_utc,
         "created_at": created_at,
-        **payload
     }
-    return await post(api_url, payload, None, meta_info)
+
+    return await post(api_url, payload_updated, None, meta_info)
