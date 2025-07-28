@@ -58,7 +58,7 @@ FilterFieldDimensionEnum = Literal[
     "card_exp_month",
     "card_exp_year",
     "card_issuer_country",
-    "original_card_isin",
+    "card_bin",
     "card_last_four_digits",
     "is_upicc",
     "resp_message",
@@ -181,7 +181,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - card_exp_month: expiry month of the card used. Numeric value (1-12)
         - card_exp_year: expiry year of the card used. Numeric value (4-digit year)
         - card_issuer_country: country of the card issuer
-        - original_card_isin: also known as card bin, bin or card ISIN (International Securities Identification Number)
+        - card_bin: also known as bin or card ISIN (International Securities Identification Number)
         - card_last_four_digits: last four digits of the card used / card ending with. Numeric value (4 digits)
         - is_upicc: boolean, true if UPI credit card transaction
         - resp_message: response message from the payment gateway, only use when specifically asked to filter on payment gateway response message

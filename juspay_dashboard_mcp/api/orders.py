@@ -33,6 +33,8 @@ def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
         field = clause.field
         if field.startswith("udf"):
             field = f"full_{field}"
+        if field == "card_bin":
+            field = "original_card_isin"
 
         return {
             "field": field,
