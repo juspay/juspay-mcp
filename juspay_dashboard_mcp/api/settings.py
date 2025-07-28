@@ -4,7 +4,15 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from typing import Any  
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.summarizer import (
+    count_tokens_in_response,
+    tool_output_summarizer,
+    should_summarize_response,
+)
+import logging
+
 
 async def get_conflict_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -116,7 +124,20 @@ async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = No
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/priorityLogic"
-    return await post(api_url, {}, None, meta_info)
+    response = await post(api_url, {}, None, meta_info)
+
+    user_query = meta_info.get("query") if meta_info else None
+    should_summarize, token_count, item_count = should_summarize_response(
+        response, token_threshold=50000 
+    )
+
+    if not should_summarize:
+        logging.info(f"Returning raw data: {item_count} items, {token_count} tokens")
+        return response
+
+    logging.info(f"FAST summarizing: {item_count} rules, {token_count} tokens")
+    return tool_output_summarizer(response, user_query)
+
 
 async def get_routing_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
