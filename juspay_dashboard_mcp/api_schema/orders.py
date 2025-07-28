@@ -38,7 +38,7 @@ FilterFieldDimensionEnum = Literal[
     "card_brand",
     "auth_type",
     "is_cvv_less_txn",
-    "is_emi",
+    "emi",
     "emi_bank",
     "emi_type",
     "emi_tenure",
@@ -52,6 +52,18 @@ FilterFieldDimensionEnum = Literal[
     "bank",
     "date_created",
     "payment_status",
+    "amount",
+    "payment_instrument_group",
+    "epg_txn_id",
+    "card_exp_month",
+    "card_exp_year",
+    "card_issuer_country",
+    "original_card_isin",
+    "card_last_four_digits",
+    "is_upicc",
+    "resp_message",
+    "mandate_frequency",
+    "platform"
 ]
 
 FilterCondition = Literal[
@@ -118,6 +130,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
         NOTE: Domain is a mandatory field and must always be sent with payload.
         
         MANDATORY: In case of domain 'txnsELS', always use 'payment_status' instead of 'order_status' for filtering.
+        MANDATORY: In case of domain 'txnsELS', always use 'order_amount' instead of 'amount' for filtering.
         
         SUPPORTED CONDITIONS:
         - "In": value is in the provided list
@@ -142,14 +155,16 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - order_created_at: order created timestamp (epoch seconds)
         - merchant_id: unique identifier for the merchant (lowercase, no spaces)
         - udf1 through udf10: user-defined fields for additional order information
+        - amount: order amount for filtering by amount, always apply this filter's value in an array
+        - payment_instrument_group: 'CREDIT CARD', 'RTP', 'WALLET', 'OTC', 'REWARD', 'NET BANKING', 'CASH', 'AADHAAR', 'DEBIT CARD', 'UPI', 'VIRTUAL_ACCOUNT'
         
         For 'txnsELS' domain:
         - payment_status :In case of the domain txnsELS always use payment_status filter instead of order_status. Proxy for order_status when txnsELS domain is selected. Always use  Values: 'SUCCESS', 'FAILURE', 'PENDING'
-        - order_amount: order amount for filtering by amount , always apply this filter's value in an array
+        - order_amount: order amount for filtering by amount , always apply this filter's value in an array. In case of the domain txnsELS always use order_amount filter instead of amount.
         - card_brand: card brand for filtering by card brand
         - auth_type: type of authentication used
         - is_cvv_less_txn: boolean, true if CVV-less transaction
-        - is_emi: boolean, true if EMI transaction
+        - emi: boolean, true if EMI transaction
         - emi_bank: bank used for EMI transactions
         - emi_type: EMI type. Values: 'STANDARD_EMI', 'NO_COST_EMI', 'LOW_COST_EMI'
         - emi_tenure: EMI tenure in months
@@ -162,6 +177,16 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - payment_gateway: payment gateway name
         - bank: payment method used (also stores UPI handles, wallet names)
         - date_created: transaction created timestamp (epoch seconds)
+        - epg_txn_id: transaction ID at the payment gateway's (PG) end
+        - card_exp_month: expiry month of the card used. Numeric value (1-12)
+        - card_exp_year: expiry year of the card used. Numeric value (4-digit year)
+        - card_issuer_country: country of the card issuer
+        - original_card_isin: also known as card bin, bin or card ISIN (International Securities Identification Number)
+        - card_last_four_digits: last four digits of the card used / card ending with. Numeric value (4 digits)
+        - is_upicc: boolean, true if UPI credit card transaction
+        - resp_message: response message from the payment gateway, only use when specifically asked to filter on payment gateway response message
+        - mandate_frequency: Frequency of the mandate, only use when specifically asked to filter on mandate/autopay/recurring payment frequency
+        - platform: possible values are android, ios, mobile_web, web
         
         IMPORTANT FILTERING RULES:
         - ALWAYS filter out null values when querying top values: use "condition": "NotIn", "val": [null]
@@ -173,6 +198,8 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - You are not allowed to use any field apart from the provided possible enum values in the JSON schema
         - After generating the filter, check each key and match it with the allowed JSON schema. Do not return filters outside of the JSON schema
         - Only use fields from the supported enum values above
+        - To filter transactions for a specific card type (Credit Card/Debit Card) filter on "payment_instrument_group"!
+        - When asked for upi credit card transactions, NEVER `payment_instrument_group` = `CREDIT CARD`, always use `is_upicc` = `true`!!!
         
         EXAMPLE - Latest SUCCESS orders with payment gateway filtering:
         {
