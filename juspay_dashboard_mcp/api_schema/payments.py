@@ -75,8 +75,8 @@ class Options(BaseModel):
 
 class JuspayCreatePaymentLinkPayload(WithHeaders):
     amount: Union[int, float] = Field(..., description="Payment amount (required)")
-    payment_page_client_id: str = Field(
-        ..., description="Client ID for payment page (required)"
+    payment_page_client_id: Optional[str] = Field(
+        None, description="Client ID for payment page"
     )
 
     currency: Optional[str] = Field(default="INR", description="Payment currency")
@@ -217,8 +217,8 @@ class JuspayCreateAutopayLinkPayload(WithHeaders):
     amount: Union[int, float] = Field(
         ..., description="One-time payment amount (required)"
     )
-    payment_page_client_id: str = Field(
-        ..., description="Client ID for payment page (required)"
+    payment_page_client_id: Optional[str] = Field(
+        None, description="Client ID for payment page"
     )
     mandate_max_amount: str = Field(
         ..., description="Max mandate amount for future payments (required)"

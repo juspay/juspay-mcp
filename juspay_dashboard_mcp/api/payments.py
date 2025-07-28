@@ -136,7 +136,6 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
         payload (dict): Should contain payment link creation parameters:
             Required:
             - amount: Payment amount (required)
-            - payment_page_client_id: Client ID for payment page (required)
 
             Optional:
             - currency: Payment currency (default: "INR")
@@ -167,16 +166,36 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
 
     if "amount" in payload:
         request_data["amount"] = payload["amount"]
-    if "payment_page_client_id" in payload:
-        request_data["payment_page_client_id"] = payload["payment_page_client_id"]
 
-    request_data["walletCheckBox"] = True
-    request_data["cardsCheckBox"] = True
-    request_data["netbankingCheckBox"] = True
-    request_data["upiCheckBox"] = True
-    request_data["consumerFinanceCheckBox"] = True
-    request_data["otcCheckBox"] = True
-    request_data["virtualAccountCheckBox"] = True
+    is_hdfc = False
+    if meta_info:
+        token_response = meta_info.get("token_response")
+        if isinstance(token_response, dict):
+            valid_host = token_response.get("validHost")
+            if valid_host in ["dashboard.smartgateway.hdfcbank.com", "dashboard.smartgateway.hdfcbank.com/"]:
+                is_hdfc = True
+    if is_hdfc:
+        request_data["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
+    elif "payment_page_client_id" in payload:
+        request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+    else:
+        raise Exception("The payment page client id is missing. Can you please provide it?")
+
+    wallet_enabled = payload.get("walletCheckBox", True)
+    cards_enabled = payload.get("cardsCheckBox", True)
+    netbanking_enabled = payload.get("netbankingCheckBox", True)
+    upi_enabled = payload.get("upiCheckBox", True)
+    consumer_finance_enabled = payload.get("consumerFinanceCheckBox", True)
+    otc_enabled = payload.get("otcCheckBox", True)
+    virtual_account_enabled = payload.get("virtualAccountCheckBox", True)
+
+    request_data["walletCheckBox"] = wallet_enabled
+    request_data["cardsCheckBox"] = cards_enabled
+    request_data["netbankingCheckBox"] = netbanking_enabled
+    request_data["upiCheckBox"] = upi_enabled
+    request_data["consumerFinanceCheckBox"] = consumer_finance_enabled
+    request_data["otcCheckBox"] = otc_enabled
+    request_data["virtualAccountCheckBox"] = virtual_account_enabled
 
     if "payment_filter" not in payload:
         request_data["payment_filter"] = {}
@@ -185,13 +204,13 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
 
     request_data["payment_filter"]["allowDefaultOptions"] = True
     request_data["payment_filter"]["options"] = [
-        {"paymentMethodType": "UPI", "enable": True},
-        {"paymentMethodType": "WALLET", "enable": True},
-        {"paymentMethodType": "CARD", "enable": True},
-        {"paymentMethodType": "NB", "enable": True},
-        {"paymentMethodType": "OTC", "enable": True},
-        {"paymentMethodType": "VIRTUAL_ACCOUNT", "enable": True},
-        {"paymentMethodType": "CONSUMER_FINANCE", "enable": True},
+        {"paymentMethodType": "UPI", "enable": upi_enabled},
+        {"paymentMethodType": "WALLET", "enable": wallet_enabled},
+        {"paymentMethodType": "CARD", "enable": cards_enabled},
+        {"paymentMethodType": "NB", "enable": netbanking_enabled},
+        {"paymentMethodType": "OTC", "enable": otc_enabled},
+        {"paymentMethodType": "VIRTUAL_ACCOUNT", "enable": virtual_account_enabled},
+        {"paymentMethodType": "CONSUMER_FINANCE", "enable": consumer_finance_enabled},
     ]
 
     user_provided_order_id = "order_id" in payload and payload["order_id"]
@@ -238,14 +257,17 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     }
     request_data["payment_filter"]["emiOptions"]["showOnlyEmi"] = False
 
+    if "options" not in payload:
+        request_data["options"] = {"create_mandate": "REQUIRED"}
+    else:
+        options = payload["options"].copy()
+        if "create_mandate" not in options:
+            options["create_mandate"] = "REQUIRED"
+        request_data["options"] = options
 
     for field in OPTIONAL_PAYMENT_FIELDS:
         if field in payload:
             request_data[field] = payload[field]
-
-    if "options" in payload:
-        request_data["options"] = payload["options"]
-
 
     if "metaData" in payload:
         request_data["metaData"] = payload["metaData"]
@@ -302,7 +324,6 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
         payload (dict): Should contain autopay link creation parameters:
             Required (USER MUST PROVIDE ALL OF THESE):
             - amount: One-time payment amount (REQUIRED - ask user for specific amount)
-            - payment_page_client_id: Client ID for payment page (REQUIRED - ask user for this)
             - mandate_max_amount: Max mandate amount for future payments (REQUIRED - ask user to specify this amount)
             - mandate_start_date: Mandate creation date in YYYY-MM-DD format (REQUIRED - ask user for specific date)
             - mandate_end_date: Future date after which mandate stops in YYYY-MM-DD format (REQUIRED - ask user for specific end date)
@@ -333,9 +354,19 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
     Raises:
         Exception: If the API call fails or required autopay fields are missing.
     """
+    is_hdfc = False
+    if meta_info:
+        token_response = meta_info.get("token_response")
+        if isinstance(token_response, dict):
+            valid_host = token_response.get("validHost")
+            if valid_host in ["dashboard.smartgateway.hdfcbank.com", "dashboard.smartgateway.hdfcbank.com/"]:
+                is_hdfc = True
+    if is_hdfc:
+        payload["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
+    elif "payment_page_client_id" not in payload:
+        raise Exception("The payment page client id is missing. Can you please provide it?")
     required_autopay_fields = [
         "amount",
-        "payment_page_client_id",
         "mandate_max_amount",
         "mandate_start_date",
         "mandate_end_date",
@@ -373,15 +404,27 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
     request_data = {}
 
     for field in required_autopay_fields:
-        request_data[field] = payload[field]
+        if field in payload:
+            request_data[field] = payload[field]
 
-    request_data["walletCheckBox"] = True
-    request_data["cardsCheckBox"] = True
-    request_data["netbankingCheckBox"] = True
-    request_data["upiCheckBox"] = True
-    request_data["consumerFinanceCheckBox"] = True
-    request_data["otcCheckBox"] = True
-    request_data["virtualAccountCheckBox"] = True
+    if "payment_page_client_id" in payload:
+        request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+
+    wallet_enabled = payload.get("walletCheckBox", True)
+    cards_enabled = payload.get("cardsCheckBox", True)
+    netbanking_enabled = payload.get("netbankingCheckBox", True)
+    upi_enabled = payload.get("upiCheckBox", True)
+    consumer_finance_enabled = payload.get("consumerFinanceCheckBox", True)
+    otc_enabled = payload.get("otcCheckBox", True)
+    virtual_account_enabled = payload.get("virtualAccountCheckBox", True)
+
+    request_data["walletCheckBox"] = wallet_enabled
+    request_data["cardsCheckBox"] = cards_enabled
+    request_data["netbankingCheckBox"] = netbanking_enabled
+    request_data["upiCheckBox"] = upi_enabled
+    request_data["consumerFinanceCheckBox"] = consumer_finance_enabled
+    request_data["otcCheckBox"] = otc_enabled
+    request_data["virtualAccountCheckBox"] = virtual_account_enabled
 
     if "payment_filter" not in payload:
         request_data["payment_filter"] = {}
@@ -390,13 +433,13 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
 
     request_data["payment_filter"]["allowDefaultOptions"] = True
     request_data["payment_filter"]["options"] = [
-        {"paymentMethodType": "UPI", "enable": True},
-        {"paymentMethodType": "WALLET", "enable": True},
-        {"paymentMethodType": "CARD", "enable": True},
-        {"paymentMethodType": "NB", "enable": True},
-        {"paymentMethodType": "OTC", "enable": True},
-        {"paymentMethodType": "VIRTUAL_ACCOUNT", "enable": True},
-        {"paymentMethodType": "CONSUMER_FINANCE", "enable": True},
+        {"paymentMethodType": "UPI", "enable": upi_enabled},
+        {"paymentMethodType": "WALLET", "enable": wallet_enabled},
+        {"paymentMethodType": "CARD", "enable": cards_enabled},
+        {"paymentMethodType": "NB", "enable": netbanking_enabled},
+        {"paymentMethodType": "OTC", "enable": otc_enabled},
+        {"paymentMethodType": "VIRTUAL_ACCOUNT", "enable": virtual_account_enabled},
+        {"paymentMethodType": "CONSUMER_FINANCE", "enable": consumer_finance_enabled},
     ]
 
     user_provided_order_id = "order_id" in payload and payload["order_id"]
@@ -441,8 +484,6 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
         "cardless": {"enable": request_data["no_cost_cardless"]},
     }
     request_data["payment_filter"]["emiOptions"]["showOnlyEmi"] = False
-
-
 
     if "options" not in payload:
         request_data["options"] = {"create_mandate": "REQUIRED"}

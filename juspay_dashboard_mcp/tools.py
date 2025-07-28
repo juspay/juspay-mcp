@@ -394,14 +394,37 @@ Use this tool to check for any service disruptions or performance degradation is
     ),
     util.make_api_config(
         name="create_payment_link_juspay",
-        description="Use this tool when asked to create a payment link. IMPORTANT: You must ask the user for the required fields (amount, payment_page_client_id), do not assume any of these fields always prompt the user. Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified. If the user does not ask to send the email , WhatsApp message or SMS then do not mark the fields - shouldSendMail,shouldSendSMS and shouldSendWhatsapp as true. CRITICAL: Do not assume or auto-generate these values - always prompt the user to provide them explicitly. NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one card type (credit/debit/cardless) must be enabled within that EMI type. EMI OPTIONS: If the user requests EMI options, ask them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi). For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless). Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them. Set showEmiOption to true only if any EMI option is requested.",
+        description="""Use this tool when asked to create a payment link.
+IMPORTANT: You must ask the user for the required fields (amount), do not assume any of these fields always prompt the user.
+Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified.
+If the user does not ask to send the email , WhatsApp message or SMS then do not mark the fields - shouldSendMail,shouldSendSMS and shouldSendWhatsapp as true.
+CRITICAL: Do not assume or auto-generate these values -  prompt the user to provide them explicitly if they ask for it.
+NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one card type (credit/debit/cardless) must be enabled within that EMI type.
+EMI OPTIONS: If the user requests EMI options, ask them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi).
+For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless).
+Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
+Set showEmiOption to true only if any EMI option is requested.
+RECREATE FROM ORDER: If the user asks to recreate a payment link and provides an order ID, first call the 'juspay_get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, payment methods, etc.) to create a new payment link with the same parameters.
+CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the payment link.
+""",
         model=api_schema.payments.JuspayCreatePaymentLinkPayload,
         handler=payments.create_payment_link_juspay,
         response_schema=None,
     ),
     util.make_api_config(
         name="create_autopay_link_juspay",
-        description="Use this tool when asked to create an autopay payment link or recurring payment link or mandate payment link. IMPORTANT: You must ask the user for ALL required fields (amount, payment_page_client_id, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency), do not assume any of these fields always prompt the user. Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified , the user should be prompted for the email ID and phone number if they want to send email and sms or Whatsapp message  . If the user does not ask to send the email , WhatsApp message or SMS then do not mark the fields - shouldSendMail,shouldSendSMS and shouldSendWhatsapp as true. CRITICAL: Do not assume or auto-generate these values - always prompt the user to provide them explicitly. NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one card type (credit/debit/cardless) must be enabled within that EMI type. EMI OPTIONS: If the user requests EMI options, prompt them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi). For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless), Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them. Set showEmiOption to true only if any EMI option is requested.",
+        description="""Use this tool when asked to create an autopay payment link or recurring payment link or mandate payment link.
+IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency), do not assume any of these fields always prompt the user.
+Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified , the user should be prompted for the email ID and phone number if they want to send email and sms or Whatsapp message.
+If the user does not ask to send the email , WhatsApp message or SMS then do not mark the fields - shouldSendMail,shouldSendSMS and shouldSendWhatsapp as true.
+CRITICAL: Do not assume or auto-generate these values - prompt the user to provide them explicitly if they ask for it.
+NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one card type (credit/debit/cardless) must be enabled within that EMI type.
+EMI OPTIONS: If the user requests EMI options, prompt them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi).
+For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless), Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
+Set showEmiOption to true only if any EMI option is requested.
+RECREATE FROM ORDER: If the user asks to recreate an autopay payment link and provides an order ID, first call the 'juspay_get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, mandate details, payment methods, etc.) to create a new autopay payment link with the same parameters.
+CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the autopay payment link.
+""",
         model=api_schema.payments.JuspayCreateAutopayLinkPayload,
         handler=payments.create_autopay_link_juspay,
         response_schema=None,
@@ -421,9 +444,37 @@ async def list_my_tools() -> list[types.Tool]:
     ]
 
 @app.call_tool()
-async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
-    logger.info(f"Tool called: {name} with arguments: {arguments}")
+async def handle_tool_calls(
+    name: str, arguments: dict, meta_info: dict = None
+) -> list[types.TextContent]:
+    logger.info(f"Tool called: {name} with arguments: {arguments} and meta_info: {meta_info}")
     try:
+        current_meta_info = arguments.get("juspay_meta_info", meta_info or {})
+
+        is_hdfc = False
+        if current_meta_info:
+            token_response = current_meta_info.get("token_response")
+            if token_response and isinstance(token_response, dict):
+                is_hdfc = token_response.get("validHost") in ["dashboard.smartgateway.hdfcbank.com/", "dashboard.smartgateway.hdfcbank.com"]
+        for tool in AVAILABLE_TOOLS:
+            if tool["name"] in ["create_payment_link_juspay", "create_autopay_link_juspay"]:
+                if is_hdfc:
+                    tool["description"] = tool["description"].replace(
+                        "IMPORTANT: You must ask the user for the required fields (amount, payment_page_client_id)",
+                        "IMPORTANT: You must ask the user for the required fields (amount)"
+                    ).replace(
+                        "IMPORTANT: You must ask the user for ALL required fields (amount, payment_page_client_id, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)",
+                        "IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)"
+                    )
+                else:
+                    tool["description"] = tool["description"].replace(
+                        "IMPORTANT: You must ask the user for the required fields (amount)",
+                        "IMPORTANT: You must ask the user for the required fields (amount, payment_page_client_id)"
+                    ).replace(
+                        "IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)",
+                        "IMPORTANT: You must ask the user for ALL required fields (amount, payment_page_client_id, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)"
+                    )
+
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name and t["name"] not in JUSPAY_DASHBOARD_IGNORE_TOOL), None)
         if not tool_entry:
             raise ValueError(f"Unknown tool: {name}")
@@ -448,25 +499,21 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         else:
             payload_dict = arguments 
         
-        meta_info = arguments.pop("juspay_meta_info", {})
-        if isinstance(meta_info, BaseModel):
-            meta_info = meta_info.model_dump()
+        if isinstance(current_meta_info, BaseModel):
+            current_meta_info = current_meta_info.model_dump()
 
         sig = inspect.signature(handler)
         param_count = len(sig.parameters)
 
         if param_count == 0:
             response = await handler()
-
         elif param_count == 1:
-            if arguments or not meta_info:
+            if arguments or not current_meta_info:
                 response = await handler(arguments)
             else:
-                response = await handler(meta_info)
-
+                response = await handler(current_meta_info)
         elif param_count == 2:
-            response = await handler(arguments, meta_info)
-
+            response = await handler(arguments, current_meta_info)
         else:
             raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
         return [types.TextContent(type="text", text=json.dumps(response))]
