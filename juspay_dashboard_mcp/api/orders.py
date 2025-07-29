@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
@@ -84,6 +84,9 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     date_to_str = payload.get("dateTo")
     if not date_from_str or not date_to_str:
         raise ValueError("Both 'dateFrom' and 'dateTo' are required in the payload")
+
+    date_from_str = ist_to_utc(date_from_str)
+    date_to_str = ist_to_utc(date_to_str)
 
     try:
         date_from_dt = datetime.fromisoformat(date_from_str.replace("Z", "+00:00"))

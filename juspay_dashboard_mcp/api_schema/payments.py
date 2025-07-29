@@ -19,12 +19,12 @@ class JuspayListPaymentLinksV1Payload(WithHeaders):
         
         Supports fields like: order_source_object, payment_status, order_type, currency, txn_id, udf1-10, customer_id, order_amount, payment_method_type, payment_gateway, merchant_id, etc.""",
     )
-    filters: Optional[Dict[str, Any]] = Field(
-        None,
-        description="""Filters for the payment links. Must include a dateCreated filter with lte and gte timestamps.
-        
-        Structure: {"dateCreated": {"lte": "2025-07-16T07:04:44Z", "gte": "2025-07-15T18:30:00Z", "opt": "today"}}
-        
-        If not provided, will default to today's date range.""",
+    date_from: str = Field(
+        ...,
+        description="Start date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
+    )
+    date_to: str = Field(
+        ...,
+        description="End date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
     )
     offset: Optional[int] = Field(0, description="Pagination offset (default: 0)")
