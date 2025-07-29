@@ -11,6 +11,7 @@
 
     nix2container.url = "github:nlewo/nix2container";
 
+    # TODO: update once the PR is merged
     python-flake.url = "github:juspay/python-flake/pull/2/head";
   };
 
