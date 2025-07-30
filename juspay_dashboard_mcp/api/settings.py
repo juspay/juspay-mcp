@@ -94,7 +94,8 @@ async def get_mandate_settings_juspay(payload: dict, meta_info: dict = None) -> 
 async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches a list of all configured priority logic rules, including their current 
-    status and full logic definition.
+    status and full logic definition. Returns only the latest 5 logics to avoid
+    overwhelming the context.
 
     The API endpoint is:
         https://portal.juspay.in/api/ec/v1/priorityLogic
@@ -109,14 +110,24 @@ async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = No
         payload (dict): No specific parameters required.
 
     Returns:
-        dict: The parsed JSON response from the Juspay Priority Logic Settings API.
+        dict: The parsed JSON response from the Juspay Priority Logic Settings API
+              with only the latest 5 logics included (or fewer if less than 5 exist).
 
     Raises:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/ec/v1/priorityLogic"
-    return await post(api_url, {}, None, meta_info)
+    response = await post(api_url, {}, None, meta_info)
+    
+    if isinstance(response, dict) and "logics" in response and isinstance(response["logics"], list):
+        sorted_logics = sorted(
+            response["logics"], 
+            key=lambda x: x.get("lastUpdated", ""), 
+            reverse=True
+        )
+        response["logics"] = sorted_logics[:5]
+    return response
 
 async def get_routing_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
