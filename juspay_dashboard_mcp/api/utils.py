@@ -136,6 +136,29 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
     except Exception as e:
         logger.error(f"Token validation failed: {e}")
         raise
+
+async def hash_contact_details_juspay(contact_details: list, meta_info: dict = None) -> list:
+    """
+    Calls the Juspay hashing API to hash contact details (emails/phone numbers).
+    
+    Args:
+        contact_details (list): List of email addresses or phone numbers to hash
+        meta_info (dict): Metadata containing authentication info
+        
+    Returns:
+        list: List of hashed values corresponding to the input contact details
+        
+    Raises:
+        Exception: If the API call fails
+    """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    api_url = f"{host}/ec/v1/hashing"
+    
+    request_data = {
+        "contactDetails": contact_details
+    }
+    
+    return await post(api_url, request_data, None, meta_info)
     
 def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
     """Convert IST time to UTC time.
@@ -185,3 +208,35 @@ def utc_to_ist(utc_time_string: str) -> str:
     except Exception as e:
         logging.error(f"Error converting utc to ist: {str(e)}")
         return utc_time_string
+
+def generate_phone_number_variants(phone_number: str, country_code: str = "+91") -> list:
+    """
+    Generate all possible phone number variants for hashing API.
+    Based on the frontend logic for phone number formatting.
+    
+    Args:
+        phone_number (str): Base phone number (e.g., "7058774907")
+        country_code (str): Country code with + (default: "+91")
+        
+    Returns:
+        list: List of all phone number variants
+    """
+    country_code_without_plus = country_code[1:] if country_code.startswith('+') else country_code
+    
+    variants = [
+        phone_number,  
+        f"{country_code} {phone_number}",  
+        f"{country_code}{phone_number}",   
+        f"{country_code}-{phone_number}",  
+        f"{country_code_without_plus}{phone_number}",  
+        f"{country_code_without_plus} {phone_number}",  
+        f"{country_code_without_plus}-{phone_number}",  
+        f"0{phone_number}",  
+        f"{country_code}0{phone_number}", 
+        f"{country_code} 0{phone_number}", 
+        f"{country_code_without_plus}0{phone_number}", 
+        f"{country_code_without_plus}-0{phone_number}", 
+        f"{country_code_without_plus} 0{phone_number}", 
+    ]
+    
+    return variants
