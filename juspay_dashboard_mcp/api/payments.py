@@ -159,7 +159,7 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     Raises:
         Exception: If the API call fails or EMI validation fails.
     """
-    host = "https://portal.juspay.in"
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/ec/v1/paymentLinks"
 
     request_data = {}
@@ -172,7 +172,12 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
         token_response = meta_info.get("token_response")
         if isinstance(token_response, dict):
             valid_host = token_response.get("validHost")
-            if valid_host in ["dashboard.smartgateway.hdfcbank.com", "dashboard.smartgateway.hdfcbank.com/"]:
+            if valid_host in [
+                "dashboard.smartgateway.hdfcbank.com", 
+                "dashboard.smartgateway.hdfcbank.com/",
+                "dashboarduat.smartgatewayuat.hdfcbank.com",
+                "dashboarduat.smartgatewayuat.hdfcbank.com/"
+            ]:
                 is_hdfc = True
     if is_hdfc:
         request_data["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
@@ -359,7 +364,12 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
         token_response = meta_info.get("token_response")
         if isinstance(token_response, dict):
             valid_host = token_response.get("validHost")
-            if valid_host in ["dashboard.smartgateway.hdfcbank.com", "dashboard.smartgateway.hdfcbank.com/"]:
+            if valid_host in [
+                "dashboard.smartgateway.hdfcbank.com", 
+                "dashboard.smartgateway.hdfcbank.com/",
+                "dashboarduat.smartgatewayuat.hdfcbank.com",
+                "dashboarduat.smartgatewayuat.hdfcbank.com/"
+            ]:
                 is_hdfc = True
     if is_hdfc:
         payload["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
@@ -398,7 +408,7 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
             f"Invalid mandate_frequency '{payload['mandate_frequency']}'. Please ask user to choose from: {', '.join(valid_frequencies)}"
         )
         
-    host = "https://portal.juspay.in"
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/ec/v1/paymentLinks"
 
     request_data = {}
