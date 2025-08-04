@@ -455,7 +455,12 @@ async def handle_tool_calls(
         if current_meta_info:
             token_response = current_meta_info.get("token_response")
             if token_response and isinstance(token_response, dict):
-                is_hdfc = token_response.get("validHost") in ["dashboard.smartgateway.hdfcbank.com/", "dashboard.smartgateway.hdfcbank.com"]
+                is_hdfc = token_response.get("validHost") in [
+                    "dashboard.smartgateway.hdfcbank.com/", 
+                    "dashboard.smartgateway.hdfcbank.com",
+                    "dashboarduat.smartgatewayuat.hdfcbank.com",
+                    "dashboarduat.smartgatewayuat.hdfcbank.com/"
+                ]
         for tool in AVAILABLE_TOOLS:
             if tool["name"] in ["create_payment_link_juspay", "create_autopay_link_juspay"]:
                 if is_hdfc:
