@@ -4,132 +4,237 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List, Literal, Union
+from pydantic import BaseModel, Field, model_validator
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
-from juspay_dashboard_mcp.api_schema.qapi import Filter
+
+# Import the flat filter types
+FilterFieldDimensionEnum = Literal[
+    "customer_id",
+    "business_region",
+    "actual_order_status",
+    "ord_currency",
+    "order_source_object",
+    "order_source_object_id",
+    "order_status",
+    "order_type",
+    "is_retargeted_order",
+    "is_retried_order",
+    "industry",
+    "prev_order_status",
+    "order_created_at",
+    "merchant_id",
+    "udf1",
+    "udf2",
+    "udf3",
+    "udf4",
+    "udf5",
+    "udf6",
+    "udf7",
+    "udf8",
+    "udf9",
+    "udf10",
+    "order_amount",
+    "card_brand",
+    "auth_type",
+    "is_cvv_less_txn",
+    "emi",
+    "emi_bank",
+    "emi_type",
+    "emi_tenure",
+    "payment_method_type",
+    "source_object",
+    "error_code",
+    "error_message",
+    "error_category",
+    "gateway_reference_id",
+    "payment_gateway",
+    "bank",
+    "date_created",
+    "payment_status",
+    "amount",
+    "payment_instrument_group",
+    "epg_txn_id",
+    "card_exp_month",
+    "card_exp_year",
+    "card_issuer_country",
+    "card_bin",
+    "card_last_four_digits",
+    "is_upicc",
+    "resp_message",
+    "mandate_frequency",
+    "platform"
+]
+
+FilterCondition = Literal[
+    "In", "NotIn", "Greater", "GreaterThanEqual", "LessThanEqual", "Less"
+]
+
+
+class Clause(BaseModel):
+    """Single predicate applied to a dimension."""
+
+    field: FilterFieldDimensionEnum
+    condition: FilterCondition
+    val: Union[str, bool, float, int, None, List[Union[str, bool, int, float, None]]]
+
+
+class FlatFilter(BaseModel):
+    """Flat representation of the boolean filter tree."""
+
+    clauses: List[Clause] = Field(..., min_items=1, max_items=10)
+    logic: str = Field(
+        ...,
+        description="Expression referencing clause indices, e.g. '(0 AND (1 OR 2))'",
+    )
+
+    @model_validator(mode="after")
+    def _check_logic_indices(self) -> "FlatFilter":
+        """Sanity check: make sure logic only references valid indices."""
+        import re
+
+        if self.logic:
+            max_idx = len(self.clauses) - 1
+            for idx in map(int, re.findall(r"\d+", self.logic)):
+                if idx > max_idx:
+                    raise ValueError(f"logic references non-existent clause #{idx}")
+        return self
+
 
 class JuspayListOrdersV4Payload(WithHeaders):
     dateFrom: str = Field(
         ...,
-        description="Start date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ')."
+        description="Start date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
     )
     dateTo: str = Field(
         ...,
-        description="End date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ')."
+        description="End date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
     )
     offset: Optional[int] = Field(
-        0,
-        description="Offset for pagination (optional, default is 0)."
+        0, description="Offset for pagination (optional, default is 0)."
     )
     limit: Optional[int] = Field(
-        None, # Default to None if not provided
-        description="Limit for the number of orders to fetch (optional)."
-    )
-    paymentStatus: Optional[str] = Field(
         None,
-        description="Optional filter for payment status (e.g., 'CHARGED', 'PENDING')."
+        description="Limit for the number of orders to fetch (optional).",
     )
-    orderType: Optional[str] = Field(
+    order: Optional[List[List[str]]] = Field(
         None,
-        description="Optional filter for order type."
+        description="Optional sort order specification as array of [field, direction] pairs (e.g., [['date_created', 'DESC']]).",
     )
-    qFilters: Optional[Dict[str, Any]] = Field(
-         None,
-        description="""MANDATORY: This qFilters block MUST include 'order_created_at'/'date_created' conditions using epoch timestamp strings for 'val'. 'date_created' to be used where domain selected is txnsELS and 'order_created_at'to be used where domain selected is ordersELS (see example below for structure, where date_from_ts and date_to_ts are epoch seconds. Structure remains the same for both 'date_created' and 'order_created_at').
-                A dict representing the 'filters' section with valid field values from the schema.
-                IMPORTANT NOTES:
-                  - DO NOT pass limit in qFilters. It is already handled in the payload.
-                  - Only pass the supported filters in the qFilters. DO NOT pass anyother filters in qFilter. The supported filters are:
 
-                  Filters supported by 'ordersELS' domain :
-                        "customer_id", // unique identifier for the customer
-                        "business_region", 
-                        "actual_order_status", // actual order status gives granular information about the order status. Possible values are: 'COD_INITIATED', 'AUTHORIZED', 'AUTO_REFUNDED', 'AUTHENTICATION_FAILED', 'CAPTURE_INITIATED', 'CAPTURE_FAILED', 'AUTHORIZING', 'VOIDED', 'NEW', 'SUCCESS', 'PENDING_AUTHENTICATION', 'AUTHORIZATION_FAILED', 'PARTIAL_CHARGED', 'JUSPAY_DECLINED', 'TO_BE_CHARGED'
-                        "ord_currency", // Order currency
-                        "order_refunded_entirely", // boolean, true if order is refunded entirely
-                        "order_source_object", 
-                        "order_source_object_id",
-                        "order_status", // order status gives high level information about the order status. Possible values are: 'SUCCESS', 'FAILURE', 'PENDING'
-                        "order_type", // order type gives information about the type of order. Possible values are: 'MANDATE_PAYMENT', 'ORDER_PAYMENT', 'TPV_MANDATE_REGISTER', 'TPV_PAYMENT', 'MOTO_PAYMENT', 'VAN_PAYMENT', 'MANDATE_REGISTER', 'TPV_MANDATE_PAYMENT'
-                        "is_retargeted_order", // boolean, true if order is retargeted
-                        "is_retried_order", // boolean, true if order is retried
-                        "industry", // industry of the merchant
-                        "prev_order_status", // previous order status gives information about the previous status of the order. Possible values are: 'SUCCESS', 'FAILURE', 'PENDING'
-                        "order_created_at", // order created at timestamp
-                        "merchant_id", // unique identifier for the merchant
-                        "full_udf1", // UDFs are user-defined fields that can be used to store additional information about the order. The UDFs are stored as key-value pairs. The keys are "full_udf1", "full_udf2", "full_udf3", "full_udf4", "full_udf5", "full_udf6", "full_udf7", "full_udf8", "full_udf9", and "full_udf10". The values can be any string.
-                        "full_udf2", 
-                        "full_udf3",
-                        "full_udf4", 
-                        "full_udf5",
-                        "full_udf6",
-                        "full_udf7",
-                        "full_udf8",
-                        "full_udf9",
-                        "full_udf10"
-
-                  Filters supported by 'txnsELS' domain :
-                        "order_amount",// order amount for filtering orders based on amount
-                        "card_brand", // card brand for filtering orders based on card brand
-                        "auth_type", // type of authentication used for the order
-                        "is_cvv_less_txn", // boolean, true if the transaction is CVV-less
-                        "is_emi", // boolean, true if the transaction is EMI
-                        "emi_bank", // bank used for EMI transactions
-                        "emi_type", // type of EMI for the transaction - STANDARD_EMI, NO_COST_EMI, LOW_COST_EMI
-                        "emi_tenure", // tenure of the EMI in months
-                        "payment_method_type", // type of payment method used for the order. Possible values are: 'CARD', 'UPI', 'WALLET', 'NB', 'CONSUMER_FINANCE', 'REWARD', 'CASH', 'RTP', 'MERCHANT_CONTAINER', 'AADHAAR'
-                        "payment_method_subtype", // subtype of the payment method used for the order. For example, for UPI payments, the subtype can be 'UPI_COLLECT', 'UPI_INTENT', 'UPI_QR', etc.
-                        "error_code", // error code encountered during the order processing
-                        "error_message", // error message encountered during the order processing
-                        "error_category", // error category basis the encountered error code
-                        "gateway_reference_id", // reference ID of the payment gateway processing the order
-                        "payment_gateway", // name of the payment gateway processing the order
-                        "bank", // this field is used to store the payment method used to process the order. Filters on this field can be used to get orders processed through specific payment methods.
-
-                     # Example filter for latest orders with actual_order_status as SUCCESS 
-                        {
-    "and": {
-        "right": {
-            "field": "order_created_at",
-            "condition": "LessThanEqual",
-            "val": "1741328100"
-        },
-        "left": {
-            "and": {
-                "right": {
-                    "field": "order_created_at",
-                    "condition": "GreaterThanEqual",
-                    "val": "1741285800"
-                },
-                "left": {
-                    "field": "actual_order_status",
-                    "condition": "In",
-                    "val": "SUCCESS"
-                }
-            }
+    flatFilters: Optional[FlatFilter] = Field(
+        None,
+        description="""SIMPLIFIED FILTERS: Use this field instead of qFilters. Provide a flat list of filter conditions with simple logic.
+        
+        NOTE: Time range filters are automatically added by the handler - DO NOT include them manually.
+        NOTE: Domain is a mandatory field and must always be sent with payload.
+        
+        MANDATORY: In case of domain 'txnsELS', always use 'payment_status' instead of 'order_status' for filtering.
+        MANDATORY: In case of domain 'txnsELS', always use 'order_amount' instead of 'amount' for filtering.
+        
+        SUPPORTED CONDITIONS:
+        - "In": value is in the provided list
+        - "NotIn": value is not in the provided list  
+        - "Greater", "GreaterThanEqual", "LessThanEqual", "Less": comparison operators
+        
+        SUPPORTED FIELDS BY DOMAIN:
+        
+        For 'ordersELS' domain:
+        - customer_id: unique identifier for the customer
+        - business_region: business region information
+        - actual_order_status: granular order status. Values: 'COD_INITIATED', 'AUTHORIZED', 'AUTO_REFUNDED', 'AUTHENTICATION_FAILED', 'CAPTURE_INITIATED', 'CAPTURE_FAILED', 'AUTHORIZING', 'VOIDED', 'NEW', 'SUCCESS', 'PENDING_AUTHENTICATION', 'AUTHORIZATION_FAILED', 'PARTIAL_CHARGED', 'JUSPAY_DECLINED', 'TO_BE_CHARGED'
+        - ord_currency: order currency
+        - order_source_object: source object information
+        - order_source_object_id: source object ID
+        - order_status: high-level order status. Values: 'SUCCESS', 'FAILURE', 'PENDING'
+        - order_type: type of order. Values: 'MANDATE_PAYMENT', 'ORDER_PAYMENT', 'TPV_MANDATE_REGISTER', 'TPV_PAYMENT', 'MOTO_PAYMENT', 'VAN_PAYMENT', 'MANDATE_REGISTER', 'TPV_MANDATE_PAYMENT'
+        - is_retargeted_order: boolean, true if order is retargeted
+        - is_retried_order: boolean, true if order is retried
+        - industry: industry of the merchant
+        - prev_order_status: previous order status. Values: 'SUCCESS', 'FAILURE', 'PENDING'
+        - order_created_at: order created timestamp (epoch seconds)
+        - merchant_id: unique identifier for the merchant (lowercase, no spaces)
+        - udf1 through udf10: user-defined fields for additional order information
+        - amount: order amount for filtering by amount, always apply this filter's value in an array
+        - payment_instrument_group: 'CREDIT CARD', 'RTP', 'WALLET', 'OTC', 'REWARD', 'NET BANKING', 'CASH', 'AADHAAR', 'DEBIT CARD', 'UPI', 'VIRTUAL_ACCOUNT'
+        
+        For 'txnsELS' domain:
+        - payment_status :In case of the domain txnsELS always use payment_status filter instead of order_status. Proxy for order_status when txnsELS domain is selected. Always use  Values: 'SUCCESS', 'FAILURE', 'PENDING'
+        - order_amount: order amount for filtering by amount , always apply this filter's value in an array. In case of the domain txnsELS always use order_amount filter instead of amount.
+        - card_brand: card brand for filtering by card brand
+        - auth_type: type of authentication used
+        - is_cvv_less_txn: boolean, true if CVV-less transaction
+        - emi: boolean, true if EMI transaction
+        - emi_bank: bank used for EMI transactions
+        - emi_type: EMI type. Values: 'STANDARD_EMI', 'NO_COST_EMI', 'LOW_COST_EMI'
+        - emi_tenure: EMI tenure in months
+        - payment_method_type: payment method type. Values: 'CARD', 'UPI', 'WALLET', 'NB', 'CONSUMER_FINANCE', 'REWARD', 'CASH', 'RTP', 'MERCHANT_CONTAINER', 'AADHAAR'
+        - source_object: use this field when payment method subtype filter is to be applied . Values: 'MANDATE', 'REDIRECT_WALLET_DEBIT', 'UPI_COLLECT', 'UPI_PAY', 'UPI_QR', 'DIRECT_WALLET_DEBIT', 'DIRECT_WALLET_LINK_AND_DEBIT', 'DECIDER_FALLBACK_TO_THREE_DS', 'UPI_INAPP', 'PG_FAILURE_FALLBACK_TO_THREE_DS', 'PAYMENT_CHANNEL_FALLBACK_TO_THREE_DS', 'CUSTOMER_FALLBACK_TO_THREE_DS'
+        - error_code: error code during order processing
+        - error_message: error message during order processing
+        - error_category: error category based on error code
+        - gateway_reference_id: payment gateway reference ID
+        - payment_gateway: payment gateway name
+        - bank: payment method used (also stores UPI handles, wallet names)
+        - date_created: transaction created timestamp (epoch seconds)
+        - epg_txn_id: transaction ID at the payment gateway's (PG) end
+        - card_exp_month: expiry month of the card used. Numeric value (1-12)
+        - card_exp_year: expiry year of the card used. Numeric value (4-digit year)
+        - card_issuer_country: country of the card issuer
+        - card_bin: also known as bin or card ISIN (International Securities Identification Number)
+        - card_last_four_digits: last four digits of the card used / card ending with. Numeric value (4 digits)
+        - is_upicc: boolean, true if UPI credit card transaction
+        - resp_message: response message from the payment gateway, only use when specifically asked to filter on payment gateway response message
+        - mandate_frequency: Frequency of the mandate, only use when specifically asked to filter on mandate/autopay/recurring payment frequency
+        - platform: possible values are android, ios, mobile_web, web
+        
+        IMPORTANT FILTERING RULES:
+        - ALWAYS filter out null values when querying top values: use "condition": "NotIn", "val": [null]
+        - When asked to filter on order success/failure, always use "order_status" by default. If the user wants more fine grained filtering then use actual_order_status otherwise always default to "order_status". Supported values for order_status: ["SUCCESS", "FAILURE", "PENDING"]
+        - When asked about payments through UPI handle/VPA/UPI ID/UPI Address (eg. @icici, @okicici, @okhdfcbank, @ptyes), set source_object filter on UPI_COLLECT. UPI handle is stored in "bank" field. (example - 'paytm handle' in the query refers to "Paytm" in the "bank" field and set source_object filter on UPI_COLLECT)
+        - When asked about orders processed through a specific wallet, set payment_method_type filter on WALLET and the wallet name is stored in "bank" field
+        - If the query asks details about a specific merchant, add the filter for merchant_id. (Note: merchant_id should be lowercase and without spaces)
+        - Consider Conversational Context: Carefully examine if the current user query is a continuation or refinement of a previous query within the ongoing conversation. If the current query lacks specific filter details but appears to build upon earlier messages, actively infer the necessary filters from the established conversational context. For example, if the user first asks "Give me the most recent orders" and then follows up with "Break it down by payment method type", the second query implicitly requires the payment_method dimension for the orders from the first query.
+        - You are not allowed to use any field apart from the provided possible enum values in the JSON schema
+        - After generating the filter, check each key and match it with the allowed JSON schema. Do not return filters outside of the JSON schema
+        - Only use fields from the supported enum values above
+        - To filter transactions for a specific card type (Credit Card/Debit Card) filter on "payment_instrument_group"!
+        - When asked for upi credit card transactions, NEVER `payment_instrument_group` = `CREDIT CARD`, always use `is_upicc` = `true`!!!
+        
+        EXAMPLE - Latest SUCCESS orders with payment gateway filtering:
+        {
+            "clauses": [
+                {"field": "order_status", "condition": "In", "val": ["SUCCESS"]},
+                {"field": "payment_gateway", "condition": "NotIn", "val": [null]}
+            ],
+            "logic": "0 AND 1"
         }
-    }
-}                   
-                  ```
-                 - ALWAYS add a filter to exclude null values when querying for top values of any dimension/field. This ensures that null values don't appear in the top results. For example, when asked for "top payment gateways", always include a filter like `"condition": "NotIn", "field": "payment_gateway", "val": [null]`. _MAKE SURE TO ALWAYS FILTER OUT NULL VALUES NOT EMPTY STRING ""_
-                 - Consider Conversational Context: Carefully examine if the current user query is a continuation or refinement of a previous query within the ongoing conversation. If the current query lacks specific filter details but appears to build upon earlier messages, actively infer the necessary filters from the established conversational context. For example, if the user first asks "Give me the most recent orders" and then follows up with "Break it down by payment method type", the second query implicitly requires the `payment_method` dimension for the orders from the first query.
-                 - You are not allowed to use any field apart from the provided possible enum values in the JSON schema.
-                 - Do not return an empty filter object.
-                 - After generating the filter, check each key and match it with the allowed JSON schema. Do not return filters outside of the JSON schema.
-                 - Return only the JSON filter in the output; do not return any other text apart from the generated filter.
-                 - If the query asks details about a specific merchant, add the filter for merchant_id. (Note: merchant_id should be lowercase and without spaces)
-                 - NOTE: When asked to filter on order success/failure, always use "order_status" in dimensions or filter fields. If the user wants more fine grained filtering then use actual_order_status otherwise always default to "order_status". Supported values for order_status: ["SUCCESS", "FAILURE", "PENDING"]
-                 - When asked about payments through UPI handle/VPA/UPI ID/UPI Address (eg. @icici, @okicici, @okhdfcbank, @ptyes), set payment_method_subtype filter on UPI_COLLECT. UPI handle is stored in "bank" field. (example - 'paytm handle' in the query refers to "Paytm" in the "bank" fieldDimensionEnum and set payment_method_subtype filter on UPI_COLLECT)
-                 - When asked about orders processed through a specific wallet, set payment_method_type filter on WALLET and the wallet name is stored in "bank" field."""
+        
+        EXAMPLE - UPI Paytm handle orders:
+        {
+            "clauses": [
+                {"field": "source_object", "condition": "In", "val": ["UPI_COLLECT"]},
+                {"field": "bank", "condition": "In", "val": ["Paytm"]}
+            ],
+            "logic": "0 AND 1"
+        }
+        
+        EXAMPLE - Wallet orders:
+        {
+            "clauses": [
+                {"field": "payment_method_type", "condition": "In", "val": ["WALLET"]},
+                {"field": "bank", "condition": "In", "val": ["PayPal"]}
+            ],
+            "logic": "0 AND 1"
+        }""",
     )
     domain: str = Field(
         ...,
-        description="Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'."
+        description="Domain is a mandatory field always and must always be sent with payload.Domain for query, choose between 'ordersELS' or 'txnsELS' based on the filers passed in qfilters. If unsure, use 'txnsELS'. Choose 'ordersELS' only when ALL filters passed in qFilters are from the ordersELS domain. Even if any one filter is from the txnsELS domain, use 'txnsELS'.",
     )
+
 
 class JuspayGetOrderDetailsPayload(WithHeaders):
     order_id: str = Field(
-        ...,
-        description="Order ID for which details are to be fetched."
+        ..., description="Order ID for which details are to be fetched."
     )

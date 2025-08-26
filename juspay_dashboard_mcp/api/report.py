@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post,call, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.utils import call, post, get_juspay_host_from_api
 
 async def report_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -40,7 +40,7 @@ async def report_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     if not task_uid or not user_name:
         raise ValueError("The payload must include 'task_uid' and 'user_name'.")
 
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/monitoring/task?task_uid={task_uid}&user_name={user_name}"
     
     # Empty body since parameters are in URL
@@ -79,7 +79,7 @@ async def list_report_juspay(payload: dict, meta_info: dict = None) -> dict:
     if "merchantId" not in payload or payload.get("task_type") != "report":
         raise ValueError("Payload must contain 'merchantId' and 'task_type' must be 'report'.")
     
-    host = await get_juspay_host_from_api()
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/api/monitoring/task/list"
     
     return await post(api_url, payload, None, meta_info)

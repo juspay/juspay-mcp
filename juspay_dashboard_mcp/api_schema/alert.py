@@ -19,7 +19,7 @@ class JuspayAlertDetailsPayload(WithHeaders):
     )
 
 class JuspayListAlertsPayload(WithHeaders):
-    merchantId: str = Field(
+    merchant_id: str = Field(
         ...,
         description="Merchant ID for which alerts are to be listed."
     )
