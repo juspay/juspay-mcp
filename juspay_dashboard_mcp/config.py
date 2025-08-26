@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
+JUSPAY_ENV = os.getenv("JUSPAY_ENV", "sandbox").lower() 
 JUSPAY_WEB_LOGIN_TOKEN = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
 
 if JUSPAY_ENV == "production":
