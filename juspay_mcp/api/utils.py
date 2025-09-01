@@ -32,7 +32,8 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with headers: {headers}")
+            headers_to_log = {k: v for k, v in headers.items() if k.lower() != "authorization"}
+            logger.info(f"Calling Juspay API at: {api_url} with headers: {headers_to_log}")
             response = await client.get(api_url, headers=headers)
             logger.info(f"Response: {response}")
             response.raise_for_status()
