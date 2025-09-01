@@ -298,17 +298,32 @@ Use this tool to get a complete overview of the monitoring and alerting setup fo
         response_schema=None,
     ),
     util.make_api_config(
-        name="juspay_list_orders_v4",
-        description="""Retrieves a list of orders created within a specified time range. Supports an optional top-level 'limit' parameter and optional 'flatFilters' for payment status and order type.Domain is a mandatory field for this tool and should always be provided . If unsure about the domain, use 'txnsELS' as the default value.
+        name="juspay_find_orders",
+        description="""Powerful order search and listing tool designed for both RCA (Root Cause Analysis) and general order management. Retrieves orders within a specified time range with advanced filtering capabilities for troubleshooting and investigation.
 
 Key features:
-- Fetches a list of orders within a given start and end time.
-- Allows limiting the number of results.
-- Supports filtering by payment status (e.g., CHARGED, PENDING).
-- Supports filtering by order type (e.g., PAYMENT, REFUND).
-- Requires a 'domain' parameter, typically 'txnsELS'.
+- Fetches orders within a given start and end time range
+- Advanced filtering by payment status, order type, error messages, and more
+- NEW: Search by specific transaction identifiers for RCA:
+  * epg_txn_id: Transaction ID at the payment gateway's end
+  * txn_uuid: Unique identifier for transaction record in Juspay's system  
+  * pgr_rrn: Bank-assigned Retrieval Reference Number for tracking
+- Supports filtering by amount, error codes and error messages for troubleshooting
+- Allows limiting the number of results and pagination
+- Domain parameter is mandatory (use 'txnsELS' if unsure)
 
-Use this tool to search for orders based on time, status, or type. Essential for generating order reports, reconciling transactions, and getting a high-level view of order activity.""",
+RCA Use Cases:
+- Find orders by specific transaction IDs when investigating payment issues
+- Search for orders with specific error messages reported by merchants
+- Filter by error codes or error messages to identify patterns in payment failures
+- Locate sample orders for a particular date range when merchants report issues basis any filter info available (like amount, customer ID, card last four digits etc.)
+
+General Use Cases:
+- Generate order reports and reconcile transactions
+- Get high-level view of order activity by status or type
+- Search orders by payment method, gateway, or other criteria
+
+Use this tool whenever you need to find specific orders for investigation, troubleshooting, or general order management tasks.""",
         model=api_schema.orders.JuspayListOrdersV4Payload,
         handler=orders.list_orders_v4_juspay,
         response_schema=None,
