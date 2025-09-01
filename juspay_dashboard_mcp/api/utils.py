@@ -7,13 +7,30 @@
 import os
 import httpx
 import logging
+from contextvars import ContextVar
 from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+# Context variable to store Juspay credentials for the current request
+juspay_credentials: ContextVar[dict | None] = ContextVar('juspay_credentials', default=None)
+
+def set_juspay_credentials(creds: dict | None):
+    """Set Juspay credentials for the current context."""
+    juspay_credentials.set(creds)
+
+def get_juspay_credentials() -> dict | None:
+    """Get Juspay credentials from the current context."""
+    return juspay_credentials.get()
+
 async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
-    headers = get_common_headers({}, meta_info)
+    # Get Juspay credentials from context or use meta_info for backward compatibility
+    juspay_creds = get_juspay_credentials()
+    if not juspay_creds and meta_info:
+        juspay_creds = meta_info.get("juspay_credentials")
+    
+    headers = get_common_headers({}, meta_info, juspay_creds)
     
     if additional_headers:
         headers.update(additional_headers)
@@ -35,7 +52,12 @@ async def call(api_url: str, additional_headers: dict = None, meta_info: dict = 
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
 async def post(api_url: str, payload: dict,additional_headers: dict = None, meta_info: dict= None) -> dict:
-    headers = get_common_headers(payload, meta_info) 
+    # Get Juspay credentials from context or use meta_info for backward compatibility
+    juspay_creds = get_juspay_credentials()
+    if not juspay_creds and meta_info:
+        juspay_creds = meta_info.get("juspay_credentials")
+    
+    headers = get_common_headers(payload, meta_info, juspay_creds) 
 
     if additional_headers:
         headers.update(additional_headers)
@@ -64,14 +86,24 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     """
     validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
 
-    token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    # Get token from header credentials context first, then fallback to other sources
+    juspay_creds = get_juspay_credentials()
+    token_to_use = token
+    if not token_to_use and juspay_creds:
+        token_to_use = juspay_creds.get("dashboard_token")
+    if not token_to_use:
+        token_to_use = os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    if not token_to_use and meta_info:
+        token_to_use = meta_info.get("x-web-logintoken")
+        
     logger.info(f"Using token for validation: {token_to_use}")  
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 
     try:
         json_payload = {"token": token_to_use}
-        request_api_headers = get_common_headers(json_payload, meta_info)
+        juspay_creds = get_juspay_credentials()
+        request_api_headers = get_common_headers(json_payload, meta_info, juspay_creds)
         if headers: # headers from function signature
             request_api_headers.update(headers)
 
@@ -105,20 +137,30 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
     """
     validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
 
-    token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    # Get token from header credentials context first, then fallback to other sources
+    juspay_creds = get_juspay_credentials()
+    token_to_use = token
+    if not token_to_use and juspay_creds:
+        token_to_use = juspay_creds.get("dashboard_token")
+    if not token_to_use:
+        token_to_use = os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+    if not token_to_use and meta_info:
+        token_to_use = meta_info.get("x-web-logintoken")
+        
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 
     try:
+        json_payload = {"token": token_to_use}
+        # Pass juspay_creds to get_common_headers to avoid environment variable verification
+        juspay_creds = get_juspay_credentials()
+        request_api_headers = get_common_headers(json_payload, meta_info, juspay_creds)
+        
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 validate_url,
-                headers={
-                    "accept": "*/*",
-                    "accept-language": "en-US,en;q=0.9",
-                    "content-type": "application/json"
-                },
-                json={"token": token_to_use}
+                headers=request_api_headers,
+                json=json_payload
             )
             resp.raise_for_status()
             data = resp.json()

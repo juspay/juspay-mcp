@@ -7,11 +7,25 @@
 import httpx
 from juspay_mcp.config import get_json_headers
 import logging 
+from contextvars import ContextVar
 
 logger = logging.getLogger(__name__)
 
+# Context variable to store Juspay credentials for the current request
+juspay_credentials: ContextVar[dict | None] = ContextVar('juspay_credentials', default=None)
+
+def set_juspay_credentials(creds: dict | None):
+    """Set Juspay credentials for the current context."""
+    juspay_credentials.set(creds)
+
+def get_juspay_credentials() -> dict | None:
+    """Get Juspay credentials from the current context."""
+    return juspay_credentials.get()
+
 async def call(api_url: str, customer_id: str | None = None, additional_headers: dict = None) -> dict:
-    headers = get_json_headers(routing_id=customer_id)
+    # Get Juspay credentials from context
+    juspay_creds = get_juspay_credentials()
+    headers = get_json_headers(routing_id=customer_id, juspay_creds=juspay_creds)
     
     if additional_headers:
         headers.update(additional_headers)
@@ -35,7 +49,9 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
 
 async def post(api_url: str, payload: dict, routing_id: str | None = None) -> dict:
     effective_routing_id = routing_id or payload.get("customer_id")
-    headers = get_json_headers(routing_id=effective_routing_id) 
+    # Get Juspay credentials from context
+    juspay_creds = get_juspay_credentials()
+    headers = get_json_headers(routing_id=effective_routing_id, juspay_creds=juspay_creds) 
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:

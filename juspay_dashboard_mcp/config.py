@@ -31,24 +31,39 @@ def verify_env_vars():
     if not JUSPAY_WEB_LOGIN_TOKEN:
         raise ValueError("JUSPAY_WEB_LOGIN_TOKEN environment variable must be set.")
 
+def verify_dynamic_credentials(juspay_creds: dict):
+    """Verifies that required Juspay credentials are present in the auth context."""
+    if not juspay_creds:
+        raise ValueError("No Juspay credentials found in authentication context")
+    
+    dashboard_token = juspay_creds.get("dashboard_token")
+    
+    if not dashboard_token:
+        raise ValueError("Missing dashboard_token in Juspay credentials")
 
 def get_base64_auth():
     """Returns the base64 encoded auth string."""
     pass
 
 
-def get_common_headers(payload: dict, meta_info: dict = None):
+def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict = None):
     """
     Returns common headers used by all API calls.
-    Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
+    If juspay_creds is provided, uses dynamic credentials; otherwise falls back to env vars and meta_info.
     """
-    if "x-web-logintoken" not in (meta_info or {}):
-        verify_env_vars()
-
-    if meta_info:
-        token = meta_info.get("x-web-logintoken", JUSPAY_WEB_LOGIN_TOKEN)
+    if juspay_creds:
+        # Use dynamic credentials from headers
+        verify_dynamic_credentials(juspay_creds)
+        token = juspay_creds["dashboard_token"]
     else:
-        token = JUSPAY_WEB_LOGIN_TOKEN
+        # Fallback to original logic
+        if "x-web-logintoken" not in (meta_info or {}):
+            verify_env_vars()
+
+        if meta_info:
+            token = meta_info.get("x-web-logintoken", JUSPAY_WEB_LOGIN_TOKEN)
+        else:
+            token = JUSPAY_WEB_LOGIN_TOKEN
 
     default_headers = {
         "Content-Type": "application/json",
