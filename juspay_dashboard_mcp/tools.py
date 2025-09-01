@@ -323,7 +323,9 @@ General Use Cases:
 - Get high-level view of order activity by status or type
 - Search orders by payment method, gateway, or other criteria
 
-Use this tool whenever you need to find specific orders for investigation, troubleshooting, or general order management tasks.""",
+Use this tool whenever you need to find specific orders for investigation, troubleshooting, or general order management tasks.
+
+IMPORTANT: If unsure about the type of a provided ID, the agent should ask the user for clarification, providing the available ID fields (epg_txn_id, txn_uuid, pgr_rrn) as options to choose from.""",
         model=api_schema.orders.JuspayListOrdersV4Payload,
         handler=orders.list_orders_v4_juspay,
         response_schema=None,
