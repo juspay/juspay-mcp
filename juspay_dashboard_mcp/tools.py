@@ -20,17 +20,16 @@ logger = logging.getLogger(__name__)
 
 app = Server("juspay-dashboard")
 
-# Global variable to store header-based credentials (set by middleware)
-header_credentials = None
+from contextvars import ContextVar
+juspay_request_credentials: ContextVar[dict | None] = ContextVar('juspay_request_credentials', default=None)
 
-def set_juspay_credentials_from_headers(credentials):
-    """Set Juspay credentials from request headers."""
-    global header_credentials
-    header_credentials = credentials
+def set_juspay_request_credentials(credentials):
+    """Set Juspay credentials for the current request context."""
+    juspay_request_credentials.set(credentials)
     
-def get_juspay_credentials():
-    """Get Juspay credentials from headers or return None to use environment variables."""
-    return header_credentials
+def get_juspay_request_credentials():
+    """Get Juspay credentials from current request context."""
+    return juspay_request_credentials.get()
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
@@ -490,8 +489,7 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         else:
             payload_dict = arguments 
         
-        # Extract Juspay credentials from headers and set in context
-        juspay_creds = get_juspay_credentials()
+        juspay_creds = get_juspay_request_credentials()
         if juspay_creds:
             logger.info("Using header credentials for Juspay Dashboard API calls")
             set_juspay_credentials(juspay_creds)

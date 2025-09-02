@@ -22,9 +22,9 @@ from starlette.requests import Request
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
-    from juspay_dashboard_mcp.tools import app, set_juspay_credentials_from_headers
+    from juspay_dashboard_mcp.tools import app
 else:
-    from juspay_mcp.tools import app, set_juspay_credentials_from_headers
+    from juspay_mcp.tools import app
 from juspay_mcp.stdio import run_stdio
 
 # Load environment variables.
@@ -45,12 +45,10 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
     """
     
     async def dispatch(self, request: Request, call_next):
-        # Extract Juspay credentials from headers
         api_key = request.headers.get("JUSPAY_API_KEY")
         merchant_id = request.headers.get("JUSPAY_MERCHANT_ID") 
         dashboard_token = request.headers.get("JUSPAY_WEB_LOGIN_TOKEN")
         
-        # Build credentials dict with available headers (can be partial)
         juspay_credentials = {}
         if api_key:
             juspay_credentials["api_key"] = api_key
@@ -62,11 +60,10 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
         if juspay_credentials:
             credential_summary = ", ".join(juspay_credentials.keys())
             logger.debug(f"Setting partial Juspay credentials from headers: {credential_summary}")
-            set_juspay_credentials_from_headers(juspay_credentials)
         else:
-            # No headers provided, fall back to environment variables completely
             logger.debug("No Juspay credentials in headers, using environment variables")
-            set_juspay_credentials_from_headers(None)
+        
+        request.state.juspay_credentials = juspay_credentials
             
         response = await call_next(request)
         return response
@@ -114,6 +111,15 @@ def main(host: str, port: int, mode: str):
         """Handles a single client SSE connection and runs the MCP session."""
         logging.info(f"New SSE connection from: {request.client} - {request.method} {request.url.path}")
         
+        # Set credentials for SSE connections 
+        if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
+            from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+        else:
+            from juspay_mcp.tools import set_juspay_request_credentials
+            
+        juspay_creds = getattr(request.state, 'juspay_credentials', None)
+        set_juspay_request_credentials(juspay_creds)
+        
         async with sse_transport_handler.connect_sse(
             request.scope, request.receive, request._send
         ) as streams:
@@ -133,6 +139,14 @@ def main(host: str, port: int, mode: str):
         """Handles StreamableHTTP requests."""
         
         logging.info(f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}")
+
+        if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
+            from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+        else:
+            from juspay_mcp.tools import set_juspay_request_credentials
+            
+        juspay_creds = getattr(request.state, 'juspay_credentials', None)
+        set_juspay_request_credentials(juspay_creds)
 
         await streamable_session_manager.handle_request(
             request.scope, request.receive, request._send

@@ -32,7 +32,6 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            # Only log non-sensitive header names, never values. Do NOT add sensitive headers such as 'Authorization'.
             safe_headers = ["x-request-id"]
             logger.info(
                 f"Calling Juspay API at: {api_url} with permitted headers: {safe_headers if safe_headers else 'None'}"
