@@ -299,12 +299,12 @@ Use this tool to get a complete overview of the monitoring and alerting setup fo
     ),
     util.make_api_config(
         name="juspay_find_orders",
-        description="""Powerful order search and listing tool designed for both RCA (Root Cause Analysis) and general order management. Retrieves orders within a specified time range with advanced filtering capabilities for troubleshooting and investigation.
+        description="""Powerful order search and listing tool designed for both finding sample order IDs for debugging/issue investigation and general order management. Retrieves orders within a specified time range with advanced filtering capabilities for troubleshooting and investigation.
 
 Key features:
 - Fetches orders within a given start and end time range
 - Advanced filtering by payment status, order type, error messages, and more
-- NEW: Search by specific transaction identifiers for RCA:
+- Search by specific transaction identifiers for order ID discovery:
   * epg_txn_id: Transaction ID at the payment gateway's end
   * txn_uuid: Unique identifier for transaction record in Juspay's system  
   * pgr_rrn: Bank-assigned Retrieval Reference Number for tracking
@@ -312,7 +312,7 @@ Key features:
 - Allows limiting the number of results and pagination
 - Domain parameter is mandatory (use 'txnsELS' if unsure)
 
-RCA Use Cases:
+Investigation Use Cases:
 - Find orders by specific transaction IDs when investigating payment issues
 - Search for orders with specific error messages reported by merchants
 - Filter by error codes or error messages to identify patterns in payment failures
