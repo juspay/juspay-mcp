@@ -20,6 +20,17 @@ logger = logging.getLogger(__name__)
 
 app = Server("juspay-dashboard")
 
+from contextvars import ContextVar
+juspay_request_credentials: ContextVar[dict | None] = ContextVar('juspay_request_credentials', default=None)
+
+def set_juspay_request_credentials(credentials):
+    """Set Juspay credentials for the current request context."""
+    juspay_request_credentials.set(credentials)
+    
+def get_juspay_request_credentials():
+    """Get Juspay credentials from current request context."""
+    return juspay_request_credentials.get()
+
 AVAILABLE_TOOLS = [
     util.make_api_config(
         name="juspay_list_configured_gateway",
@@ -451,6 +462,9 @@ async def list_my_tools() -> list[types.Tool]:
 async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
     logger.info(f"Tool called: {name} with arguments: {arguments}")
     try:
+        # Import here to avoid circular imports
+        from juspay_dashboard_mcp.api.utils import set_juspay_credentials
+        
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name), None)
         if not tool_entry:
             raise ValueError(f"Unknown tool: {name}")
@@ -475,6 +489,14 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         else:
             payload_dict = arguments 
         
+        juspay_creds = get_juspay_request_credentials()
+        if juspay_creds:
+            logger.info("Using header credentials for Juspay Dashboard API calls")
+            set_juspay_credentials(juspay_creds)
+        else:
+            logger.info("No header credentials found, falling back to environment variables")
+            set_juspay_credentials(None)
+
         meta_info = arguments.pop("juspay_meta_info", None)
 
         sig = inspect.signature(handler)
