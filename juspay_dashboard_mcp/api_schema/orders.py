@@ -63,7 +63,9 @@ FilterFieldDimensionEnum = Literal[
     "is_upicc",
     "resp_message",
     "mandate_frequency",
-    "platform"
+    "platform",
+    "txn_uuid",
+    "pgr_rrn"
 ]
 
 FilterCondition = Literal[
@@ -187,7 +189,8 @@ class JuspayListOrdersV4Payload(WithHeaders):
         - resp_message: response message from the payment gateway, only use when specifically asked to filter on payment gateway response message
         - mandate_frequency: Frequency of the mandate, only use when specifically asked to filter on mandate/autopay/recurring payment frequency
         - platform: possible values are android, ios, mobile_web, web
-        
+        - txn_uuid: unique identifier for the transaction record created in Juspay's system
+        - pgr_rrn: unique identifier assigned by the bank to track or reference a specific transaction (Retrieval Reference Number)
         IMPORTANT FILTERING RULES:
         - ALWAYS filter out null values when querying top values: use "condition": "NotIn", "val": [null]
         - When asked to filter on order success/failure, always use "order_status" by default. If the user wants more fine grained filtering then use actual_order_status otherwise always default to "order_status". Supported values for order_status: ["SUCCESS", "FAILURE", "PENDING"]
