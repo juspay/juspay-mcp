@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
 from juspay_dashboard_mcp.config import JUSPAY_DASHBOARD_IGNORE_TOOL
+from juspay_dashboard_mcp.api import integrationCheklist
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
 
@@ -447,6 +448,44 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
         response_schema=None,
     ),
   
+    util.make_api_config(
+        name="juspay_integration_monitoring_status",
+        description="""Retrieves integration monitoring status for merchant's product integrations across different platforms.
+
+This tool automatically routes to the appropriate API based on platform:
+- Backend platform: Uses agnostic API (platform-independent monitoring)
+- Web/Android/iOS platforms: Uses nonagnostic API (platform-specific monitoring)
+
+Key features:
+- Platform-aware API routing (agnostic vs nonagnostic)
+- Time-range based monitoring data
+- Success rate and total transaction metrics
+- Stage-wise breakdown of integration status
+- Feature-wise analysis (base, mandate, payout, etc.)
+- Critical vs non-critical stage identification
+- Visibility conditions and results for each stage
+
+Required inputs:
+- platform: Must be one of "Backend", "Web", "Android", "iOS"
+- product_integrated: Must be one of "Payment Page Signature", "Payment Page Session", "EC + SDK", "EC Only"
+- merchant_id: Merchant ID
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+Time format example: "2025-08-03T00:00:00Z"
+
+Response includes:
+- Overall score data with critical and total success counts
+- Feature-wise breakdown (base, mandate, payout, etc.)
+- Section-wise analysis (e.g., "Payments Flow Checklist")
+- Individual stage details with status, criticality, and visibility conditions
+- Module metadata including platform dependencies and minimum hit requirements
+
+Use this tool to monitor integration health, track success rates, analyze platform-specific performance metrics, and identify critical integration issues that need attention.""",
+        model=api_schema.integrationCheklist.JuspayIntegrationMonitoringPayload,
+        handler=integrationCheklist.get_integration_monitoring_status_juspay,
+        response_schema=response_schema.integration_monitoring_status_response_schema,
+    ),
 ]
 
 @app.list_tools()
