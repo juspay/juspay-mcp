@@ -10,7 +10,19 @@ from datetime import datetime
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayIntegrationStatusPayload(WithHeaders):
+class BaseTimeRangePayload(WithHeaders):
+    """Base class for payloads that include time range validation."""
+    
+    @validator('start_time', 'end_time')
+    def validate_datetime_format(cls, v):
+        try:
+            datetime.fromisoformat(v.replace('Z', '+00:00'))
+            return v
+        except ValueError:
+            raise ValueError('Time must be in ISO format: YYYY-MM-DDTHH:MM:SSZ')
+
+
+class JuspayIntegrationStatusPayload(BaseTimeRangePayload):
     platform: Literal["Backend", "Web", "Android", "IOS"] = Field(
         ...,
         description="Platform type. Use 'Backend' for agnostic API, or 'Web'/'Android'/'IOS' for nonagnostic API."
@@ -31,16 +43,9 @@ class JuspayIntegrationStatusPayload(WithHeaders):
         ...,
         description="End time in ISO format: YYYY-MM-DDTHH:MM:SSZ (e.g., '2025-09-01T12:50:00Z')"
     )
-    
-    @validator('start_time', 'end_time')
-    def validate_datetime_format(cls, v):
-        try:
-            datetime.fromisoformat(v.replace('Z', '+00:00'))
-            return v
-        except ValueError:
-            raise ValueError('Time must be in ISO format: YYYY-MM-DDTHH:MM:SSZ')
 
-class JuspayXMidMonitoringPayload(WithHeaders):
+
+class JuspayXMidMonitoringPayload(BaseTimeRangePayload):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier (e.g., '12club', 'A23Games')"
@@ -53,16 +58,9 @@ class JuspayXMidMonitoringPayload(WithHeaders):
         ...,
         description="End time in ISO format: YYYY-MM-DDTHH:MM:SSZ (e.g., '2025-09-08T15:50:00Z')"
     )
-    
-    @validator('start_time', 'end_time')
-    def validate_datetime_format(cls, v):
-        try:
-            datetime.fromisoformat(v.replace('Z', '+00:00'))
-            return v
-        except ValueError:
-            raise ValueError('Time must be in ISO format: YYYY-MM-DDTHH:MM:SSZ')
 
-class JuspayIntegrationPlatformMetricsPayload(WithHeaders):
+
+class JuspayIntegrationPlatformMetricsPayload(BaseTimeRangePayload):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier (e.g., '12club', 'A23Games')"
@@ -75,16 +73,9 @@ class JuspayIntegrationPlatformMetricsPayload(WithHeaders):
         ...,
         description="End time in ISO format: YYYY-MM-DDTHH:MM:SSZ (e.g., '2025-09-08T15:50:00Z')"
     )
-    
-    @validator('start_time', 'end_time')
-    def validate_datetime_format(cls, v):
-        try:
-            datetime.fromisoformat(v.replace('Z', '+00:00'))
-            return v
-        except ValueError:
-            raise ValueError('Time must be in ISO format: YYYY-MM-DDTHH:MM:SSZ')
 
-class JuspayIntegrationProductCountMetricsPayload(WithHeaders):
+
+class JuspayIntegrationProductCountMetricsPayload(BaseTimeRangePayload):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier (e.g., 'pokerindia', 'A23Games')"
@@ -101,11 +92,3 @@ class JuspayIntegrationProductCountMetricsPayload(WithHeaders):
         None,
         description="Optional platform filter (e.g., '', 'Android', 'IOS', 'Web')"
     )
-    
-    @validator('start_time', 'end_time')
-    def validate_datetime_format(cls, v):
-        try:
-            datetime.fromisoformat(v.replace('Z', '+00:00'))
-            return v
-        except ValueError:
-            raise ValueError('Time must be in ISO format: YYYY-MM-DDTHH:MM:SSZ')
