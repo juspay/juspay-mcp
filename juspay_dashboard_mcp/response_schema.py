@@ -1523,7 +1523,7 @@ integration_monitoring_status_response_schema = {
             "required": ["success", "scoreData", "responseData"]
         }
     },
-    "required": ["queryString", "uuid", "queryData"]
+    "required": ["queryData"]
 }
 
 x_mid_monitoring_response_schema = {
@@ -1563,5 +1563,137 @@ x_mid_monitoring_response_schema = {
             "description": "Additional metadata about the query"
         }
     },
-    "required": ["queryString", "uuid", "queryStatus", "queryData", "metaData"]
+    "required": ["queryData"]
+}
+
+integration_platform_metrics_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Generated SQL query for platform-based metrics",
+            "items": {"type": "string"}
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query (e.g., 'analytics-UUID-821482cf-ed31-4a3b-9102-02e16b692242')"
+        },
+        "queryStatus": {
+            "type": "object",
+            "description": "Status information about the query execution"
+        },
+        "queryData": {
+            "type": "array",
+            "description": "Platform-grouped product integration data",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "platform": {
+                        "type": "string",
+                        "description": "Platform identifier (e.g., '', 'Android', 'IOS', 'Web')"
+                    },
+                    "product": {
+                        "type": "string",
+                        "description": "Product integration type (e.g., 'Payment Page Signature', 'EC + SDK')"
+                    }
+                },
+                "required": ["platform", "product"]
+            }
+        },
+        "metaData": {
+            "type": "array",
+            "description": "Additional metadata about the query including time range",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "currentTimeRange": {
+                        "type": "object",
+                        "properties": {
+                            "startTime": {
+                                "type": "string",
+                                "description": "Query start time in ISO format"
+                            },
+                            "endTime": {
+                                "type": "string", 
+                                "description": "Query end time in ISO format"
+                            }
+                        },
+                        "required": ["startTime", "endTime"]
+                    },
+                    "requestPrefix": {
+                        "type": "string",
+                        "description": "Request prefix identifier"
+                    }
+                },
+                "required": ["currentTimeRange", "requestPrefix"]
+            }
+        }
+    },
+    "required": ["queryData"]
+}
+
+integration_product_count_metrics_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Generated SQL query for product count metrics",
+            "items": {"type": "string"}
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query (e.g., 'analytics-UUID-9f9fa9d1-bc68-4fa3-8140-b435e6130972')"
+        },
+        "queryStatus": {
+            "type": "object",
+            "description": "Status information about the query execution"
+        },
+        "queryData": {
+            "type": "array",
+            "description": "Product integration count data grouped by product_integrated",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "product_integrated": {
+                        "type": "string",
+                        "description": "Product integration type (e.g., '', 'EC + SDK', 'Payment Page Session')"
+                    },
+                    "product_count": {
+                        "type": "integer",
+                        "description": "Count of transactions for this product integration type"
+                    }
+                },
+                "required": ["product_integrated", "product_count"]
+            }
+        },
+        "metaData": {
+            "type": "array",
+            "description": "Additional metadata about the query including time range",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "currentTimeRange": {
+                        "type": "object",
+                        "properties": {
+                            "startTime": {
+                                "type": "string",
+                                "description": "Query start time in ISO format"
+                            },
+                            "endTime": {
+                                "type": "string",
+                                "description": "Query end time in ISO format"
+                            }
+                        },
+                        "required": ["startTime", "endTime"]
+                    },
+                    "requestPrefix": {
+                        "type": "string",
+                        "description": "Request prefix identifier"
+                    }
+                },
+                "required": ["currentTimeRange", "requestPrefix"]
+            }
+        }
+    },
+    "required": ["queryData"]
 }

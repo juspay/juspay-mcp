@@ -481,7 +481,7 @@ Response includes:
 - Module metadata including platform dependencies and minimum hit requirements
 
 Use this tool to monitor integration health, track success rates, analyze platform-specific performance metrics, and identify critical integration issues that need attention.""",
-        model=api_schema.integrationChecklist.JuspayIntegrationMonitoringPayload,
+        model=api_schema.integrationChecklist.JuspayIntegrationStatusPayload,
         handler=integrationChecklist.get_integration_monitoring_status_juspay,
         response_schema=response_schema.integration_monitoring_status_response_schema,
     ),
@@ -514,6 +514,81 @@ Use this tool to monitor X-Mid header validation compliance, track validation fa
         model=api_schema.integrationChecklist.JuspayXMidMonitoringPayload,
         handler=integrationChecklist.get_x_mid_monitoring_juspay,
         response_schema=response_schema.x_mid_monitoring_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_integration_platform_metrics",
+        description="""Retrieves integration metrics grouped by platform for product integration analysis.
+
+This tool is used for platform-based analytics in the ReScript Euler Dashboard UI:
+- Platform dropdown population with available platforms (Android, IOS, Web, Backend)
+- Platform tab creation in integration checklist interface with completion percentages
+- Platform-specific content filtering and display
+- Mini donut chart data for platform completion status
+
+Key features:
+- Groups integration data by platform
+- Returns product integration metrics for each platform
+- Supports time-range based analysis
+- Provides platform-specific product integration status
+- Returns raw API response without modification
+
+Required inputs:
+- merchant_id: Merchant ID for which to retrieve platform metrics
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+Time format example: "2025-08-10T00:00:00Z"
+
+Response includes:
+- Query string with generated SQL
+- Platform-grouped data with product integration information (typically Android, IOS, Web)
+- Metadata with time range and request details
+- UUID for query tracking
+
+IMPORTANT: The API response typically includes only Android, IOS, and Web platforms. The Frontend must explicitly add "Backend" platform to the platform list to ensure complete platform coverage for UI dropdown population and tab creation.
+
+Use this tool to analyze platform-specific integration patterns, populate platform selection interfaces, and generate platform-based completion metrics for dashboard visualization.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationPlatformMetricsPayload,
+        handler=integrationChecklist.get_integration_platform_metrics_juspay,
+        response_schema=response_schema.integration_platform_metrics_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_integration_product_count_metrics",
+        description="""Retrieves integration metrics grouped by product_integrated for product count analysis.
+
+This tool is used for product selection logic in the ReScript Euler Dashboard UI:
+- Product selection logic (product with max count becomes default selected)
+- Dynamic product array creation for product dropdown population
+- Integration health calculation and most actively used integration type identification
+- Product usage analytics and trend analysis
+
+Key features:
+- Groups integration data by product_integrated type
+- Returns product count metrics for each integration type
+- Requires platform-specific filtering for accurate results
+- Provides time-range based product usage analysis
+
+Required inputs:
+- merchant_id: Merchant ID for which to retrieve product count metrics
+- platform: Platform filter (e.g., '', 'Android', 'IOS', 'Web') - MANDATORY for accurate filtering
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+Optional inputs:
+- product_integrated: Filter for specific product integration type
+
+Time format example: "2025-08-10T00:00:00Z"
+
+Response includes:
+- Query string with generated SQL
+- Product-grouped data with count metrics for each integration type
+- Metadata with time range and request details
+- UUID for query tracking
+
+Use this tool to analyze product integration usage patterns, determine the most popular integration types, populate product selection interfaces, and calculate integration health metrics for dashboard analytics.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationProductCountMetricsPayload,
+        handler=integrationChecklist.get_integration_product_count_metrics_juspay,
+        response_schema=response_schema.integration_product_count_metrics_response_schema,
     ),
 ]
 
