@@ -107,7 +107,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
         if headers: # headers from function signature
             request_api_headers.update(headers)
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 validate_url,
                 headers=request_api_headers,
@@ -156,7 +156,7 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
         juspay_creds = get_juspay_credentials()
         request_api_headers = get_common_headers(json_payload, meta_info, juspay_creds)
         
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 validate_url,
                 headers=request_api_headers,
