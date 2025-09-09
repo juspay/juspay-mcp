@@ -120,6 +120,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                 raise Exception("validHost not found in Juspay token validation response.")
             if not valid_host.startswith("http"):
                 valid_host = f"https://{valid_host}"
+            logger.info(f"Using valid host: {valid_host}")    
             return valid_host
     except Exception as e:
         logger.error(f"Token validation failed: {e}")
