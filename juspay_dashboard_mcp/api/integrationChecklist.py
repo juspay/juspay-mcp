@@ -29,8 +29,7 @@ async def get_integration_monitoring_status_juspay(payload: dict, meta_info: dic
     """
     platform = payload.get("platform")
     
-    # Determine API endpoint based on platform
-    api_payload = {
+    api_payload_obj = {
         "timeRange": {
             "startTime": payload["start_time"],
             "endTime": payload["end_time"]
@@ -47,9 +46,10 @@ async def get_integration_monitoring_status_juspay(payload: dict, meta_info: dic
     }
     
     if platform != "Backend":
-        api_payload["filters"]["platform"] = [platform]
+        api_payload_obj["filters"]["platform"] = [platform]
     
-    # Get the host and make the API call
+    api_payload = [api_payload_obj]
+    
     host = await get_juspay_host_from_api(meta_info=meta_info)
     domain = "agnostic" if platform == "Backend" else "nonagnostic"
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/{domain}/status"
@@ -71,7 +71,7 @@ async def get_x_mid_monitoring_juspay(payload: dict, meta_info: dict = None) -> 
     Returns:
         dict: Contains validation status for each API endpoint
     """
-    # Construct the API payload matching the curl request structure
+
     api_payload = [{
         "timeRange": {
             "startTime": payload["start_time"],
@@ -86,7 +86,6 @@ async def get_x_mid_monitoring_juspay(payload: dict, meta_info: dict = None) -> 
         "metrics": ["validate_xmid"]
     }]
     
-    # Get the host and make the API call
     host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/xmerchant/metrics"
 
@@ -133,7 +132,6 @@ async def get_integration_platform_metrics_juspay(payload: dict, meta_info: dict
         ]
     }]
     
-    # Get the host and make the API call
     host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/integrations/metrics"
 
@@ -156,7 +154,7 @@ async def get_integration_product_count_metrics_juspay(payload: dict, meta_info:
     Returns:
         dict: Product-grouped integration count data with queryString, queryData, and metaData
     """
-    # Construct the API payload matching the curl request structure
+    
     api_payload = [{
         "timeRange": {
             "startTime": payload["start_time"],
