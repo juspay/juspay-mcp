@@ -1409,3 +1409,159 @@ list_outages_response_schema = {
         ]
     }
 }
+
+integration_monitoring_status_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Query parameters used for the request"
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query"
+        },
+        "queryData": {
+            "type": "object",
+            "properties": {
+                "success": {
+                    "type": "boolean",
+                    "description": "Whether the query was successful"
+                },
+                "scoreData": {
+                    "type": "object",
+                    "description": "Feature-wise score metrics for integration monitoring. Keys are dynamic based on features (e.g., baseCriticalSuccessCount, mandateTotalCount, payoutSuccessCount, etc.)",
+                    "additionalProperties": True,
+                    "examples": [
+                        {
+                            "baseCriticalSuccessCount": 1,
+                            "baseCriticalTotalCount": 7,
+                            "baseTotalSuccessCount": 1,
+                            "baseTotalCount": 9,
+                            "mandateTotalCount": 5,
+                            "mandateSuccessCount": 3,
+                            "payoutCriticalSuccessCount": 2,
+                            "payoutCriticalTotalCount": 4
+                        }
+                    ]
+                },
+                "responseData": {
+                    "type": "object",
+                    "properties": {
+                        "moduleDescription": {"type": "string"},
+                        "disableModule": {"type": "boolean"},
+                        "features": {
+                            "type": "object",
+                            "description": "Feature-wise (e.g., base, mandate, payout etc.) integration monitoring data",
+                            "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                    "featureDescription": {"type": "string"},
+                                    "disableFeature": {"type": "boolean"},
+                                    "sections": {
+                                        "type": "object",
+                                        "description": "Sections within each feature (e.g., 'Payments Flow Checklist')",
+                                        "additionalProperties": {
+                                            "type": "object",
+                                            "properties": {
+                                                "sectionDescription": {"type": "string"},
+                                                "sectionNote": {"type": "string"},
+                                                "disableSection": {"type": "boolean"},
+                                                "stages": {
+                                                    "type": "object",
+                                                    "description": "Individual stages within each section",
+                                                    "additionalProperties": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "status": {
+                                                                "type": "string",
+                                                                "description": "Stage status (e.g., 'NOT_ATTEMPTED', 'PASSED', 'FAILED')"
+                                                            },
+                                                            "stageDisplayName": {"type": "string"},
+                                                            "stageDescription": {"type": "string"},
+                                                            "stageNote": {"type": "string"},
+                                                            "disableStage": {"type": "boolean"},
+                                                            "critical": {"type": "string"},
+                                                            "visibility": {"type": "string"},
+                                                            "onlyReport": {"type": "string"},
+                                                            "criticalResult": {"type": "boolean"},
+                                                            "visibilityResult": {"type": "boolean"},
+                                                            "onlyReportResult": {"type": "boolean"},
+                                                            "moduleMetadata": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "noOfStates": {"type": "integer"},
+                                                                    "productIntegrated": {
+                                                                        "type": "array",
+                                                                        "items": {"type": "string"}
+                                                                    },
+                                                                    "isPlatformDependent": {"type": "boolean"},
+                                                                    "minHitsRequired": {"type": "string"}
+                                                                },
+                                                                "required": ["noOfStates", "productIntegrated", "isPlatformDependent", "minHitsRequired"]
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "status", "stageDisplayName", "stageDescription", "stageNote",
+                                                            "disableStage", "critical", "visibility", "onlyReport",
+                                                            "criticalResult", "visibilityResult", "onlyReportResult", "moduleMetadata"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": ["sectionDescription", "sectionNote", "disableSection", "stages"]
+                                        }
+                                    }
+                                },
+                                "required": ["featureDescription", "disableFeature", "sections"]
+                            }
+                        }
+                    },
+                    "required": ["moduleDescription", "disableModule", "features"]
+                }
+            },
+            "required": ["success", "scoreData", "responseData"]
+        }
+    },
+    "required": ["queryString", "uuid", "queryData"]
+}
+
+x_mid_monitoring_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Actual Select Query for the request"
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query"
+        },
+        "queryStatus": {
+            "type": "object",
+            "description": "Status information about the query execution"
+        },
+        "queryData": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "api_shortcode": {
+                        "type": "string",
+                        "description": "API shortcode identifier"
+                    },
+                    "validate_xmid": {
+                        "type": "string",
+                        "description": "X-Mid validation result (PASSED/FAILED)"
+                    }
+                },
+                "required": ["api_shortcode", "validate_xmid"]
+            }
+        },
+        "metaData": {
+            "type": "array",
+            "description": "Additional metadata about the query"
+        }
+    },
+    "required": ["queryString", "uuid", "queryStatus", "queryData", "metaData"]
+}
