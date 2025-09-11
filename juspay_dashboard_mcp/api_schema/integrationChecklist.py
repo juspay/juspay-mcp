@@ -13,7 +13,7 @@ from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 class BaseTimeRangePayload(WithHeaders):
     """Base class for payloads that include time range validation."""
     
-    @validator('start_time', 'end_time')
+    @validator('start_time', 'end_time', check_fields=False)
     def validate_datetime_format(cls, v):
         try:
             datetime.fromisoformat(v.replace('Z', '+00:00'))
