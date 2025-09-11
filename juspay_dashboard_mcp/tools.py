@@ -449,38 +449,38 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
     ),
     util.make_api_config(
         name="juspay_integration_monitoring_status",
-        description="""Retrieves integration monitoring status for merchant's product integrations across different platforms.
+        description="""Track integration progress across platforms and products for a particular merchant. Use this tool when you need to view passed/failed stages and action items for merchant integrations.
 
-This tool automatically routes to the appropriate API based on platform:
-- Backend platform: Uses agnostic API (platform-independent monitoring)
-- Web/Android/iOS platforms: Uses nonagnostic API (platform-specific monitoring)
+**When to call this tool:**
+- When asked about integration status, progress, or completion for a specific merchant
+- To check which integration stages/items have passed or failed
+- To identify action items and next steps for integration completion
+- When troubleshooting integration issues or blockers
+- To view detailed stage-wise breakdown of integration checklist
 
-Key features:
-- Platform-aware API routing (agnostic vs nonagnostic)
-- Time-range based monitoring data
-- Success rate and total transaction metrics
-- Stage-wise breakdown of integration status
-- Feature-wise analysis (base, mandate, payout, etc.)
-- Critical vs non-critical stage identification
-- Visibility conditions and results for each stage
+**Tool capabilities:**
+- Platform-aware monitoring (Backend uses agnostic API, Web/Android/iOS use nonagnostic API)
+- Stage-wise integration progress tracking with pass/fail status
+- Critical vs non-critical stage identification for prioritization
+- Feature-wise analysis (base payments, mandate, payout, etc.)
+- Visibility conditions and actionable results for each stage
+- Integration checklist completion tracking
 
-Required inputs:
+**Required inputs:**
 - platform: Must be one of "Backend", "Web", "Android", "iOS"
 - product_integrated: Must be one of "Payment Page Signature", "Payment Page Session", "EC + SDK", "EC Only"
 - merchant_id: Merchant ID
 - start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
 - end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
 
-Time format example: "2025-08-03T00:00:00Z"
-
-Response includes:
-- Overall score data with critical and total success counts
-- Feature-wise breakdown (base, mandate, payout, etc.)
+**Response provides:**
+- Overall integration completion status with critical stage counts
+- Feature-wise progress breakdown (base, mandate, payout, etc.)
 - Section-wise analysis (e.g., "Payments Flow Checklist")
-- Individual stage details with status, criticality, and visibility conditions
-- Module metadata including platform dependencies and minimum hit requirements
+- Individual stage details with pass/fail status, criticality level, and action items
+- Module metadata including platform dependencies and minimum requirements
 
-Use this tool to monitor integration health, track success rates, analyze platform-specific performance metrics, and identify critical integration issues that need attention.""",
+Use this tool to monitor integration progress, identify failed stages that need attention, and provide actionable guidance for completing merchant integrations.""",
         model=api_schema.integrationChecklist.JuspayIntegrationStatusPayload,
         handler=integrationChecklist.get_integration_monitoring_status_juspay,
         response_schema=response_schema.integration_monitoring_status_response_schema,
@@ -489,7 +489,7 @@ Use this tool to monitor integration health, track success rates, analyze platfo
         name="juspay_x_mid_monitoring",
         description="""Retrieves X-Mid validation monitoring data for merchant transactions.
 
-This tool provides X-Mid validation results for API transactions within a specified time range, helping merchants monitor the validation status of their X-Mid headers across different API endpoints.
+This tool provides X-Mid validation results for API transactions within a specified time range, helping merchants monitor the validation status of their X-Mid headers is correctly passed across different API endpoints.
 
 Key features:
 - Time-range based X-Mid validation monitoring
@@ -507,7 +507,7 @@ Time format example: "2025-08-03T00:00:00Z"
 Response includes:
 - Query metadata and execution status
 - Array of validation results with API shortcodes
-- Validation status (PASSED/FAILED) for each API endpoint
+- Validation status (PASSED/FAILED) for each API endpoint/shortcode
 - Additional metadata about the query execution
 
 Use this tool to monitor X-Mid header validation compliance, track validation failures across different API endpoints, and ensure proper X-Mid implementation for merchant transactions.""",
@@ -517,75 +517,74 @@ Use this tool to monitor X-Mid header validation compliance, track validation fa
     ),
     util.make_api_config(
         name="juspay_integration_platform_metrics",
-        description="""Retrieves integration metrics grouped by platform for product integration analysis.
+        description="""Analyze integration progress across different platforms (Android, iOS, Web, Backend) for a particular merchant. Use this tool when you need to understand platform-specific integration status and completion levels.
 
-This tool is used for platform-based analytics in the ReScript Euler Dashboard UI:
-- Platform dropdown population with available platforms (Android, IOS, Web, Backend)
-- Platform tab creation in integration checklist interface with completion percentages
-- Platform-specific content filtering and display
-- Mini donut chart data for platform completion status
+**When to call this tool:**
+- When asked about integration progress across different platforms
+- To compare integration completion between Android, iOS, Web, and Backend platforms
+- When generating platform-specific integration reports or analytics
+- To identify which platforms have completed integrations vs those that need attention
+- For platform-wise integration health assessment
 
-Key features:
-- Groups integration data by platform
-- Returns product integration metrics for each platform
-- Supports time-range based analysis
-- Provides platform-specific product integration status
-- Returns raw API response without modification
+**Tool capabilities:**
+- Groups integration data by platform (Android, iOS, Web - Backend must be added separately)
+- Platform-specific integration progress tracking
+- Time-range based platform analysis
+- Integration completion metrics per platform
+- Platform comparison and analytics support
 
-Required inputs:
-- merchant_id: Merchant ID for which to retrieve platform metrics
+**Required inputs:**
+- merchant_id: Merchant ID for platform metrics analysis
 - start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
 - end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
 
-Time format example: "2025-08-10T00:00:00Z"
+**Response provides:**
+- Platform-grouped integration data (typically Android, iOS, Web)
+- Product integration information for each platform
+- Platform-specific completion metrics
+- Query metadata and tracking information
 
-Response includes:
-- Query string with generated SQL
-- Platform-grouped data with product integration information (typically Android, IOS, Web)
-- Metadata with time range and request details
-- UUID for query tracking
+**Important Note:** API typically returns Android, iOS, and Web platforms only. Backend platform data must be handled separately for complete platform coverage.
 
-IMPORTANT: The API response typically includes only Android, IOS, and Web platforms. The Frontend must explicitly add "Backend" platform to the platform list to ensure complete platform coverage for UI dropdown population and tab creation.
-
-Use this tool to analyze platform-specific integration patterns, populate platform selection interfaces, and generate platform-based completion metrics for dashboard visualization.""",
+Use this tool to track integration progress across platforms, identify platform-specific issues, and provide platform-wise completion status for merchant integrations.""",
         model=api_schema.integrationChecklist.JuspayIntegrationPlatformMetricsPayload,
         handler=integrationChecklist.get_integration_platform_metrics_juspay,
         response_schema=response_schema.integration_platform_metrics_response_schema,
     ),
     util.make_api_config(
         name="juspay_integration_product_count_metrics",
-        description="""Retrieves integration metrics grouped by product_integrated for product count analysis.
+        description="""Analyze integration usage patterns by product type for a particular merchant. Use this tool when you need to understand which integration products are most actively used and their adoption patterns.
 
-This tool is used for product selection logic in the ReScript Euler Dashboard UI:
-- Product selection logic (product with max count becomes default selected)
-- Dynamic product array creation for product dropdown population
-- Integration health calculation and most actively used integration type identification
-- Product usage analytics and trend analysis
+**When to call this tool:**
+- When asked about product integration usage patterns or adoption rates
+- To identify the most popular integration types for a merchant
+- When analyzing integration health across different product types
+- To understand product-wise integration trends and patterns
+- For product selection analytics and usage comparison
 
-Key features:
-- Groups integration data by product_integrated type
-- Returns product count metrics for each integration type
-- Requires platform-specific filtering for accurate results
-- Provides time-range based product usage analysis
+**Tool capabilities:**
+- Groups integration data by product_integrated type (Payment Page Signature, Payment Page Session, EC + SDK, EC Only)
+- Product usage count metrics and analytics
+- Platform-specific filtering for accurate product analysis
+- Time-range based product adoption tracking
+- Integration health calculation by product type
 
-Required inputs:
-- merchant_id: Merchant ID for which to retrieve product count metrics
-- platform: Platform filter (e.g., '', 'Android', 'IOS', 'Web') - MANDATORY for accurate filtering
+**Required inputs:**
+- merchant_id: Merchant ID for product count metrics analysis
+- platform: Platform filter (e.g., '', 'Android', 'iOS', 'Web') - MANDATORY for accurate filtering
 - start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
 - end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
 
-Optional inputs:
+**Optional inputs:**
 - product_integrated: Filter for specific product integration type
 
-Time format example: "2025-08-10T00:00:00Z"
-
-Response includes:
-- Query string with generated SQL
+**Response provides:**
 - Product-grouped data with count metrics for each integration type
-- Metadata with time range and request details
-- UUID for query tracking
+- Usage patterns and adoption rates by product
+- Platform-specific product integration data
+- Query metadata and tracking information
 
-Use this tool to analyze product integration usage patterns, determine the most popular integration types, populate product selection interfaces, and calculate integration health metrics for dashboard analytics.""",
+Use this tool to analyze product integration patterns, identify the most actively used integration types, and understand product adoption trends for merchant integrations.""",
         model=api_schema.integrationChecklist.JuspayIntegrationProductCountMetricsPayload,
         handler=integrationChecklist.get_integration_product_count_metrics_juspay,
         response_schema=response_schema.integration_product_count_metrics_response_schema,
