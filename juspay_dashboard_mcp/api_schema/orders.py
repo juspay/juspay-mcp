@@ -11,6 +11,8 @@ from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 # Import the flat filter types
 FilterFieldDimensionEnum = Literal[
     "customer_id",
+    "customer_email_hash",
+    "customer_phone_hash",
     "business_region",
     "actual_order_status",
     "ord_currency",
@@ -142,6 +144,8 @@ class JuspayListOrdersV4Payload(WithHeaders):
         SUPPORTED FIELDS BY DOMAIN:
         
         For 'ordersELS' domain:
+        - customer_email_hash: hashed customer email (provide plain email, will be automatically hashed)
+        - customer_phone_hash: hashed customer phone number (provide plain phone number, will be automatically hashed)
         - customer_id: unique identifier for the customer
         - business_region: business region information
         - actual_order_status: granular order status. Values: 'COD_INITIATED', 'AUTHORIZED', 'AUTO_REFUNDED', 'AUTHENTICATION_FAILED', 'CAPTURE_INITIATED', 'CAPTURE_FAILED', 'AUTHORIZING', 'VOIDED', 'NEW', 'SUCCESS', 'PENDING_AUTHENTICATION', 'AUTHORIZATION_FAILED', 'PARTIAL_CHARGED', 'JUSPAY_DECLINED', 'TO_BE_CHARGED'

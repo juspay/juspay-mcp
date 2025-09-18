@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc, hash_contact_details_juspay, generate_phone_number_variants
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
@@ -123,7 +123,51 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
             ]
 
             original_clauses = payload["flatFilters"]["clauses"]
-            enhanced_clauses.extend(original_clauses)
+            
+            processed_clauses = []
+            for clause in original_clauses:
+                if clause["field"] == "customer_email_hash":
+                    contact_details = clause["val"] if isinstance(clause["val"], list) else [clause["val"]]
+                    
+                    hashed_values = await hash_contact_details_juspay(contact_details, meta_info)
+                    
+                    new_clause = Clause(
+                        field=clause["field"],
+                        condition=clause["condition"],
+                        val=hashed_values if isinstance(clause["val"], list) else hashed_values[0]
+                    )
+                    processed_clauses.append(new_clause)
+                    
+                elif clause["field"] == "customer_phone_hash":
+                    original_phones = clause["val"] if isinstance(clause["val"], list) else [clause["val"]]
+                    
+                    all_phone_variants = []
+                    for phone in original_phones:
+                        variants = generate_phone_number_variants(str(phone))
+                        all_phone_variants.extend(variants)
+                    
+                    
+                    hashed_values = await hash_contact_details_juspay(all_phone_variants, meta_info)
+                    
+                    new_clause = Clause(
+                        field=clause["field"],
+                        condition=clause["condition"],
+                        val=hashed_values 
+                    )
+                    processed_clauses.append(new_clause)
+                    
+                else:
+                    if isinstance(clause, dict):
+                        clause_obj = Clause(
+                            field=clause["field"],
+                            condition=clause["condition"],
+                            val=clause["val"]
+                        )
+                        processed_clauses.append(clause_obj)
+                    else:
+                        processed_clauses.append(clause)
+            
+            enhanced_clauses.extend(processed_clauses)
 
             original_logic = payload["flatFilters"]["logic"]
 
