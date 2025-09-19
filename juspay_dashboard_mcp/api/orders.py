@@ -59,7 +59,62 @@ def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
     return current
 
 
-async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
+def determine_domain_from_filters(flat_filters: FlatFilter) -> str:
+    """
+    Determine the appropriate domain based on the flatFilters.
+    If any filter field belongs to txnsELS domain, return 'txnsELS'.
+    Otherwise, return 'ordersELS'.
+    
+    Args:
+        flat_filters: FlatFilter object containing the filter clauses
+        
+    Returns:
+        str: Either 'txnsELS' or 'ordersELS'
+    """
+    # Fields that belong to txnsELS domain
+    txns_els_fields = {
+        "payment_status",
+        "order_amount", 
+        "card_brand",
+        "auth_type",
+        "is_cvv_less_txn",
+        "emi",
+        "emi_bank",
+        "emi_type",
+        "emi_tenure",
+        "payment_method_type",
+        "source_object",
+        "error_code",
+        "error_message",
+        "error_category",
+        "gateway_reference_id",
+        "payment_gateway",
+        "bank",
+        "date_created",
+        "epg_txn_id",
+        "card_exp_month",
+        "card_exp_year",
+        "card_issuer_country",
+        "card_bin",
+        "card_last_four_digits",
+        "is_upicc",
+        "resp_message",
+        "mandate_frequency",
+        "platform",
+        "txn_uuid",
+        "pgr_rrn"
+    }
+    
+    # Check if any clause uses a txnsELS field
+    for clause in flat_filters.clauses:
+        if clause.field in txns_els_fields:
+            return "txnsELS"
+    
+    # If no txnsELS fields found, use ordersELS
+    return "ordersELS"
+
+
+async def find_orders_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Portal API to retrieve a list of orders within a specified time range.
 
@@ -68,7 +123,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
             - dateFrom: Start date/time in ISO format (e.g., '2025-04-15T18:30:00Z')
             - dateTo: End date/time in ISO format (e.g., '2025-04-16T15:06:00Z')
             - offset: Pagination offset (optional, default 0)
-            - domain: Domain for query (default 'txnsELS').Domain is a mandatory field.
+            - domain: Domain for query. If 'findorders', will be automatically determined based on filters
             - paymentStatus: Optional filter for payment status
             - orderType: Optional filter for order type
             - flatFilters: Optional flat filter structure that gets converted to qFilters
@@ -103,9 +158,22 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     date_from_ts = int(date_from_dt.timestamp())
     date_to_ts = int(date_to_dt.timestamp())
 
-    time_field = (
-        "order_created_at" if payload.get("domain") == "ordersELS" else "date_created"
-    )
+    # Handle domain aliasing
+    domain = payload.get("domain", "txnsELS")
+    if domain == "findorders":
+        if payload.get("flatFilters"):
+            try:
+                flat_filters = FlatFilter(**payload["flatFilters"])
+                domain = determine_domain_from_filters(flat_filters)
+                logging.info(f"Domain aliasing: 'findorders' resolved to '{domain}' based on filters")
+            except Exception as e:
+                logging.warning(f"Failed to parse flatFilters for domain resolution: {e}")
+                domain = "txnsELS"  
+        else:
+            domain = "ordersELS"  
+            logging.info("Domain aliasing: 'findorders' resolved to 'ordersELS' (no filters)")
+
+    time_field = "order_created_at" if domain == "ordersELS" else "date_created"
 
     if payload.get("flatFilters"):
         try:
@@ -142,7 +210,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
         except Exception as e:
             raise ValueError(f"Invalid flatFilters format: {str(e)}")
     else:
-        if payload.get("domain") and payload["domain"] == "ordersELS":
+        if domain == "ordersELS":
             qFilters = {
                 "and": {
                     "right": {
@@ -178,7 +246,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
         "filters": {"dateCreated": {"lte": date_to_str, "gte": date_from_str}},
         "order": [["date_created", "DESC"]],
         "qFilters": qFilters,
-        "domain": payload.get("domain", "txnsELS"),
+        "domain": domain,  # Use the resolved domain
         "sortDimension": "order_created_at",
     }
 

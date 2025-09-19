@@ -103,7 +103,7 @@ class FlatFilter(BaseModel):
         return self
 
 
-class JuspayListOrdersV4Payload(WithHeaders):
+class JuspayFindOrdersPayload(WithHeaders):
     dateFrom: str = Field(
         ...,
         description="Start date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
