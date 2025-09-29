@@ -38,7 +38,7 @@ async def get_payout_configs_juspay(meta_info: dict = None) -> dict:
     api_url = f"{host}/api/payout/batch/dashboard/v1/config"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_ecnryption_or_ssl_keys_juspay(meta_info: dict = None) -> dict:
+async def get_payout_encryption_or_ssl_keys_juspay(meta_info: dict = None) -> dict:
     """
     Retrieves encryption and SSL keys used for secure payout operations. This API
     returns cryptographic keys and certificates that are used for data encryption,
