@@ -688,7 +688,7 @@ Use this tool to:
 
 Essential for security teams and operations personnel managing secure payout processing.""",
         model=api_schema.headers.WithHeaders,
-        handler=payout_settings.get_payout_ecnryption_or_ssl_keys_juspay,
+        handler=payout_settings.get_payout_encryption_or_ssl_keys_juspay,
         response_schema=None,
     ),
     util.make_api_config(
