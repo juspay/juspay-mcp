@@ -69,13 +69,3 @@ def get_common_headers(payload: dict, meta_info: dict = None):
         default_headers["x-source-id"] = "juspay-mcp"        
         
     return default_headers
-
-def make_auth_header(meta_info: dict = None) -> dict:
-    """
-    Constructs the Authorization header using the token from meta_info or environment variable.
-    """
-    token = (meta_info.get("x-web-logintoken") if meta_info else None) or JUSPAY_WEB_LOGIN_TOKEN
-    if not token:
-        raise ValueError("Authorization token not found in meta_info or environment variables.")
-    
-    return {"Authorization": token}

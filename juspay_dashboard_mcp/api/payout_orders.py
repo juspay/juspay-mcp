@@ -5,8 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.config import make_auth_header
-from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, call, ist_to_utc
+from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, call, ist_to_utc, make_payout_additional_headers
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from typing import Dict, Any
@@ -76,8 +75,8 @@ async def list_payout_orders_juspay(payload: dict, meta_info: dict = None) -> di
     logging.info(f"Calling payout orders API: {full_url}")
     
     # Make GET request (no body needed)
-    auth_header = make_auth_header(meta_info)
-    return await call(full_url, additional_headers=auth_header, meta_info=meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
+    return await call(full_url, additional_headers=additional_headers, meta_info=meta_info)
 
 
 def extract_order_id_from_txn_id_or_fulfillment_id(txn_id: str) -> str:
@@ -140,19 +139,19 @@ async def get_payout_order_details_juspay(payload: dict, meta_info: dict) -> dic
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
 
-    auth_header = make_auth_header(meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
 
     api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{order_id}?expand=fulfillment"
 
     try:
         logging.info(f"Attempting to get order details for order_id: {order_id}")
-        return await call(api_url, additional_headers=auth_header, meta_info=meta_info)
+        return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
     except Exception as e:
         error_str = str(e)
         logging.warning(f"First attempt failed: {error_str}")
 
-        if "Could not find resource" in error_str:
+        if "Could not find order" in error_str:
 
             extracted_order_id = extract_order_id_from_txn_id_or_fulfillment_id(order_id)
 
@@ -160,7 +159,7 @@ async def get_payout_order_details_juspay(payload: dict, meta_info: dict) -> dic
                 logging.info(f"Retrying with extracted order_id: {extracted_order_id}")
                 try:
                     retry_api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{extracted_order_id}?expand=fulfillment"
-                    result = await call(retry_api_url, additional_headers=auth_header, meta_info=meta_info)
+                    result = await call(retry_api_url, additional_headers=additional_headers, meta_info=meta_info)
                     logging.info(
                         f"Success with extracted order_id: {extracted_order_id}"
                     )

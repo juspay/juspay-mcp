@@ -207,3 +207,14 @@ def utc_to_ist(utc_time_string: str) -> str:
     except Exception as e:
         logging.error(f"Error converting utc to ist: {str(e)}")
         return utc_time_string
+
+def make_payout_additional_headers(meta_info: dict = None) -> dict:
+    """
+    Constructs the Authorization header using the token from meta_info or environment variable.
+    """
+    JUSPAY_WEB_LOGIN_TOKEN = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
+    token = (meta_info.get("x-web-logintoken") if meta_info else None) or JUSPAY_WEB_LOGIN_TOKEN
+    if not token:
+        raise ValueError("Authorization token not found in meta_info or environment variables.")
+    
+    return {"Authorization": token, "X-Token-Type" : "Euler"}

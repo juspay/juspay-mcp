@@ -4,8 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.config import make_auth_header
-from juspay_dashboard_mcp.api.utils import get, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers
 
 async def list_configured__payout_gateways_juspay(meta_info: dict = None) -> dict:
     """
@@ -35,9 +34,9 @@ async def list_configured__payout_gateways_juspay(meta_info: dict = None) -> dic
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/gatewaycredential"
-    return await get(api_url, additional_headers=auth_header, meta_info=meta_info)
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
 async def get_payout_gateways_juspay(meta_info: dict = None) -> dict:
     """
@@ -67,10 +66,10 @@ async def get_payout_gateways_juspay(meta_info: dict = None) -> dict:
     """
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/gateway"
 
-    return await get(api_url, additional_headers=auth_header, meta_info=meta_info)
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
 async def get_payout_gateway_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -113,10 +112,10 @@ async def get_payout_gateway_details_juspay(payload: dict, meta_info: dict = Non
         raise ValueError("The payload must include 'gateway' and 'rail'.")
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
-    api_url = f"{host}/api/payout/batch/dashboard/v1/gatewaycredential/{gateway}/{rail}"
+    additional_headers = make_payout_additional_headers(meta_info)
+    api_url = f"{host}/api/payout/batch/dashboard/v1/gatewaycredential/schema/{gateway}/{rail}"
 
-    return await get(api_url, payload, additional_headers=auth_header, meta_info=meta_info)
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
 async def get_active_payout_gateways_juspay(meta_info: dict = None) -> dict:
     """
@@ -130,7 +129,7 @@ async def get_active_payout_gateways_juspay(meta_info: dict = None) -> dict:
     the merchant's priority logic settings.
 
     The API endpoint is:
-        https://portal.juspay.in/api/payout/dashboard/v1/prioritylogic/activemethods
+        https://portal.juspay.in/api/payout/batch/dashboard/v1/prioritylogic/activemethods
 
     Headers include:
         - x-tenant-id from payload
@@ -146,9 +145,9 @@ async def get_active_payout_gateways_juspay(meta_info: dict = None) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
-    api_url = f"{host}/api/payout/dashboard/v1/prioritylogic/activemethods"
-    return await get(api_url, additional_headers=auth_header, meta_info=meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
+    api_url = f"{host}/api/payout/batch/dashboard/v1/prioritylogic/activemethods"
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
 async def get_payout_priority_logics_juspay(meta_info: dict = None) -> dict:
     """
@@ -178,9 +177,9 @@ async def get_payout_priority_logics_juspay(meta_info: dict = None) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/prioritylogic"
-    return await get(api_url, additional_headers=auth_header, meta_info=meta_info)
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
 async def get_payout_weblabs_juspay(meta_info: dict = None) -> dict:
     """
@@ -210,9 +209,9 @@ async def get_payout_weblabs_juspay(meta_info: dict = None) -> dict:
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/weblabConfig"
-    return await get(api_url, additional_headers=auth_header, meta_info=meta_info)
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
 async def get_payout_balance_juspay(isForce: str = "false", meta_info: dict = None) -> dict:
     """
@@ -246,6 +245,6 @@ async def get_payout_balance_juspay(isForce: str = "false", meta_info: dict = No
         Exception: If the API call fails.
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    auth_header = make_auth_header(meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/getways/balance?force={isForce}"
-    return await get(api_url, additional_headers=auth_header, meta_info=meta_info)
+    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
