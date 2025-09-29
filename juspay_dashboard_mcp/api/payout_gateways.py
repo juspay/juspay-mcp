@@ -213,7 +213,7 @@ async def get_payout_weblabs_juspay(meta_info: dict = None) -> dict:
     api_url = f"{host}/api/payout/batch/dashboard/v1/weblabConfig"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_balance_juspay(isForce: str = "false", meta_info: dict = None) -> dict:
+async def get_payout_balance_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the current balance information from all configured payout gateways.
     This API returns real-time or cached balance data for each gateway, providing
@@ -244,6 +244,8 @@ async def get_payout_balance_juspay(isForce: str = "false", meta_info: dict = No
     Raises:
         Exception: If the API call fails.
     """
+
+    isForce = payload.get("isForce")
     host = await get_juspay_host_from_api(meta_info=meta_info)
     additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/getways/balance?force={isForce}"

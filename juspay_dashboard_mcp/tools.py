@@ -708,8 +708,8 @@ Use this tool to:
 - Troubleshoot customer-specific beneficiary issues
 
 Essential for customer support and operations teams managing beneficiary relationships and payout disbursements.""",
-        model=api_schema.payout_benedetails.JuspayListBeneficiariesPerCustomerIdPayload,
-        handler=payout_benedetails.list_beneficiaries_per_customerId_juspay,
+        model=api_schema.payout_beneficiary_details.JuspayListBeneficiariesPerCustomerIdPayload,
+        handler=payout_beneficiary_details.list_beneficiaries_per_customerId_juspay,
         response_schema=None,
     ),
     util.make_api_config(
@@ -729,8 +729,8 @@ Use this tool to:
 - Troubleshoot beneficiary-specific payout issues
 
 Essential for customer support and operations teams when dealing with specific beneficiary inquiries and payout issues.""",
-        model=api_schema.payout_benedetails.JuspayGetBeneficiaryDetailsPayload,
-        handler=payout_benedetails.get_beneficiary_details_juspay,
+        model=api_schema.payout_beneficiary_details.JuspayGetBeneficiaryDetailsPayload,
+        handler=payout_beneficiary_details.get_beneficiary_details_juspay,
         response_schema=None,
     ),
     util.make_api_config(
