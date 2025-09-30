@@ -135,6 +135,22 @@ async def find_orders_juspay(payload: dict, meta_info: dict = None) -> dict:
         ValueError: If required parameters are missing or date formats are invalid.
         Exception: If the API call fails.
     """
+    # Check if flatFilters are present and validate that find_orders_field_value_discovery was called
+    if payload.get("flatFilters"):
+        tool_calls = []
+        if meta_info and meta_info.get("tool_calls"):
+            tool_calls = meta_info.get("tool_calls", [])
+        
+        # Check if find_orders_field_value_discovery was called
+        field_discovery_called = any(
+            tool_call.get("tool_name") == "find_orders_field_value_discovery" 
+            for tool_call in tool_calls
+        )
+        if not field_discovery_called:
+            raise ValueError(
+                "Please call the 'find_orders_field_value_discovery' tool first to validate the filter values" 
+            )
+    
     date_from_str = payload.get("dateFrom")
     date_to_str = payload.get("dateTo")
     if not date_from_str or not date_to_str:

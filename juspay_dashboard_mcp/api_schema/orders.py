@@ -155,7 +155,7 @@ class JuspayFindOrdersPayload(WithHeaders):
         - industry: industry of the merchant
         - prev_order_status: previous order status. Values: 'SUCCESS', 'FAILURE', 'PENDING'
         - order_created_at: order created timestamp (epoch seconds)
-        - merchant_id: unique identifier for the merchant (lowercase, no spaces)
+        - merchant_id: unique identifier for the merchant 
         - udf1 through udf10: user-defined fields for additional order information
         - amount: order amount for filtering by amount, always apply this filter's value in an array
         - payment_instrument_group: 'CREDIT CARD', 'RTP', 'WALLET', 'OTC', 'REWARD', 'NET BANKING', 'CASH', 'AADHAAR', 'DEBIT CARD', 'UPI', 'VIRTUAL_ACCOUNT'

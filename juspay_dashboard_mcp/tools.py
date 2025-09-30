@@ -227,14 +227,16 @@ Use this tool to understand how recurring payments and subscriptions are configu
     ),
     util.make_api_config(
         name="juspay_get_priority_logic_settings",
-        description="""This API fetches a list of all configured priority logic rules, including their current status and full logic definition.
+        description="""This API fetches a list of all configured priority logic rules, including their current status, full logic definition, activation date, and last modified date.
 
 Key features:
 - Retrieves all priority logic rules defined for the merchant.
 - Shows the status of each rule.
 - Provides the complete logical definition of each rule.
+- Includes activation date for each rule.
+- Shows last modified date for tracking changes.
 
-Use this tool to understand how payment gateways are prioritized for routing transactions. Essential for analyzing and troubleshooting payment routing decisions.""",
+Use this tool whenever there is a query regarding priority logic or when users ask about their priority logic configuration. Use this tool to understand how payment gateways are prioritized for routing transactions. Essential for analyzing and troubleshooting payment routing decisions.""",
         model=api_schema.settings.JuspayPriorityLogicSettingsPayload,
         handler=settings.get_priority_logic_settings_juspay,
         response_schema=None,
@@ -311,6 +313,66 @@ Key features:
 - Supports filtering by amount, error codes and error messages for troubleshooting
 - Allows limiting the number of results and pagination
 - Domain parameter is mandatory (use 'txnsELS' if unsure)
+
+CRITICAL: When using flatFilters, you MUST follow this exact structure:
+
+flatFilters: {
+  "clauses": [
+    {"field": "field_name", "condition": "In", "val": ["value1", "value2"]},
+    {"field": "another_field", "condition": "NotIn", "val": [null]}
+  ],
+  "logic": "0 AND 1"
+}
+
+MANDATORY STRUCTURE RULES:
+- flatFilters must be an OBJECT with "clauses" and "logic" properties
+- Each clause must use "val" (NOT "values")
+- Logic must reference clause indices (e.g., "0 AND 1", "0 OR (1 AND 2)")
+
+EXAMPLES:
+
+SUCCESS orders with payment gateway filtering:
+{
+  "flatFilters": {
+    "clauses": [
+      {"field": "payment_status", "condition": "In", "val": ["SUCCESS"]},
+      {"field": "payment_gateway", "condition": "NotIn", "val": [null]}
+    ],
+    "logic": "0 AND 1"
+  }
+}
+
+UPI Paytm handle orders:
+{
+  "flatFilters": {
+    "clauses": [
+      {"field": "source_object", "condition": "In", "val": ["UPI_COLLECT"]},
+      {"field": "bank", "condition": "In", "val": ["Paytm"]}
+    ],
+    "logic": "0 AND 1"
+  }
+}
+
+Wallet orders:
+{
+  "flatFilters": {
+    "clauses": [
+      {"field": "payment_method_type", "condition": "In", "val": ["WALLET"]},
+      {"field": "bank", "condition": "In", "val": ["PayPal"]}
+    ],
+    "logic": "0 AND 1"
+  }
+}
+
+FAILED orders from yesterday:
+{
+  "flatFilters": {
+    "clauses": [
+      {"field": "payment_status", "condition": "In", "val": ["FAILURE"]}
+    ],
+    "logic": "0"
+  }
+}
 
 Investigation Use Cases:
 - Find orders by specific transaction IDs when investigating payment issues
@@ -422,7 +484,7 @@ For each selected EMI type, ask which card types to enable: credit cards (standa
 Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
 Set showEmiOption to true only if any EMI option is requested.
 RECREATE FROM ORDER: If the user asks to recreate a payment link and provides an order ID, first call the 'juspay_get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, payment methods, etc.) to create a new payment link with the same parameters.
-CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the payment link.
+CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the payment link.When a user requests creation of a payment link without specifying a delivery channel (such as email, SMS, or WhatsApp), generate and display only a direct payment link. Do not ask follow-up questions about delivery unless the user explicitly requests or mentions a specific channel.
 """,
         model=api_schema.payments.JuspayCreatePaymentLinkPayload,
         handler=payments.create_payment_link_juspay,
@@ -440,7 +502,7 @@ EMI OPTIONS: If the user requests EMI options, prompt them to choose from: 1) St
 For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless), Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
 Set showEmiOption to true only if any EMI option is requested.
 RECREATE FROM ORDER: If the user asks to recreate an autopay payment link and provides an order ID, first call the 'juspay_get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, mandate details, payment methods, etc.) to create a new autopay payment link with the same parameters.
-CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the autopay payment link.
+CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the autopay payment link.When a user requests creation of a payment link without specifying a delivery channel (such as email, SMS, or WhatsApp), generate and display only a direct payment link. Do not ask follow-up questions about delivery unless the user explicitly requests or mentions a specific channel.
 """,
         model=api_schema.payments.JuspayCreateAutopayLinkPayload,
         handler=payments.create_autopay_link_juspay,
@@ -467,35 +529,6 @@ async def handle_tool_calls(
     logger.info(f"Tool called: {name} with arguments: {arguments} and meta_info: {meta_info}")
     try:
         current_meta_info = arguments.get("juspay_meta_info", meta_info or {})
-
-        is_hdfc = False
-        if current_meta_info:
-            token_response = current_meta_info.get("token_response")
-            if token_response and isinstance(token_response, dict):
-                is_hdfc = token_response.get("validHost") in [
-                    "dashboard.smartgateway.hdfcbank.com/", 
-                    "dashboard.smartgateway.hdfcbank.com",
-                    "dashboarduat.smartgatewayuat.hdfcbank.com",
-                    "dashboarduat.smartgatewayuat.hdfcbank.com/"
-                ]
-        for tool in AVAILABLE_TOOLS:
-            if tool["name"] in ["create_payment_link_juspay", "create_autopay_link_juspay"]:
-                if is_hdfc:
-                    tool["description"] = tool["description"].replace(
-                        "IMPORTANT: You must ask the user for the required fields (amount, payment_page_client_id)",
-                        "IMPORTANT: You must ask the user for the required fields (amount)"
-                    ).replace(
-                        "IMPORTANT: You must ask the user for ALL required fields (amount, payment_page_client_id, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)",
-                        "IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)"
-                    )
-                else:
-                    tool["description"] = tool["description"].replace(
-                        "IMPORTANT: You must ask the user for the required fields (amount)",
-                        "IMPORTANT: You must ask the user for the required fields (amount, payment_page_client_id)"
-                    ).replace(
-                        "IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)",
-                        "IMPORTANT: You must ask the user for ALL required fields (amount, payment_page_client_id, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency)"
-                    )
 
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name and t["name"] not in JUSPAY_DASHBOARD_IGNORE_TOOL), None)
         if not tool_entry:

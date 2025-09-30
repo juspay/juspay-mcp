@@ -167,22 +167,10 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     if "amount" in payload:
         request_data["amount"] = payload["amount"]
 
-    is_hdfc = False
-    if meta_info:
-        token_response = meta_info.get("token_response")
-        if isinstance(token_response, dict):
-            valid_host = token_response.get("validHost")
-            if valid_host in [
-                "dashboard.smartgateway.hdfcbank.com", 
-                "dashboard.smartgateway.hdfcbank.com/",
-                "dashboarduat.smartgatewayuat.hdfcbank.com",
-                "dashboarduat.smartgatewayuat.hdfcbank.com/"
-            ]:
-                is_hdfc = True
-    if is_hdfc:
-        request_data["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
-    elif "payment_page_client_id" in payload:
+    if "payment_page_client_id" in payload:
         request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+    elif meta_info and "token_response" in meta_info and "merchantId" in meta_info["token_response"]:
+        request_data["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
     else:
         raise Exception("The payment page client id is missing. Can you please provide it?")
 
@@ -359,21 +347,11 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
     Raises:
         Exception: If the API call fails or required autopay fields are missing.
     """
-    is_hdfc = False
-    if meta_info:
-        token_response = meta_info.get("token_response")
-        if isinstance(token_response, dict):
-            valid_host = token_response.get("validHost")
-            if valid_host in [
-                "dashboard.smartgateway.hdfcbank.com", 
-                "dashboard.smartgateway.hdfcbank.com/",
-                "dashboarduat.smartgatewayuat.hdfcbank.com",
-                "dashboarduat.smartgatewayuat.hdfcbank.com/"
-            ]:
-                is_hdfc = True
-    if is_hdfc:
-        payload["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
-    elif "payment_page_client_id" not in payload:
+    if "payment_page_client_id" in payload:
+        payment_page_client_id = payload["payment_page_client_id"]
+    elif meta_info and "token_response" in meta_info and "merchantId" in meta_info["token_response"]:
+        payment_page_client_id = meta_info["token_response"]["merchantId"]
+    else:
         raise Exception("The payment page client id is missing. Can you please provide it?")
     required_autopay_fields = [
         "amount",
@@ -417,8 +395,7 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
         if field in payload:
             request_data[field] = payload[field]
 
-    if "payment_page_client_id" in payload:
-        request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+    request_data["payment_page_client_id"] = payment_page_client_id
 
     wallet_enabled = payload.get("walletCheckBox", True)
     cards_enabled = payload.get("cardsCheckBox", True)
