@@ -1409,3 +1409,291 @@ list_outages_response_schema = {
         ]
     }
 }
+
+integration_monitoring_status_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Query parameters used for the request"
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query"
+        },
+        "queryData": {
+            "type": "object",
+            "properties": {
+                "success": {
+                    "type": "boolean",
+                    "description": "Whether the query was successful"
+                },
+                "scoreData": {
+                    "type": "object",
+                    "description": "Feature-wise score metrics for integration monitoring. Keys are dynamic based on features (e.g., baseCriticalSuccessCount, mandateTotalCount, payoutSuccessCount, etc.)",
+                    "additionalProperties": True,
+                    "examples": [
+                        {
+                            "baseCriticalSuccessCount": 1,
+                            "baseCriticalTotalCount": 7,
+                            "baseTotalSuccessCount": 1,
+                            "baseTotalCount": 9,
+                            "mandateTotalCount": 5,
+                            "mandateSuccessCount": 3,
+                            "payoutCriticalSuccessCount": 2,
+                            "payoutCriticalTotalCount": 4
+                        }
+                    ]
+                },
+                "responseData": {
+                    "type": "object",
+                    "properties": {
+                        "moduleDescription": {"type": "string"},
+                        "disableModule": {"type": "boolean"},
+                        "features": {
+                            "type": "object",
+                            "description": "Feature-wise (e.g., base, mandate, payout etc.) integration monitoring data",
+                            "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                    "featureDescription": {"type": "string"},
+                                    "disableFeature": {"type": "boolean"},
+                                    "sections": {
+                                        "type": "object",
+                                        "description": "Sections within each feature (e.g., 'Payments Flow Checklist')",
+                                        "additionalProperties": {
+                                            "type": "object",
+                                            "properties": {
+                                                "sectionDescription": {"type": "string"},
+                                                "sectionNote": {"type": "string"},
+                                                "disableSection": {"type": "boolean"},
+                                                "stages": {
+                                                    "type": "object",
+                                                    "description": "Individual stages within each section",
+                                                    "additionalProperties": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "status": {
+                                                                "type": "string",
+                                                                "description": "Stage status (e.g., 'NOT_ATTEMPTED', 'PASSED', 'FAILED')"
+                                                            },
+                                                            "stageDisplayName": {"type": "string"},
+                                                            "stageDescription": {"type": "string"},
+                                                            "stageNote": {"type": "string"},
+                                                            "disableStage": {"type": "boolean"},
+                                                            "critical": {"type": "string"},
+                                                            "visibility": {"type": "string"},
+                                                            "onlyReport": {"type": "string"},
+                                                            "criticalResult": {"type": "boolean"},
+                                                            "visibilityResult": {"type": "boolean"},
+                                                            "onlyReportResult": {"type": "boolean"},
+                                                            "moduleMetadata": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "noOfStates": {"type": "integer"},
+                                                                    "productIntegrated": {
+                                                                        "type": "array",
+                                                                        "items": {"type": "string"}
+                                                                    },
+                                                                    "isPlatformDependent": {"type": "boolean"},
+                                                                    "minHitsRequired": {"type": "string"}
+                                                                },
+                                                                "required": ["noOfStates", "productIntegrated", "isPlatformDependent", "minHitsRequired"]
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "status", "stageDisplayName", "stageDescription", "stageNote",
+                                                            "disableStage", "critical", "visibility", "onlyReport",
+                                                            "criticalResult", "visibilityResult", "onlyReportResult", "moduleMetadata"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": ["sectionDescription", "sectionNote", "disableSection", "stages"]
+                                        }
+                                    }
+                                },
+                                "required": ["featureDescription", "disableFeature", "sections"]
+                            }
+                        }
+                    },
+                    "required": ["moduleDescription", "disableModule", "features"]
+                }
+            },
+            "required": ["success", "scoreData", "responseData"]
+        }
+    },
+    "required": ["queryData"]
+}
+
+x_mid_monitoring_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Actual Select Query for the request"
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query"
+        },
+        "queryStatus": {
+            "type": "object",
+            "description": "Status information about the query execution"
+        },
+        "queryData": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "api_shortcode": {
+                        "type": "string",
+                        "description": "API shortcode identifier"
+                    },
+                    "validate_xmid": {
+                        "type": "string",
+                        "description": "X-Mid validation result (PASSED/FAILED)"
+                    }
+                },
+                "required": ["api_shortcode", "validate_xmid"]
+            }
+        },
+        "metaData": {
+            "type": "array",
+            "description": "Additional metadata about the query"
+        }
+    },
+    "required": ["queryData"]
+}
+
+integration_platform_metrics_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Generated SQL query for platform-based metrics",
+            "items": {"type": "string"}
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query (e.g., 'analytics-UUID-821482cf-ed31-4a3b-9102-02e16b692242')"
+        },
+        "queryStatus": {
+            "type": "object",
+            "description": "Status information about the query execution"
+        },
+        "queryData": {
+            "type": "array",
+            "description": "Platform-grouped product integration data",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "platform": {
+                        "type": "string",
+                        "description": "Platform identifier (e.g., '', 'Android', 'IOS', 'Web')"
+                    },
+                    "product": {
+                        "type": "string",
+                        "description": "Product integration type (e.g., 'Payment Page Signature', 'EC + SDK')"
+                    }
+                },
+                "required": ["platform", "product"]
+            }
+        },
+        "metaData": {
+            "type": "array",
+            "description": "Additional metadata about the query including time range",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "currentTimeRange": {
+                        "type": "object",
+                        "properties": {
+                            "startTime": {
+                                "type": "string",
+                                "description": "Query start time in ISO format"
+                            },
+                            "endTime": {
+                                "type": "string", 
+                                "description": "Query end time in ISO format"
+                            }
+                        },
+                        "required": ["startTime", "endTime"]
+                    },
+                    "requestPrefix": {
+                        "type": "string",
+                        "description": "Request prefix identifier"
+                    }
+                },
+                "required": ["currentTimeRange", "requestPrefix"]
+            }
+        }
+    },
+    "required": ["queryData"]
+}
+
+integration_product_count_metrics_response_schema = {
+    "type": "object",
+    "properties": {
+        "queryString": {
+            "type": "array",
+            "description": "Generated SQL query for product count metrics",
+            "items": {"type": "string"}
+        },
+        "uuid": {
+            "type": "string",
+            "description": "Unique identifier for the analytics query (e.g., 'analytics-UUID-9f9fa9d1-bc68-4fa3-8140-b435e6130972')"
+        },
+        "queryStatus": {
+            "type": "object",
+            "description": "Status information about the query execution"
+        },
+        "queryData": {
+            "type": "array",
+            "description": "Product integration count data grouped by product_integrated",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "product_integrated": {
+                        "type": "string",
+                        "description": "Product integration type (e.g., '', 'EC + SDK', 'Payment Page Session')"
+                    },
+                    "product_count": {
+                        "type": "integer",
+                        "description": "Count of transactions for this product integration type"
+                    }
+                },
+                "required": ["product_integrated", "product_count"]
+            }
+        },
+        "metaData": {
+            "type": "array",
+            "description": "Additional metadata about the query including time range",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "currentTimeRange": {
+                        "type": "object",
+                        "properties": {
+                            "startTime": {
+                                "type": "string",
+                                "description": "Query start time in ISO format"
+                            },
+                            "endTime": {
+                                "type": "string",
+                                "description": "Query end time in ISO format"
+                            }
+                        },
+                        "required": ["startTime", "endTime"]
+                    },
+                    "requestPrefix": {
+                        "type": "string",
+                        "description": "Request prefix identifier"
+                    }
+                },
+                "required": ["currentTimeRange", "requestPrefix"]
+            }
+        }
+    },
+    "required": ["queryData"]
+}

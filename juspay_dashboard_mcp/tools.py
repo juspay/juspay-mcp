@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
 from juspay_dashboard_mcp.config import JUSPAY_DASHBOARD_IGNORE_TOOL
+from juspay_dashboard_mcp.api import integrationChecklist
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
 
@@ -508,7 +509,156 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
         handler=payments.create_autopay_link_juspay,
         response_schema=None,
     ),
-  
+    util.make_api_config(
+        name="juspay_integration_monitoring_status",
+        description="""Track integration progress across platforms and products for a particular merchant. Use this tool when you need to view passed/failed stages and action items for merchant integrations.
+
+**When to call this tool:**
+- When asked about integration status, progress, or completion for a specific merchant
+- To check which integration stages/items have passed or failed
+- To identify action items and next steps for integration completion
+- When troubleshooting integration issues or blockers
+- To view detailed stage-wise breakdown of integration checklist
+- When user asks about integration status and doesn't mention platform or product_integrated, then we will call the juspay_integration_platform_metrics and juspay_integration_product_count_metrics for fetching the default platform and product_integrated and then call this tool with that platform and product_integrated. Here firstly call the platform metrics tool and get the default platform and then call the product count metrics tool because that tool will need the platform as input parameter then only select the default product_integrated
+
+**Tool capabilities:**
+- Platform-aware monitoring (Backend uses agnostic API, Web/Android/iOS use nonagnostic API)
+- Stage-wise integration progress tracking with pass/fail status
+- Critical vs non-critical stage identification for prioritization
+- Feature-wise analysis (base payments, mandate, payout, etc.)
+- Visibility conditions and actionable results for each stage
+- Integration checklist completion tracking
+
+**Required inputs:**
+- platform: Must be one of "Backend", "Web", "Android", "iOS"
+- product_integrated: Must be one of "Payment Page Signature", "Payment Page Session", "EC + SDK", "EC Only"
+- merchant_id: Merchant ID
+- User can ask for data for last 1 day, last 2 days, last 7 days, last 30 days or last 45 days etc. We have to accordingly convert that into start_time and end_time and call this tool with that start_time and end_time
+- **Date Range Limitation:** We only show data for the last 45 days. If merchant asks for data before last 45 days, show an alert that we don't show data for that date range
+- **Default Date Range:** If merchant doesn't mention/select a date range, call this API for default 30 days (last 30 days)
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+**Response provides:**
+- Overall integration completion status with critical stage counts
+- Feature-wise progress breakdown (base, mandate, payout, etc.)
+- Section-wise analysis (e.g., "Payments Flow Checklist")
+- Individual stage details with pass/fail status, criticality level, and action items
+- Module metadata including platform dependencies and minimum requirements
+
+Use this tool to monitor integration progress, identify failed stages that need attention, and provide actionable guidance for completing merchant integrations.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationStatusPayload,
+        handler=integrationChecklist.get_integration_monitoring_status_juspay,
+        response_schema=response_schema.integration_monitoring_status_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_x_mid_monitoring",
+        description="""Retrieves X-Mid validation monitoring data for merchant transactions.
+
+This tool provides X-Mid validation results for API transactions within a specified time range, helping merchants monitor the validation status of their X-Mid headers is correctly passed across different API endpoints.
+
+Key features:
+- Time-range based X-Mid validation monitoring
+- API shortcode-wise validation results
+- PASSED/FAILED validation status tracking
+- Merchant-specific validation data
+
+Required inputs:
+- merchant_id: Merchant ID for which to retrieve X-Mid validation data
+- User can ask for data for last 1 day, last 2 days, last 7 days, last 30 days or last 45 days etc. We have to accordingly convert that into start_time and end_time and call this tool with that start_time and end_time
+- **Date Range Limitation:** We only show data for the last 45 days. If merchant asks for data before last 45 days, show an alert that we don't show data for that date range
+- **Default Date Range:** If merchant doesn't mention/select a date range, call this API for default 30 days (last 30 days)
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+Time format example: "2025-08-03T00:00:00Z"
+
+Response includes:
+- Query metadata and execution status
+- Array of validation results with API shortcodes
+- Validation status (PASSED/FAILED) for each API endpoint/shortcode
+- Additional metadata about the query execution
+
+Use this tool to monitor X-Mid header validation compliance, track validation failures across different API endpoints, and ensure proper X-Mid implementation for merchant transactions.""",
+        model=api_schema.integrationChecklist.JuspayXMidMonitoringPayload,
+        handler=integrationChecklist.get_x_mid_monitoring_juspay,
+        response_schema=response_schema.x_mid_monitoring_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_integration_platform_metrics",
+        description="""Retrieve available platforms for a particular merchant. This API only provides the list of platforms available for any merchant ID.
+
+**When to call this tool:**
+- When you need to get the list of available platforms for a merchant
+- To determine which platforms are configured for a merchant
+- When you need to get the default platform for subsequent API calls
+- When asked about integration progress across different platforms
+- To compare integration completion between Android, iOS, Web, and Backend platforms
+- When generating platform-specific integration reports
+- To identify which platforms have completed integrations vs those that need attention
+
+
+**Tool capabilities:**
+- Groups integration data by platform (Android, iOS, Web - Backend must be added separately)
+- First platform becomes default platform
+- "Backend" is always added if not present in response
+
+**Required inputs:**
+- merchant_id: Merchant ID for platform metrics analysis
+- User can ask for data for last 1 day, last 2 days, last 7 days, last 30 days or last 45 days etc. We have to accordingly convert that into start_time and end_time and call this tool with that start_time and end_time
+- **Date Range Limitation:** We only show data for the last 45 days. If merchant asks for data before last 45 days, show an alert that we don't show data for that date range
+- **Default Date Range:** If merchant doesn't mention/select a date range, call this API for default 30 days (last 30 days)
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+**Response provides:**
+- Platform-grouped data (typically Android, iOS, Web)
+- Platform list for any merchant
+
+**Important Note:** API typically returns Android, iOS, and Web platforms only. Backend platform data must be handled separately for complete platform coverage.
+
+Use this tool to get the list of available platforms for a merchant, not for integration status tracking.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationPlatformMetricsPayload,
+        handler=integrationChecklist.get_integration_platform_metrics_juspay,
+        response_schema=response_schema.integration_platform_metrics_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_integration_product_count_metrics",
+        description="""Analyze integration usage patterns by product type for a particular merchant. Use this tool when you need to understand which integration products are most actively used and their adoption patterns.
+
+**When to call this tool:**
+- When asked about product integration usage patterns or adoption rates
+- To identify the most popular integration types for a merchant
+- When analyzing integration health across different product types
+- For product selection if user didn't provide any input for platform then call the juspay_integration_platform_metrics tool and get the default platform and then call this tool with that platform
+
+**Tool capabilities:**
+- Groups integration data by product_integrated type (Payment Page Signature, Payment Page Session, EC + SDK, EC Only)
+- Product usage count metrics and analytics
+- Platform-specific filtering for accurate product analysis
+- Time-range based product adoption tracking
+- Integration health calculation by product type
+- Product with highest `product_count` becomes default
+- gives products for mentioned merchant and platform
+
+**Required inputs:**
+- merchant_id: Merchant ID for product count metrics analysis
+- platform: Platform filter (e.g., '', 'Android', 'iOS', 'Web') - MANDATORY for accurate filtering
+- User can ask for data for last 1 day, last 2 days, last 7 days, last 30 days or last 45 days etc. We have to accordingly convert that into start_time and end_time and call this tool with that start_time and end_time
+- **Date Range Limitation:** We only show data for the last 45 days. If merchant asks for data before last 45 days, show an alert that we don't show data for that date range
+- **Default Date Range:** If merchant doesn't mention/select a date range, call this API for default 30 days (last 30 days)
+- start_time: Start time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+- end_time: End time in ISO format (YYYY-MM-DDTHH:MM:SSZ)
+
+**Response provides:**
+- Product-grouped data with count metrics for each integration type
+- Platform-specific product integration data
+
+Use this tool to analyze product integration patterns, identify the most actively used integration types, and understand product adoption trends for merchant integrations.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationProductCountMetricsPayload,
+        handler=integrationChecklist.get_integration_product_count_metrics_juspay,
+        response_schema=response_schema.integration_product_count_metrics_response_schema,
+    ),
 ]
 
 @app.list_tools()
