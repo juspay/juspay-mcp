@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-JUSPAY_DASHBOARD_IGNORE_TOOL = json.loads(os.getenv('DASHBOARD_TOOL_IGNORE_LIST', '["juspay_report_details","juspay_list_report","juspay_alert_details","juspay_list_alerts","q_api"]'))
+JUSPAY_DASHBOARD_IGNORE_TOOL = json.loads(os.getenv('DASHBOARD_TOOL_IGNORE_LIST', '["juspay_find_orders","juspay_report_details","juspay_list_report","juspay_alert_details","juspay_list_alerts","q_api"]'))
 
 JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
 
