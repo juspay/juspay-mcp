@@ -25,11 +25,11 @@ async def list_unified_alerts_juspay(payload: dict, meta_info: dict = None) -> L
 
     Args:
         payload (dict): A dictionary containing:
-            - merchantId: Merchant ID to filter alerts (required)
-            - startTime: Start time in 'YYYY-MM-DD HH:MM:SS' format (required)
-            - endTime: End time in 'YYYY-MM-DD HH:MM:SS' format (required)
-            - name: Optional alert name/type to filter by
-            - dimensions: Optional dictionary for additional filtering
+            - merchantId: Merchant ID to filter alerts (required).
+            - startTime: Start time in 'YYYY-MM-DD HH:MM:SS' format (required).
+            - endTime: End time in 'YYYY-MM-DD HH:MM:SS' format (required).
+            - name: Optional alert name/type to filter by (e.g., 'Api Availability Drop').
+            - dimensions: Optional dictionary to filter for alerts triggered on a specific subset of dimensions. For example, `{'api': 'TRANSACTION'}` would return alerts where the 'api' dimension was 'TRANSACTION'.
 
     Returns:
         List[Dict[str, Any]]: A list of alert objects, each containing all alert fields.
@@ -51,7 +51,7 @@ async def list_unified_alerts_juspay(payload: dict, meta_info: dict = None) -> L
             "current_metric",
             "expected_metric",
             "start_time",
-            "nametadata_alert_detailsme",
+            "metadata_alert_details",
             "metadata_info",
             "recovered_ts"
         ]

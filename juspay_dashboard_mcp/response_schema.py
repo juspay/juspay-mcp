@@ -1564,7 +1564,7 @@ list_unified_alerts_response_schema = {
             "current_metric",
             "expected_metric",
             "start_time",
-            "nametadata_alert_detailsme",
+            "metadata_alert_details",
             "metadata_info",
             "recovered_ts"
         ]
