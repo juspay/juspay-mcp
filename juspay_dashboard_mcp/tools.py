@@ -508,6 +508,314 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
         handler=payments.create_autopay_link_juspay,
         response_schema=None,
     ),
+    # Payout Orders Tools
+    util.make_api_config(
+        name="juspay_list_payout_orders",
+        description="""Retrieves a list of payout orders within a specified time range. This tool is specifically for payout operations and provides comprehensive information about disbursement transactions processed through the payout system.
+
+Key features:
+- Fetches payout orders within a given start and end time range
+- Supports pagination with limit and offset parameters (max 100 orders per request)
+- Returns detailed payout order information including fulfillments and transactions
+- Provides order status, amounts, customer details, and timestamps
+- Includes beneficiary information and transaction processing details
+
+Use this tool to:
+- Track payout order status and processing history
+- Generate payout reconciliation reports
+- Monitor disbursement operations and performance
+- Investigate payout-related issues and customer inquiries
+
+Essential for payout operations, finance teams, and customer support when dealing with disbursement transactions.""",
+        model=api_schema.payout_orders.JuspayListPayoutOrdersPayload,
+        handler=payout_orders.list_payout_orders_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_order_details",
+        description="""Returns complete details for a specific payout order ID. This tool provides comprehensive information about individual payout transactions including fulfillment status, transaction details, and beneficiary information.
+
+IMPORTANT RETRY LOGIC: If you receive an error like "Could not find resource: Order abc", the provided ID might be a fulfillment ID or transaction ID instead of an order ID. The tool automatically extracts the order_id using these patterns:
+
+Supported ID patterns:
+- Order ID: 5c8e3f9bff064048ac46b98e04ea75c2 → 5c8e3f9bff064048ac46b98e04ea75c2 (no change)
+- Fulfillment ID: 5c8e3f9bff064048ac46b98e04ea75c2-f1 → 5c8e3f9bff064048ac46b98e04ea75c2
+- Transaction ID: 5c8e3f9bff064048ac46b98e04ea75c2-f1-t1 → 5c8e3f9bff064048ac46b98e04ea75c2
+
+Key features:
+- Fetches complete payout order details including status, amount, and timestamps
+- Returns fulfillment information with gateway details and processing status
+- Provides transaction-level details with gateway references and response codes
+- Includes beneficiary account information and verification status
+- Shows detailed error information if processing failed
+- Returns amounts in major currency unit (e.g., rupees, dollars)
+
+Use this tool to:
+- Investigate specific payout transaction issues
+- Verify beneficiary details and account information
+- Check transaction status and processing history
+- Troubleshoot failed or pending payouts
+- Provide detailed information for customer support inquiries
+
+Essential for payout operations teams and customer support when dealing with specific disbursement transactions.""",
+        model=api_schema.payout_orders.JuspayGetPayoutOrderDetailsPayload,
+        handler=payout_orders.get_payout_order_details_juspay,
+        response_schema=None,
+    ),
+    # Payout Gateways Tools
+    util.make_api_config(
+        name="juspay_list_configured_payout_gateways",
+        description="""Retrieves a list of all payout gateway credentials configured for the merchant's payout operations. This tool provides an overview of which payout providers are set up and available for disbursement operations.
+
+Key features:
+- Fetches all configured payout gateway credentials
+- Shows gateway reference IDs and configuration status
+- Provides operational parameters for batch payout processing
+- Lists available payout providers and their setup status
+
+Use this tool to:
+- Get an overview of configured payout gateways
+- Check which payout providers are available for disbursements
+- Verify gateway configuration status
+- Audit payout gateway setup for compliance and operations
+
+Essential for payout operations teams to understand available disbursement options and gateway configurations.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.list_configured__payout_gateways_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_gateways",
+        description="""Retrieves a list of all available payout gateway types that can be configured for payout operations. This tool shows the complete catalog of payout gateway options available for configuration.
+
+Key features:
+- Lists all available payout gateway types for configuration
+- Provides gateway schemas and configuration requirements
+- Shows supported fields and requirements for each gateway type
+- Offers comprehensive overview of payout gateway options
+
+Use this tool to:
+- Discover available payout gateway types for new configurations
+- Understand configuration requirements for different payout providers
+- Plan payout gateway integrations and setup
+- Explore new payout provider options
+
+Useful for integration teams and operations personnel setting up new payout channels.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_payout_gateways_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_gateway_details",
+        description="""Retrieves detailed configuration information for a specific payout gateway credential identified by gateway type and rail. This tool provides comprehensive details about a particular gateway setup including configuration parameters, status, and operational settings.
+
+Key features:
+- Fetches detailed configuration for a specific payout gateway credential
+- Shows configuration parameters, status, and operational settings
+- Provides gateway-specific setup information and capabilities
+- Returns comprehensive gateway credential details
+
+Use this tool to:
+- Get detailed information about a specific payout gateway configuration
+- Verify gateway credential settings and operational status
+- Troubleshoot gateway-specific payout issues
+- Audit individual gateway configurations
+
+Essential for operations teams when investigating gateway-specific payout problems or verifying configurations.""",
+        model=api_schema.payout_gateways.JuspayGetPayoutGatewayDetailsPayload,
+        handler=payout_gateways.get_payout_gateway_details_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_active_payout_gateways",
+        description="""Retrieves a list of active payout methods available for the merchant based on priority logic configuration. This tool shows currently enabled payout methods and their operational status.
+
+Key features:
+- Lists currently active payout methods based on priority logic
+- Shows operational status of available payout options
+- Provides real-time information about enabled disbursement methods
+- Helps determine which payout options are actively available
+
+Use this tool to:
+- Check which payout methods are currently active and available
+- Verify operational status of payout options
+- Understand current disbursement capabilities
+- Troubleshoot payout routing and availability issues
+
+Essential for operations teams to understand current payout processing capabilities and troubleshoot routing issues.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_active_payout_gateways_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_priority_logics",
+        description="""Retrieves the priority logic configuration for payout routing and gateway selection. This tool shows how payout transactions are routed across different gateways and payment methods based on configured rules and priorities.
+
+Key features:
+- Fetches priority logic configuration for payout routing
+- Shows gateway selection rules and priorities
+- Details routing strategy and fallback mechanisms
+- Provides complete logic definition for payout transaction routing
+
+Use this tool to:
+- Understand how payout transactions are routed across gateways
+- Verify priority logic configuration and routing rules
+- Troubleshoot payout routing decisions and gateway selection
+- Analyze payout processing strategy and optimization
+
+Essential for operations teams to understand and troubleshoot payout routing logic and gateway prioritization.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_payout_priority_logics_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_weblabs",
+        description="""Retrieves WebLab configuration settings for payout operations. This tool shows A/B testing configurations, feature flags, and experimental settings that control payout processing behavior and user experience.
+
+Key features:
+- Fetches WebLab configuration settings for payout operations
+- Shows feature flags and experimental configurations
+- Provides A/B testing parameters for payout functionality
+- Details dynamic configuration parameters for payout behavior
+
+Use this tool to:
+- Check feature flag settings for payout operations
+- Understand experimental configurations affecting payout processing
+- Verify A/B testing parameters for payout functionality
+- Troubleshoot feature-specific payout behavior
+
+Useful for product teams and operations personnel managing payout feature rollouts and experimentation.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_payout_weblabs_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_balance",
+        description="""Retrieves current balance information from all configured payout gateways. This tool provides visibility into available funds across different payout providers configured for disbursement operations.
+
+Key features:
+- Fetches balance information from all configured payout gateways
+- Shows available funds across different payout providers
+- Supports force refresh for real-time balance data
+- Provides account details and fund availability
+
+Use this tool to:
+- Check available funds across payout gateways
+- Monitor balance levels for disbursement operations
+- Verify account status and fund availability
+- Get real-time balance information when needed
+
+Essential for finance teams and operations personnel to monitor fund availability for payout processing.""",
+        model=api_schema.payout_gateways.JuspayGetPayoutBalancePayload,
+        handler=payout_gateways.get_payout_balance_juspay,
+        response_schema=None,
+    ),
+    # Payout Settings Tools
+    util.make_api_config(
+        name="juspay_get_payout_configs",
+        description="""Retrieves payout system configuration settings for the merchant's account. This tool shows various configuration parameters that control payout processing behavior, including operational settings, feature flags, and processing limits.
+
+Key features:
+- Fetches payout system configuration settings
+- Shows operational parameters and feature flags
+- Provides processing limits and configurable aspects
+- Details merchant-specific payout configurations
+
+Use this tool to:
+- Check payout system configuration and settings
+- Verify operational parameters and limits
+- Understand feature enablement for payout operations
+- Troubleshoot configuration-related payout issues
+
+Essential for operations teams to understand and verify payout system configuration.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_settings.get_payout_configs_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_encryption_or_ssl_keys",
+        description="""Retrieves encryption and SSL keys used for secure payout operations. This tool shows cryptographic keys and certificates used for data encryption, secure communication, and digital signatures in payout processing workflows.
+
+Key features:
+- Fetches encryption keys and SSL certificates for payout operations
+- Shows cryptographic materials for secure payout processing
+- Provides security credentials for gateway communication
+- Details digital signature and encryption capabilities
+
+Use this tool to:
+- Verify encryption and security configurations for payouts
+- Check SSL certificates and cryptographic materials
+- Troubleshoot security-related payout processing issues
+- Audit security credentials for compliance
+
+Essential for security teams and operations personnel managing secure payout processing.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_settings.get_payout_encryption_or_ssl_keys_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_list_beneficiaries_per_customer_id",
+        description="""Retrieves a list of all beneficiaries associated with a specific customer ID. This tool shows beneficiary details including account information, verification status, and configuration details for all beneficiaries linked to the provided customer.
+
+Key features:
+- Lists all beneficiaries associated with a specific customer
+- Shows account information and verification status
+- Provides configuration details for beneficiary relationships
+- Details beneficiary setup for payout operations
+
+Use this tool to:
+- View all beneficiaries registered under a specific customer
+- Check beneficiary account details and verification status
+- Manage beneficiary relationships for payout disbursements
+- Troubleshoot customer-specific beneficiary issues
+
+Essential for customer support and operations teams managing beneficiary relationships and payout disbursements.""",
+        model=api_schema.payout_beneficiary_details.JuspayListBeneficiariesPerCustomerIdPayload,
+        handler=payout_beneficiary_details.list_beneficiaries_per_customerId_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_beneficiary_details",
+        description="""Retrieves detailed information for a specific beneficiary identified by customer ID and beneficiary ID. This tool provides comprehensive beneficiary details including account information, verification status, and operational settings.
+
+Key features:
+- Fetches detailed information for a specific beneficiary
+- Shows account information and verification status
+- Provides configuration parameters and operational settings
+- Details beneficiary setup and account management information
+
+Use this tool to:
+- Get detailed information about a specific beneficiary
+- Verify beneficiary account details and verification status
+- Check beneficiary configuration and operational settings
+- Troubleshoot beneficiary-specific payout issues
+
+Essential for customer support and operations teams when dealing with specific beneficiary inquiries and payout issues.""",
+        model=api_schema.payout_beneficiary_details.JuspayGetBeneficiaryDetailsPayload,
+        handler=payout_beneficiary_details.get_beneficiary_details_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="juspay_get_payout_outages",
+        description="""Retrieves a list of current payout system outages and service disruptions. This tool shows information about ongoing outages, maintenance windows, and service interruptions affecting payout operations.
+
+Key features:
+- Lists current payout system outages and service disruptions
+- Shows ongoing maintenance windows and service interruptions
+- Provides real-time visibility into payout system health
+- Details affected services and estimated resolution times
+
+Use this tool to:
+- Check for current payout system outages and disruptions
+- Monitor payout system health and availability
+- Understand service interruptions affecting disbursement operations
+- Get information about maintenance windows and service status
+
+Essential for operations teams to monitor payout system health and understand service disruptions that may impact disbursement processing.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_settings.get_payout_outages_juspay,
+        response_schema=None,
+    ),
   
 ]
 
