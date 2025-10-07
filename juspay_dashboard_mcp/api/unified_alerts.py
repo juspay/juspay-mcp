@@ -41,7 +41,6 @@ async def list_unified_alerts_juspay(payload: dict, meta_info: dict = None) -> L
     # Build the request payload for the backend API
     request_data = {
         "is_visible": True,
-        "full_info": True,
         "with_config": True, 
         "merchant_id" : payload["merchantId"], 
         "select_columns":[
@@ -53,7 +52,8 @@ async def list_unified_alerts_juspay(payload: dict, meta_info: dict = None) -> L
             "start_time",
             "metadata_alert_details",
             "metadata_info",
-            "recovered_ts"
+            "recovered_ts", 
+            "category"
         ]
     }
     
