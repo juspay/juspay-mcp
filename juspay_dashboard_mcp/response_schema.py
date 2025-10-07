@@ -1535,3 +1535,38 @@ rag_query_response_schema = {
     "required": ["response", "query", "model", "sources"],
     "additionalProperties": True,
 }
+
+list_unified_alerts_response_schema = {
+    "type": "array",
+    "items": {
+        "type": "object",
+
+        '''name, expected_metric, current_metric, order_id, dimensions, merchant_id, category, metadata_alerts_detati, 
+        start_time
+        metadata_info, category'''
+
+        "properties": {
+            
+            "name": {"type": "string", "description": "name of alerts"},
+            "dimensions": {"type": "string", "description": "JSON string containing alert dimensions"},
+            "merchant_id": {"type": "string", "description": "Merchant identifier"},
+            "current_metric": {"type": "string", "description": "Current metric value"},
+            "expected_metric": {"type": "string", "description": "Expected metric value"},
+            "start_time": {"type": "string", "description": "Alert start time"},
+            "metadata_alert_details": {"type": "string", "description": "Alert details metadata"},
+            "metadata_info": {"type": "string", "description": "Metadata information"}, 
+            "recovered_ts": {"anyOf": [{"type": "string"}, {"type": "null"}], "description": "Recovery timestamp"},
+        },
+        "required": [
+            "name",
+            "dimensions",
+            "merchant_id",
+            "current_metric",
+            "expected_metric",
+            "start_time",
+            "nametadata_alert_detailsme",
+            "metadata_info",
+            "recovered_ts"
+        ]
+    }
+}
