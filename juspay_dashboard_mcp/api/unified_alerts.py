@@ -6,6 +6,7 @@
 
 import os
 import logging
+import json
 from typing import Dict, List, Any
 from juspay_dashboard_mcp.api.utils import post
 import requests
@@ -54,7 +55,8 @@ async def list_unified_alerts_juspay(payload: dict, meta_info: dict = None) -> L
             "metadata_info",
             "recovered_ts", 
             "category"
-        ]
+        ], 
+        "format" : "raw"
     }
     
     # Add dimensions if provided
@@ -99,45 +101,39 @@ async def list_unified_alerts_juspay(payload: dict, meta_info: dict = None) -> L
         additional_headers = dict(token = web_login_token), 
         meta_info = meta_info)
 
-    # print(resp)
-
-    return _transform_columnar_to_objects(resp)
+    return _parse_alerts_response(resp)
     
 
-def _transform_columnar_to_objects(columnar_data: Dict[str, List]) -> List[Dict[str, Any]]:
+def _parse_alerts_response(response_data) -> List[Dict[str, Any]]:
     """
-    Transforms columnar data (dict of lists) into a list of objects.
+    Parses the alerts API response from string to list of dictionaries.
     
     Args:
-        columnar_data: Dictionary where each key maps to a list of values
+        response_data: Response from the alerts API (could be string, list, or dict)
         
     Returns:
-        List of dictionaries, where each dict represents one alert with all fields
+        List of dictionaries
     """
-    if not isinstance(columnar_data, dict):
-        logger.warning("Response is not a dictionary, returning as-is")
-        return columnar_data if isinstance(columnar_data, list) else [columnar_data]
-    
-    # Get the length of the first list to determine number of records
-    if not columnar_data:
-        return []
-    
-    first_key = next(iter(columnar_data))
-    if not isinstance(columnar_data[first_key], list):
-        logger.warning("Response values are not lists, returning as single object")
-        return [columnar_data]
-    
-    num_records = len(columnar_data[first_key])
-    
-    # Transform to list of objects
-    alerts = []
-    for i in range(num_records):
-        alert = {}
-        for key, values in columnar_data.items():
-            if isinstance(values, list) and i < len(values):
-                alert[key] = values[i]
+    # If response is a string, parse it as JSON
+    if isinstance(response_data, str):
+        try:
+            parsed_data = json.loads(response_data)
+            if isinstance(parsed_data, list):
+                return parsed_data
+            elif isinstance(parsed_data, dict):
+                return [parsed_data]
             else:
-                alert[key] = None
-        alerts.append(alert)
+                logger.warning(f"Unexpected parsed data type: {type(parsed_data)}")
+                return []
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            return []
     
-    return alerts
+    # If response is already a list of dictionaries, return as-is
+    if isinstance(response_data, list):
+        return response_data
+    
+    # For any other format, wrap in list
+    return [response_data] if response_data else []
+
+
