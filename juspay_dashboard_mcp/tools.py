@@ -511,7 +511,9 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
     # Payout Orders Tools
     util.make_api_config(
         name="juspay_list_payout_orders",
-        description="""Retrieves a list of payout orders within a specified time range. This tool is specifically for payout operations and provides comprehensive information about disbursement transactions processed through the payout system.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+
+Retrieves a list of payout orders within a specified time range. This tool is specifically for payout operations and provides comprehensive information about disbursement transactions processed through the payout system.
 
 Key features:
 - Fetches payout orders within a given start and end time range
@@ -533,7 +535,9 @@ Essential for payout operations, finance teams, and customer support when dealin
     ),
     util.make_api_config(
         name="juspay_get_payout_order_details",
-        description="""Returns complete details for a specific payout order ID. This tool provides comprehensive information about individual payout transactions including fulfillment status, transaction details, and beneficiary information.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+        
+Returns complete details for a specific payout order ID. This tool provides comprehensive information about individual payout transactions including fulfillment status, transaction details, and beneficiary information.
 
 IMPORTANT RETRY LOGIC: If you receive an error like "Could not find resource: Order abc", the provided ID might be a fulfillment ID or transaction ID instead of an order ID. The tool automatically extracts the order_id using these patterns:
 
@@ -565,7 +569,9 @@ Essential for payout operations teams and customer support when dealing with spe
     # Payout Gateways Tools
     util.make_api_config(
         name="juspay_list_configured_payout_gateways",
-        description="""Retrieves a list of all payout gateway credentials configured for the merchant's payout operations. This tool provides an overview of which payout providers are set up and available for disbursement operations.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+        
+Retrieves a list of all payout gateway credentials configured for the merchant's payout operations. This tool provides an overview of which payout providers are set up and available for disbursement operations.
 
 Key features:
 - Fetches all configured payout gateway credentials
@@ -586,7 +592,9 @@ Essential for payout operations teams to understand available disbursement optio
     ),
     util.make_api_config(
         name="juspay_get_payout_gateways",
-        description="""Retrieves a list of all available payout gateway types that can be configured for payout operations. This tool shows the complete catalog of payout gateway options available for configuration.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+
+Retrieves a list of all available payout gateway types that can be configured for payout operations. This tool shows the complete catalog of payout gateway options available for configuration.
 
 Key features:
 - Lists all available payout gateway types for configuration
@@ -607,7 +615,9 @@ Useful for integration teams and operations personnel setting up new payout chan
     ),
     util.make_api_config(
         name="juspay_get_payout_gateway_details",
-        description="""Retrieves detailed configuration information for a specific payout gateway credential identified by gateway type and rail. This tool provides comprehensive details about a particular gateway setup including configuration parameters, status, and operational settings.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+        
+Retrieves detailed configuration information for a specific payout gateway credential identified by gateway type and rail. This tool provides comprehensive details about a particular gateway setup including configuration parameters, status, and operational settings.
 
 Key features:
 - Fetches detailed configuration for a specific payout gateway credential
@@ -628,7 +638,9 @@ Essential for operations teams when investigating gateway-specific payout proble
     ),
     util.make_api_config(
         name="juspay_get_active_payout_gateways",
-        description="""Retrieves a list of active payout methods available for the merchant based on priority logic configuration. This tool shows currently enabled payout methods and their operational status.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+        
+Retrieves a list of active payout methods available for the merchant based on priority logic configuration. This tool shows currently enabled payout methods and their operational status.
 
 Key features:
 - Lists currently active payout methods based on priority logic
@@ -649,7 +661,9 @@ Essential for operations teams to understand current payout processing capabilit
     ),
     util.make_api_config(
         name="juspay_get_payout_priority_logics",
-        description="""Retrieves the priority logic configuration for payout routing and gateway selection. This tool shows how payout transactions are routed across different gateways and payment methods based on configured rules and priorities.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+    
+Retrieves the priority logic configuration for payout routing and gateway selection. This tool shows how payout transactions are routed across different gateways and payment methods based on configured rules and priorities.
 
 Key features:
 - Fetches priority logic configuration for payout routing
@@ -670,7 +684,9 @@ Essential for operations teams to understand and troubleshoot payout routing log
     ),
     util.make_api_config(
         name="juspay_get_payout_weblabs",
-        description="""Retrieves WebLab configuration settings for payout operations. This tool shows A/B testing configurations, feature flags, and experimental settings that control payout processing behavior and user experience.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+        
+Retrieves WebLab configuration settings for payout operations. This tool shows A/B testing configurations, feature flags, and experimental settings that control payout processing behavior and user experience.
 
 Key features:
 - Fetches WebLab configuration settings for payout operations
@@ -691,7 +707,9 @@ Useful for product teams and operations personnel managing payout feature rollou
     ),
     util.make_api_config(
         name="juspay_get_payout_balance",
-        description="""Retrieves current balance information from all configured payout gateways. This tool provides visibility into available funds across different payout providers configured for disbursement operations.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+    
+Retrieves current balance information from all configured payout gateways. This tool provides visibility into available funds across different payout providers configured for disbursement operations.
 
 Key features:
 - Fetches balance information from all configured payout gateways
@@ -713,7 +731,9 @@ Essential for finance teams and operations personnel to monitor fund availabilit
     # Payout Settings Tools
     util.make_api_config(
         name="juspay_get_payout_configs",
-        description="""Retrieves payout system configuration settings for the merchant's account. This tool shows various configuration parameters that control payout processing behavior, including operational settings, feature flags, and processing limits.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+        
+Retrieves payout system configuration settings for the merchant's account. This tool shows various configuration parameters that control payout processing behavior, including operational settings, feature flags, and processing limits.
 
 Key features:
 - Fetches payout system configuration settings
@@ -734,7 +754,9 @@ Essential for operations teams to understand and verify payout system configurat
     ),
     util.make_api_config(
         name="juspay_get_payout_encryption_or_ssl_keys",
-        description="""Retrieves encryption and SSL keys used for secure payout operations. This tool shows cryptographic keys and certificates used for data encryption, secure communication, and digital signatures in payout processing workflows.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+    
+Retrieves encryption and SSL keys used for secure payout operations. This tool shows cryptographic keys and certificates used for data encryption, secure communication, and digital signatures in payout processing workflows.
 
 Key features:
 - Fetches encryption keys and SSL certificates for payout operations
@@ -755,7 +777,9 @@ Essential for security teams and operations personnel managing secure payout pro
     ),
     util.make_api_config(
         name="juspay_list_beneficiaries_per_customer_id",
-        description="""Retrieves a list of all beneficiaries associated with a specific customer ID. This tool shows beneficiary details including account information, verification status, and configuration details for all beneficiaries linked to the provided customer.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+    
+Retrieves a list of all beneficiaries associated with a specific customer ID. This tool shows beneficiary details including account information, verification status, and configuration details for all beneficiaries linked to the provided customer.
 
 Key features:
 - Lists all beneficiaries associated with a specific customer
@@ -776,7 +800,9 @@ Essential for customer support and operations teams managing beneficiary relatio
     ),
     util.make_api_config(
         name="juspay_get_beneficiary_details",
-        description="""Retrieves detailed information for a specific beneficiary identified by customer ID and beneficiary ID. This tool provides comprehensive beneficiary details including account information, verification status, and operational settings.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+    
+Retrieves detailed information for a specific beneficiary identified by customer ID and beneficiary ID. This tool provides comprehensive beneficiary details including account information, verification status, and operational settings.
 
 Key features:
 - Fetches detailed information for a specific beneficiary
@@ -797,7 +823,9 @@ Essential for customer support and operations teams when dealing with specific b
     ),
     util.make_api_config(
         name="juspay_get_payout_outages",
-        description="""Retrieves a list of current payout system outages and service disruptions. This tool shows information about ongoing outages, maintenance windows, and service interruptions affecting payout operations.
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+    
+Retrieves a list of current payout system outages and service disruptions. This tool shows information about ongoing outages, maintenance windows, and service interruptions affecting payout operations.
 
 Key features:
 - Lists current payout system outages and service disruptions
