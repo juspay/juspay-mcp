@@ -17,6 +17,8 @@ from juspay_dashboard_mcp.api import *
 from juspay_dashboard_mcp.config import JUSPAY_DASHBOARD_IGNORE_TOOL
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
+from juspay_dashboard_mcp.api import unified_alerts
+from juspay_dashboard_mcp.api_schema import unified_alerts as unified_alerts_schema
 
 logger = logging.getLogger(__name__)
 
@@ -815,6 +817,37 @@ Essential for operations teams to monitor payout system health and understand se
         model=api_schema.headers.WithHeaders,
         handler=payout_settings.get_payout_outages_juspay,
         response_schema=None,
+    ),
+
+    util.make_api_config(
+        name="list_unified_alerts",
+        description="""Fetches a comprehensive list of alerts detected within a specified time range for monitoring and analysis. This tool retrieves all visible alerts that occurred during the given period, providing detailed information about each alert including metrics and metadata.
+
+Key features:
+- Retrieves all alerts detected within a specified time range (required: merchantId, startTime, endTime).
+- Returns detailed alert information including current metrics, expected metrics, and performance data.
+- Provides rich metadata for each alert containing configuration details and thresholds.
+- Supports optional filtering by alert name/type (e.g., 'Api Availability Drop') and custom dimensions.
+- Transforms backend columnar data into user-friendly alert objects for easy analysis.
+- Includes alert timing information such as start time and recovery timestamps.
+
+Alert data includes:
+- Metrics descriptions and current vs expected values from metadata
+- Alert start time, recovery time, and duration information
+- Dimensional data for filtering and categorization
+- Attribution details and alert configuration metadata
+
+This tool enables you to:
+- Retrieve a complete list of alerts that occurred in a specific time period
+- Analyze alert patterns, frequency, and recovery times
+- Monitor system health and performance issues
+- Support incident management and operational monitoring
+- Generate comprehensive reports on alert activity and system reliability
+
+Ideal for monitoring system performance and managing alert-based workflows.""",
+        model=unified_alerts_schema.JuspayListUnifiedAlertsPayload,
+        handler=unified_alerts.list_unified_alerts_juspay,
+        response_schema=response_schema.list_unified_alerts_response_schema,
     ),
   
 ]
