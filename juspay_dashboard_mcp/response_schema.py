@@ -1409,3 +1409,39 @@ list_outages_response_schema = {
         ]
     }
 }
+
+list_unified_alerts_response_schema = {
+    "type": "array",
+    "items": {
+        "type": "object",
+
+        '''name, expected_metric, current_metric, order_id, dimensions, merchant_id, category, metadata_alerts_detati, 
+        start_time
+        metadata_info, category'''
+
+        "properties": {
+            "name": {"type": "string", "description": "The name of the alert that was triggered."},
+            "dimensions": {"type": "string", "description": "A JSON string representing the specific dimension values that triggered this alert instance."},
+            "merchant_id": {"type": "string", "description": "The identifier for the merchant associated with the alert."},
+            "current_metric": {"type": "string", "description": "The actual metric value observed at the time of the alert."},
+            "expected_metric": {"type": "string", "description": "The baseline or expected metric value. The deviation from this value triggered the alert."},
+            "start_time": {"type": "string", "description": "The timestamp indicating when the anomaly or alert was first detected."},
+            "metadata_alert_details": {"type": "string", "description": "A JSON string containing supplementary data related to the alert, such as sample order IDs or specific error messages that contributed to the anomaly."},
+            "metadata_info": {"type": "string", "description": "A JSON string providing descriptive context about the alert's definition, including a brief explanation of the metric, the trigger threshold, and configuration details like graph and Slack settings."},
+            "recovered_ts": {"anyOf": [{"type": "string"}, {"type": "null"}], "description": "The timestamp indicating when the alert was resolved and the metric returned to normal levels. Null if the alert is still active."},
+            "category":{"type": "string", "description": "Brief of alert."}
+        },
+        "required": [
+            "name",
+            "dimensions",
+            "merchant_id",
+            "current_metric",
+            "expected_metric",
+            "start_time",
+            "metadata_alert_details",
+            "metadata_info",
+            "recovered_ts", 
+            "category"
+        ]
+    }
+}
