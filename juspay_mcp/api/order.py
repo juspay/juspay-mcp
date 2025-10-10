@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
 
-async def order_status_api_juspay(payload: dict) -> dict:
+async def order_status_api_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the status of a specific Juspay order using the order_id.
 
@@ -37,9 +37,9 @@ async def order_status_api_juspay(payload: dict) -> dict:
     customer_id = payload.get("customer_id")
 
     api_url = ENDPOINTS["order_status"].format(order_id=order_id)
-    return await call(api_url, customer_id)
+    return await call(api_url, customer_id, meta_info=meta_info)
 
-async def create_order_juspay(payload: dict) -> dict:
+async def create_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates a new order in Juspay payment system.
 
@@ -87,9 +87,9 @@ async def create_order_juspay(payload: dict) -> dict:
     routing_id = payload.get("routing_id", payload.get("customer_id"))
     
     api_url = ENDPOINTS["create_order"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def update_order_juspay(payload: dict) -> dict:
+async def update_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Updates an existing order in Juspay.
     
@@ -125,9 +125,9 @@ async def update_order_juspay(payload: dict) -> dict:
     routing_id = payload.get("routing_id", payload.get("customer_id"))
     
     api_url = ENDPOINTS["update_order"].format(order_id=order_id)
-    return await post(api_url, update_data, routing_id)
+    return await post(api_url, update_data, routing_id, meta_info)
 
-async def order_fulfillment_sync(payload: dict) -> dict:
+async def order_fulfillment_sync(payload: dict, meta_info: dict = None) -> dict:
     """
     Updates the fulfillment status of an order.
     
@@ -166,4 +166,4 @@ async def order_fulfillment_sync(payload: dict) -> dict:
         payload.pop("routing_id")
     
     api_url = ENDPOINTS["order_fulfillment"].format(order_id=order_id)
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)

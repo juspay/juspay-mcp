@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS
 from juspay_mcp.api.utils import call, post
 
-async def list_offers_juspay(payload: dict) -> dict:
+async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Lists available offers for a given order with optional coupon code.
     
@@ -24,6 +24,7 @@ async def list_offers_juspay(payload: dict) -> dict:
             - customer (dict): Customer details like id, email, and mobile.
             - offer_code (str): Specific coupon code to apply.
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
     
     Returns:
         dict: Parsed JSON response containing available offers and their details.
@@ -43,9 +44,9 @@ async def list_offers_juspay(payload: dict) -> dict:
         payload.pop("routing_id")
     
     api_url = ENDPOINTS["offer_list"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def get_offer_order_status_juspay(payload: dict) -> dict:
+async def get_offer_order_status_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the status of an order with offer details.
     
@@ -57,6 +58,7 @@ async def get_offer_order_status_juspay(payload: dict) -> dict:
             - order_id (str): Unique identifier of the order to check.
         May include:
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
     
     Returns:
         dict: Parsed JSON response containing order status with offer details.
@@ -77,4 +79,4 @@ async def get_offer_order_status_juspay(payload: dict) -> dict:
         "version": "2023-06-30"
     }
     
-    return await call(api_url, routing_id, headers)
+    return await call(api_url, routing_id, headers, meta_info=meta_info)

@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS
 from juspay_mcp.api.utils import call, post
 
-async def get_saved_payment_methods(payload: dict) -> dict:
+async def get_saved_payment_methods(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a customer's saved payment methods.
 
@@ -21,6 +21,7 @@ async def get_saved_payment_methods(payload: dict) -> dict:
         May include:
             - payment_method (list): List of payment method types to retrieve (e.g., ["UPI_COLLECT"]).
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing saved payment method details.
@@ -39,9 +40,9 @@ async def get_saved_payment_methods(payload: dict) -> dict:
     api_url = ENDPOINTS["saved_payment_methods"].format(customer_id=customer_id)
     
     body = {"payment_method": payment_method}
-    return await post(api_url, body, routing_id)
+    return await post(api_url, body, routing_id, meta_info)
 
-async def upi_collect(payload: dict) -> dict:
+async def upi_collect(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates a UPI Collect transaction.
 
@@ -56,6 +57,7 @@ async def upi_collect(payload: dict) -> dict:
         May include:
             - redirect_after_payment (bool): Whether to redirect after payment.
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing transaction details.
@@ -83,9 +85,9 @@ async def upi_collect(payload: dict) -> dict:
         payload.pop("routing_id")
     
     api_url = ENDPOINTS["create_txn"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def verify_vpa(payload: dict) -> dict:
+async def verify_vpa(payload: dict, meta_info: dict = None) -> dict:
     """
     Verifies if a UPI Virtual Payment Address (VPA) is valid.
 
@@ -98,6 +100,7 @@ async def verify_vpa(payload: dict) -> dict:
             - merchant_id (str): Merchant identifier.
         May include:
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing VPA verification status.
@@ -119,9 +122,9 @@ async def verify_vpa(payload: dict) -> dict:
         payload.pop("routing_id")
     
     api_url = ENDPOINTS["verify_vpa"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def upi_intent(payload: dict) -> dict:
+async def upi_intent(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates a UPI Intent transaction.
 
@@ -137,6 +140,7 @@ async def upi_intent(payload: dict) -> dict:
             - sdk_params (bool): Whether to include SDK parameters in the response.
             - redirect_after_payment (bool): Whether to redirect after payment.
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing transaction details.
@@ -166,4 +170,4 @@ async def upi_intent(payload: dict) -> dict:
         payload.pop("routing_id")
     
     api_url = ENDPOINTS["create_txn"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)

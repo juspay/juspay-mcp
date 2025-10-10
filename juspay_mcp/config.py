@@ -74,30 +74,70 @@ def get_base64_auth():
     auth_string = f"{JUSPAY_API_KEY}:"
     return base64.b64encode(auth_string.encode()).decode()
 
-def get_common_headers(routing_id: str | None = None):
+def get_common_headers_with_meta_info(routing_id: str | None = None, meta_info: dict = None):
+    """
+    Returns common headers with meta_info support and env fallback.
+    Priority: meta_info > environment variables
+    """
+    # Check if meta_info contains API key/merchant info
+    api_key = None
+    merchant_id = None
+    
+    if meta_info:
+        logger.info(f"Using meta_info for authentication: {meta_info}")
+        # Extract from meta_info if available
+        api_key = meta_info.get("juspay_api_key")
+        merchant_id = meta_info.get("juspay_merchant_id")
+    
+    # Fallback to environment variables
+    if not api_key:
+        verify_env_vars()  # Existing function
+        api_key = JUSPAY_API_KEY
+        merchant_id = JUSPAY_MERCHANT_ID
+    
+    # Generate auth header
+    auth_string = f"{api_key}:"
+    auth_header = base64.b64encode(auth_string.encode()).decode()
+    
+    # routing_id comes from function parameter, not meta_info
+    effective_routing_id = routing_id or merchant_id
+    
+    return {
+        "Authorization": f"Basic {auth_header}",
+        "x-merchantid": merchant_id,
+        "x-routing-id": effective_routing_id,
+        "Accept": "application/json",
+        "x-request-id": f"mcp-tool-{os.urandom(6).hex()}"
+    }
+
+def get_common_headers(routing_id: str | None = None, meta_info: dict = None):
     """
     Returns common headers used by all API calls.
     Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
+    Supports meta_info for authentication overrides with env variable fallback.
     """
-    verify_env_vars()
-    
-    effective_routing_id = routing_id or JUSPAY_MERCHANT_ID
-    return {
-        "Authorization": f"Basic {get_base64_auth()}",
-        "x-merchantid": JUSPAY_MERCHANT_ID,
-        "x-routing-id": effective_routing_id,
-        "Accept": "application/json",
-        "x-request-id": f"mcp-tool-{os.urandom(6).hex()}" 
-    }
+    if meta_info is not None:
+        return get_common_headers_with_meta_info(routing_id, meta_info)
+    else:
+        # Existing implementation for backward compatibility
+        verify_env_vars()
+        effective_routing_id = routing_id or JUSPAY_MERCHANT_ID
+        return {
+            "Authorization": f"Basic {get_base64_auth()}",
+            "x-merchantid": JUSPAY_MERCHANT_ID,
+            "x-routing-id": effective_routing_id,
+            "Accept": "application/json",
+            "x-request-id": f"mcp-tool-{os.urandom(6).hex()}"
+        }
 
-def get_json_headers(routing_id: str | None = None):
-    """Returns headers for JSON content type."""
-    headers = get_common_headers(routing_id)
+def get_json_headers(routing_id: str | None = None, meta_info: dict = None):
+    """Returns headers for JSON content type with meta_info support."""
+    headers = get_common_headers(routing_id, meta_info)
     headers["Content-Type"] = "application/json"
     return headers
 
-def get_form_headers(routing_id: str | None = None):
-    """Returns headers for form URL-encoded content type."""
-    headers = get_common_headers(routing_id)
+def get_form_headers(routing_id: str | None = None, meta_info: dict = None):
+    """Returns headers for form URL-encoded content type with meta_info support."""
+    headers = get_common_headers(routing_id, meta_info)
     headers["Content-Type"] = "application/x-www-form-urlencoded"
     return headers

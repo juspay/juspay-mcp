@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS
 from juspay_mcp.api.utils import call, post
 
-async def add_card_juspay(payload: dict) -> dict:
+async def add_card_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Adds a new card to the Juspay system for a customer.
 
@@ -27,6 +27,7 @@ async def add_card_juspay(payload: dict) -> dict:
         May include:
             - nickname (str): Friendly name for the card.
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing card_token, card_reference, and card_fingerprint.
@@ -49,9 +50,9 @@ async def add_card_juspay(payload: dict) -> dict:
         payload.pop("routing_id")
         
     api_url = ENDPOINTS["card_add"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def list_cards_juspay(payload: dict) -> dict:
+async def list_cards_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves all stored cards for a specific customer.
 
@@ -64,6 +65,7 @@ async def list_cards_juspay(payload: dict) -> dict:
         May include:
             - options.check_cvv_less_support (bool): Check if cards support CVV-less transactions.
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing a list of cards with their details.
@@ -83,9 +85,9 @@ async def list_cards_juspay(payload: dict) -> dict:
     if payload.get("options.check_cvv_less_support"):
         api_url += "&options.check_cvv_less_support=true"
     
-    return await call(api_url, routing_id)
+    return await call(api_url, routing_id, meta_info=meta_info)
 
-async def delete_card_juspay(payload: dict) -> dict:
+async def delete_card_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Deletes a saved card from the Juspay system.
 
@@ -97,6 +99,7 @@ async def delete_card_juspay(payload: dict) -> dict:
             - card_token (str): Unique token of the card to be deleted.
         May include:
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response confirming deletion status.
@@ -114,9 +117,9 @@ async def delete_card_juspay(payload: dict) -> dict:
         payload.pop("routing_id")
         
     api_url = ENDPOINTS["card_delete"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def update_card_juspay(payload: dict) -> dict:
+async def update_card_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Updates details for a saved card.
 
@@ -130,6 +133,7 @@ async def update_card_juspay(payload: dict) -> dict:
             - nickname (str): New friendly name for the card.
             - customer_id (str): Customer identifier associated with the card.
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response confirming update status.
@@ -147,9 +151,9 @@ async def update_card_juspay(payload: dict) -> dict:
         payload.pop("routing_id")
         
     api_url = ENDPOINTS["card_update"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def get_card_info_juspay(payload: dict) -> dict:
+async def get_card_info_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves information about a specific card BIN (Bank Identification Number).
 
@@ -161,6 +165,7 @@ async def get_card_info_juspay(payload: dict) -> dict:
             - bin (str): First 6-9 digits of the card number (BIN).
         May include:
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing card BIN information.
@@ -176,9 +181,9 @@ async def get_card_info_juspay(payload: dict) -> dict:
     routing_id = payload.get("routing_id")
     
     api_url = f"{ENDPOINTS['card_info']}/{bin_number}"
-    return await call(api_url, routing_id)
+    return await call(api_url, routing_id, meta_info=meta_info)
 
-async def get_bin_list_juspay(payload: dict) -> dict:
+async def get_bin_list_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of eligible BINs for a specific authentication type.
 
@@ -189,6 +194,7 @@ async def get_bin_list_juspay(payload: dict) -> dict:
         payload (dict): May include:
             - auth_type (str): Authentication type (e.g., 'OTP').
             - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing a list of eligible BINs.
@@ -200,4 +206,4 @@ async def get_bin_list_juspay(payload: dict) -> dict:
     routing_id = payload.get("routing_id")
     
     api_url = f"{ENDPOINTS['bin_list']}?auth_type={auth_type}"
-    return await call(api_url, routing_id)
+    return await call(api_url, routing_id, meta_info=meta_info)

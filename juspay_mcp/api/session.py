@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS
 from juspay_mcp.api.utils import post
 
-async def session_api_juspay(payload: dict) -> dict:
+async def session_api_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates a Juspay payment session to initiate a transaction.
 
@@ -20,6 +20,7 @@ async def session_api_juspay(payload: dict) -> dict:
         payload (dict): A dictionary representing the JSON body for the session request.
                         Must contain required fields specified in the juspay_session_schema
                         (e.g., order_id, amount, customer_id, customer_email, etc.).
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response from the Juspay Session API. This typically contains
@@ -29,4 +30,4 @@ async def session_api_juspay(payload: dict) -> dict:
         Exception: If the API call fails (e.g., HTTP error, network issue, invalid input).
     """
     api_url = ENDPOINTS["session"]
-    return await post(api_url, payload)
+    return await post(api_url, payload, None, meta_info)
