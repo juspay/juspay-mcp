@@ -39,7 +39,7 @@ class JuspayCreateOrderPayload(WithRoutingId):
     customer_id: Optional[str] = Field(None, description="Merchant's identifier for the customer. If not provided, will be taken from meta_info.")
     customer_email: Optional[str] = Field(None, description="Customer's email address. If not provided, will be taken from meta_info.")
     customer_phone: Optional[str] = Field(None, description="Customer's phone number. If not provided, will be taken from meta_info.")
-    return_url: str = Field(..., description="URL to redirect after payment.")
+    return_url: Optional[str] = Field(None, description="URL to redirect after payment.")
     
     description: Optional[str] = Field(None, description="Description of the order.")
     product_id: Optional[str] = Field(None, description="Product identifier.")

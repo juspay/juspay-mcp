@@ -81,7 +81,10 @@ async def create_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     
     if not payload.get("customer_phone") and meta_info:
         payload["customer_phone"] = meta_info.get("phone_no")
-    
+        
+    if not payload.get("return_url"):
+         payload["return_url"] = "https://example.com/return"  
+
     # Check required fields after auto-population
     required_fields = ["amount", "currency", "customer_id", "customer_email", "customer_phone", "return_url"]
     
