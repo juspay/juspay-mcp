@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
 
-async def create_refund_juspay(payload: dict) -> dict:
+async def create_refund_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Initiates a refund for a previously successful Juspay order.
 
@@ -23,6 +23,7 @@ async def create_refund_juspay(payload: dict) -> dict:
             - amount (str): The amount to be refunded (e.g., "50.00").
         May include:
             - routing_id (str, optional): If provided, used for the x-routing-id header.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response from the Juspay Refund API, indicating the status
@@ -51,9 +52,9 @@ async def create_refund_juspay(payload: dict) -> dict:
         "unique_request_id": unique_request_id,
         "amount": amount,
     }
-    return await post(api_url, refund_data, routing_id)
+    return await post(api_url, refund_data, routing_id, meta_info)
 
-async def create_txn_refund_juspay(payload: dict) -> dict:
+async def create_txn_refund_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Initiates a transaction-based refund using the transaction ID instead of order ID.
     
@@ -67,6 +68,7 @@ async def create_txn_refund_juspay(payload: dict) -> dict:
             - amount (str): The amount to be refunded (e.g., "50.00").
         May include:
             - routing_id (str, optional): If provided, used for the x-routing-id header.
+        meta_info (dict, optional): Authentication credentials override.
             
     Returns:
         dict: Parsed JSON response from the Juspay Txn Refund API.
@@ -95,5 +97,4 @@ async def create_txn_refund_juspay(payload: dict) -> dict:
     }
     
     api_url = ENDPOINTS["txn_refund"]
-    return await post(api_url, refund_data, routing_id)
-
+    return await post(api_url, refund_data, routing_id, meta_info)

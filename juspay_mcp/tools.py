@@ -209,9 +209,12 @@ async def list_my_tools() -> list[types.Tool]:
     ]
 
 @app.call_tool()
-async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
-    logger.info(f"Calling tool: {name} with args: {arguments}")
+async def handle_tool_calls(name: str, arguments: dict, meta_info: dict = None) -> list[types.TextContent]:
+    logger.info(f"Calling tool: {name} with args: {arguments} and meta_info: {meta_info}")
     try:
+        # Extract meta_info from arguments if present, or use provided meta_info
+        current_meta_info = arguments.get("juspay_meta_info", meta_info or {})
+        
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name), None)
         if not tool_entry:
             raise ValueError(f"Unknown tool: {name}")
@@ -236,25 +239,25 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         else:
             payload_dict = arguments 
         
-        meta_info = arguments.pop("juspay_meta_info", None)
+        # Remove meta_info from arguments to avoid passing it to API functions as regular parameter
+        if "juspay_meta_info" in arguments:
+            arguments.pop("juspay_meta_info")
 
         sig = inspect.signature(handler)
         param_count = len(sig.parameters)
 
         if param_count == 0:
             response = await handler()
-
         elif param_count == 1:
-            if arguments or not meta_info:
+            if arguments or not current_meta_info:
                 response = await handler(arguments)
             else:
-                response = await handler(meta_info)
-
+                response = await handler(current_meta_info)
         elif param_count == 2:
-            response = await handler(arguments, meta_info)
-
+            response = await handler(arguments, current_meta_info)
         else:
             raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
+            
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:

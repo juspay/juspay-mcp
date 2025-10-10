@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS
 from juspay_mcp.api.utils import call, post
 
-async def list_wallets(payload: dict) -> dict:
+async def list_wallets(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the list of wallets associated with a customer.
 
@@ -19,6 +19,7 @@ async def list_wallets(payload: dict) -> dict:
             - customer_id (str): Unique identifier of the customer.
         May include:
             - routing_id (str): Optional custom routing ID.
+        meta_info (dict, optional): Authentication credentials override.
 
     Returns:
         dict: Parsed JSON response containing wallet details.
@@ -34,4 +35,4 @@ async def list_wallets(payload: dict) -> dict:
     routing_id = payload.get("routing_id", customer_id)
     api_url = f"https://api.juspay.in/customers/{customer_id}/wallets"
 
-    return await call(api_url, routing_id)
+    return await call(api_url, routing_id, meta_info=meta_info)

@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
 
-async def create_txn_juspay(payload: dict) -> dict:
+async def create_txn_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates an order and processes payment in a single API call.
     
@@ -27,6 +27,7 @@ async def create_txn_juspay(payload: dict) -> dict:
             - payment_method_type (str): Type of payment method (CARD, NB, etc.).
         For CARD payments, must also include:
             - card_number, card_exp_month, card_exp_year, etc.
+        meta_info (dict, optional): Authentication credentials override.
             
     Returns:
         dict: Parsed JSON response containing transaction details.
@@ -53,9 +54,9 @@ async def create_txn_juspay(payload: dict) -> dict:
         payload.pop("routing_id")
     
     api_url = ENDPOINTS["create_txn"]
-    return await post(api_url, payload, routing_id)
+    return await post(api_url, payload, routing_id, meta_info)
 
-async def create_moto_txn_juspay(payload: dict) -> dict:
+async def create_moto_txn_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates an order with MOTO (Mail Order/Telephone Order) payment.
     
@@ -69,6 +70,7 @@ async def create_moto_txn_juspay(payload: dict) -> dict:
             - auth_type (str): Must be "MOTO"
         May include:
             - tavv (str): Transaction Authentication Verification Value
+        meta_info (dict, optional): Authentication credentials override.
             
     Returns:
         dict: Parsed JSON response containing transaction details.
@@ -81,4 +83,4 @@ async def create_moto_txn_juspay(payload: dict) -> dict:
         raise ValueError("For MOTO transactions, 'auth_type' must be 'MOTO'.")
     
     # Use the standard txn creation function with additional MOTO parameters
-    return await create_txn_juspay(payload)
+    return await create_txn_juspay(payload, meta_info)
