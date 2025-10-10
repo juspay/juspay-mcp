@@ -54,3 +54,16 @@ class JuspayCreateMotoTxnPayload(WithRoutingId):
     class Config:
         validate_by_name = True
         extra = "allow"
+
+
+class JuspayCashTxnPayload(WithRoutingId):
+    order_id: str = Field(..., description="Unique identifier for the order.")
+    merchant_id: Optional[str] = Field(None, description="Your merchant ID provided by Juspay. If not provided, will be taken from meta_info.")
+    payment_method_type: Optional[str] = Field(None, description="Type of payment method. Will be automatically set to 'CASH'.")
+    payment_method: Optional[str] = Field(None, description="Specific payment method. Will be automatically set to 'CASH'.")
+    redirect_after_payment: Optional[bool] = Field(True, description="Whether to redirect after payment completion.")
+    format: Optional[str] = Field("json", description="Response format.", enum=["json"])
+
+    class Config:
+        validate_by_name = True
+        extra = "allow"

@@ -195,6 +195,13 @@ AVAILABLE_TOOLS = [
         handler=order.update_order_juspay,
         response_schema=response_schema.update_order_response_schema,
     ),
+    util.make_api_config(
+        name="create_cash_txn_juspay",
+        description="Creates a CASH transaction for offline/cash-on-delivery payments.",
+        model=api_schema.txn.JuspayCashTxnPayload,
+        handler=txn.create_cash_txn_juspay,
+        response_schema=response_schema.create_txn_response_schema,
+    ),
 ]
 
 @app.list_tools()

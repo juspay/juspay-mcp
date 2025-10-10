@@ -84,3 +84,62 @@ async def create_moto_txn_juspay(payload: dict, meta_info: dict = None) -> dict:
     
     # Use the standard txn creation function with additional MOTO parameters
     return await create_txn_juspay(payload, meta_info)
+
+
+async def create_cash_txn_juspay(payload: dict, meta_info: dict = None) -> dict:
+    """
+    Creates a CASH transaction for offline payments.
+    
+    This function sends an HTTP POST request to the Juspay Txns endpoint to create
+    a CASH transaction, typically used for offline/cash-on-delivery payments.
+    
+    Args:
+        payload (dict): A dictionary containing transaction details.
+        Must include:
+            - order_id (str): Unique identifier for the order.
+        May include:
+            - merchant_id (str): Your merchant ID. If not provided, taken from meta_info.
+            - redirect_after_payment (bool): Whether to redirect after payment.
+            - format (str): Response format, defaults to 'json'.
+            - routing_id (str): Custom routing identifier.
+        meta_info (dict, optional): Authentication credentials override. Should contain
+            merchant_id if not provided in payload.
+            
+    Returns:
+        dict: Parsed JSON response containing transaction details.
+        
+    Raises:
+        ValueError: If required fields are missing.
+        Exception: If the API call fails.
+    """
+    # Validate required fields
+    if not payload.get("order_id"):
+        raise ValueError("The payload must include 'order_id'.")
+    
+    # Get merchant_id from payload or meta_info
+    merchant_id = payload.get("merchant_id")
+    if not merchant_id and meta_info:
+        merchant_id = meta_info.get("juspay_merchant_id")
+    
+    if not merchant_id:
+        raise ValueError("merchant_id must be provided either in payload or meta_info.")
+    
+    # Hardcode CASH payment methods
+    payload["payment_method_type"] = "CASH"
+    payload["payment_method"] = "CASH"
+    payload["merchant_id"] = merchant_id
+    
+    # Set default values if not specified
+    if "redirect_after_payment" not in payload:
+        payload["redirect_after_payment"] = True
+    
+    if "format" not in payload:
+        payload["format"] = "json"
+    
+    # Extract routing_id if present
+    routing_id = payload.get("routing_id")
+    if "routing_id" in payload:
+        payload.pop("routing_id")
+    
+    api_url = ENDPOINTS["create_txn"]
+    return await post(api_url, payload, routing_id, meta_info)
