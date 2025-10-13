@@ -20,12 +20,6 @@ async def get_payout_configs_juspay(meta_info: dict = None) -> dict:
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/config
 
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
-
     Returns:
         dict: The parsed JSON response containing payout system configuration settings
               including operational parameters, feature flags, and processing limits.
@@ -50,12 +44,6 @@ async def get_payout_encryption_or_ssl_keys_juspay(meta_info: dict = None) -> di
 
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/keys
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
 
     Returns:
         dict: The parsed JSON response containing encryption keys, SSL certificates,
@@ -84,12 +72,6 @@ async def get_payout_outages_juspay(meta_info: dict = None) -> dict:
 
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/listOutage
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
 
     Returns:
         dict: The parsed JSON response containing current outages and service disruptions
