@@ -64,6 +64,20 @@ AVAILABLE_TOOLS = [
         handler=txn.create_cash_txn_juspay,
         response_schema=response_schema.create_txn_response_schema,
     ),
+    util.make_api_config(
+        name="create_card_txn_juspay",
+        description="Creates a CARD transaction using a saved card token. CRITICAL : Also requires `card_security_code` (CVV) to be passed. Prompt the user to enter CVV if it is not provided.",
+        model=api_schema.txn.JuspayCardTxnPayload,
+        handler=txn.create_card_txn_juspay,
+        response_schema=response_schema.create_txn_response_schema,
+    ),
+    util.make_api_config(
+        name="get_saved_payment_methods",
+        description="Retrieves a customer's saved payment methods.",
+        model=api_schema.upi.JuspaySavedPaymentMethodsPayload,
+        handler=upi.get_saved_payment_methods,
+        response_schema=response_schema.saved_payment_methods_response_schema,
+    ),
 ]
 
 @app.list_tools()

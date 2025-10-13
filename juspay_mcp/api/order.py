@@ -84,6 +84,14 @@ async def create_order_juspay(payload: dict, meta_info: dict = None) -> dict:
         
     if not payload.get("return_url"):
          payload["return_url"] = "https://example.com/return"  
+         
+    # Extract gateway_id from meta_info if not in payload
+  
+
+    payload["gateway_id"] = meta_info.get("gateway_id")
+    
+    # Extract gateway_reference_id from meta_info and add to payload with full name
+    payload["metadata.JUSPAY:gateway_reference_id"] = meta_info.get("gateway_reference_id")
 
     # Check required fields after auto-population
     required_fields = ["amount", "currency", "customer_id", "customer_email", "customer_phone", "return_url"]
