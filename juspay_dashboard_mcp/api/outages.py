@@ -103,18 +103,17 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
         "endTime": end_time_utc
     }
     
-    if payload.get("merchantId"):
-        request_data["merchantId"] = payload["merchantId"]
     
     host, isadmin = await get_admin_host(meta_info=meta_info)
     
-    
+    if isadmin and payload.get("merchantId"):
+        request_data["merchantId"] = payload["merchantId"]
     if isadmin:
         api_url = f"{host}/api/ec/v1/admin/outage/list"
     else:
         api_url = f"{host}/api/ec/v1/outage/list"
     
-    response =await post(api_url,payload, None, meta_info)
+    response =await post(api_url,request_data, None, meta_info)
     
     if isinstance(response, list):
         for outage in response:
