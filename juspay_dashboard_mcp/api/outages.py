@@ -106,8 +106,17 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
     
     host, isadmin = await get_admin_host(meta_info=meta_info)
     
+    mid_from_meta = None
+    if meta_info:
+        token_response = meta_info.get("token_response", {})
+        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
+    
+    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
+        raise ValueError("You are not authorized to view outages for this merchantId")
+    
     if isadmin and payload.get("merchantId"):
         request_data["merchantId"] = payload["merchantId"]
+
     if isadmin:
         api_url = f"{host}/api/ec/v1/admin/outage/list"
     else:
