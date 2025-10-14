@@ -80,7 +80,7 @@ class JuspayCardTxnPayload(WithRoutingId):
     name_on_card: Optional[str] = Field(None, description="Card holder name. Should contain alphabetical characters only.")
     card_exp_year: Optional[str] = Field(None, description="Represent the expiry year of the card as YY (two digits only). Not required when using card_token.")
     card_exp_month: Optional[str] = Field(None, description="Represent the expiry month of the card as MM (two digits only). Not required when using card_token.")
-    card_security_code: str = Field(..., description="CVV of the card. Usually three digits.")
+    card_security_code: Optional[str] = Field(None, description="CVV of the card. Usually three digits. Optional when CVV-less transactions are supported.")
     save_to_locker: Optional[bool] = Field(None, description="This is a boolean variable and accepts true/false. If set to true, then the card will be saved in locker when the transaction is successful. Only applicable for international cards. Defaults to true if not provided.")
     tokenize: Optional[bool] = Field(None, description="This is a boolean variable and accepts true/false. If set to true, then the card will be tokenised when the transaction is successful. Only applicable for domestic cards. Defaults to true if not provided.")
     redirect_after_payment: Optional[bool] = Field(None, description="This is a boolean variable and accepts true/false. We recommend that you set this to true and use the redirection flow. Defaults to true if not provided.")

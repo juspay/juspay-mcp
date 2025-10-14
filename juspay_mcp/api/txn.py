@@ -158,8 +158,8 @@ async def create_card_txn_juspay(payload: dict, meta_info: dict = None) -> dict:
             - order_id (str): Unique identifier for the order.
             - card_token (str): Card token for the saved card.
             - payment_method_type (str): Type of payment method (e.g., 'CARD', 'NB', 'UPI').
-            - card_security_code (str): CVV of the card.
         May include:
+            - card_security_code (str): CVV of the card. Optional for CVV-less transactions.
             - merchant_id (str): Your merchant ID. If not provided, taken from meta_info.
             - payment_method (str): Specific payment method (e.g., 'VISA', 'MASTERCARD').
             - name_on_card (str): Card holder name.
@@ -180,8 +180,9 @@ async def create_card_txn_juspay(payload: dict, meta_info: dict = None) -> dict:
         Exception: If the API call fails.
     """
     # Validate required fields - when using card_token, card details are not required
+    # card_security_code is optional to support CVV-less transactions
     required_fields = [
-        "order_id", "card_token", "payment_method_type", "card_security_code"
+        "order_id", "card_token", "payment_method_type"
     ]
     
     for field in required_fields:

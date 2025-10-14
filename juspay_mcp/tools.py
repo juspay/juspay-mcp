@@ -66,7 +66,7 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="create_card_txn_juspay",
-        description="Creates a CARD transaction using a saved card token. CRITICAL : Also requires `card_security_code` (CVV) to be passed. Prompt the user to enter CVV if it is not provided.",
+        description="Creates a CARD transaction using a saved card token.",
         model=api_schema.txn.JuspayCardTxnPayload,
         handler=txn.create_card_txn_juspay,
         response_schema=response_schema.create_txn_response_schema,
