@@ -41,8 +41,6 @@ async def get_saved_payment_methods(payload: dict, meta_info: dict = None) -> di
     payment_method =["UPI_COLLECT","CARD"]
     
     api_url = ENDPOINTS["saved_payment_methods"].format(customer_id=customer_id)
-    # Always append the check_cvv_less_support query parameter
-    api_url = f"{api_url}?options.check_cvv_less_support=true"
     
     body = {"payment_method": payment_method}
     return await post(api_url, body, routing_id, meta_info)

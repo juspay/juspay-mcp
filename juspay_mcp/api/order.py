@@ -115,8 +115,14 @@ async def create_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     # Get routing ID if provided, otherwise use customer_id
     routing_id = payload.get("routing_id", payload.get("customer_id"))
     
+    # Add version header for API versioning
+    additional_headers = {"version": "2025-12-01"}
+    
+    # Add query parameter for client auth token support
     api_url = ENDPOINTS["create_order"]
-    return await post(api_url, payload, routing_id, meta_info)
+    api_url = f"{api_url}?options.get_client_auth_token=true"
+    
+    return await post(api_url, payload, routing_id, meta_info, additional_headers)
 
 async def update_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
