@@ -40,7 +40,17 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="order_status_api_juspay",
-        description="Retrieves the status of a specific Juspay order using its `order_id`.",
+        description="""This is a Server-to-Server API that returns the status of the order along with other details in encrypted format using its `order_id`.
+
+Key features:
+- Returns order status and comprehensive order details in encrypted format.
+- Provides payment method details (card, UPI, netbanking, wallet information).
+- Includes transaction details (txn_id, gateway information, amounts).
+- Shows refund information if applicable.
+- Includes payment gateway response details.
+- Supports optional query parameter to receive complete gateway response.
+
+Use this tool to check the current status of an order, verify payment completion before order fulfillment, retrieve transaction details for reconciliation, or fetch comprehensive order information for customer support inquiries. Essential for validating amount and status before fulfilling orders.""",
         model=api_schema.order.JuspayOrderStatusPayload,
         handler=order.order_status_api_juspay,
         response_schema=response_schema.order_status_response_schema,
@@ -54,7 +64,15 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="get_customer_juspay",
-        description="Retrieves customer details using the Juspay customer ID.",
+        description="""This is a Server-to-Server API which returns the customer object for the given identifier using the `customer_id`.
+
+Key features:
+- Returns complete customer information associated with the customer_id.
+- Provides customer details including email, mobile number, name, and creation dates.
+- Supports optional query parameter to get client auth token for SDK integration.
+- Returns customer object with object_reference_id and contact information.
+
+Use this tool to retrieve customer profile information, verify customer details, fetch customer data for order processing, or obtain customer information for support inquiries. Essential for customer management and authentication workflows.""",
         model=api_schema.customer.JuspayGetCustomerPayload,
         handler=customer.get_customer_juspay,
         response_schema=response_schema.get_customer_response_schema,
@@ -110,7 +128,17 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="list_cards_juspay",
-        description="Retrieves all stored cards for a specific customer.",
+        description="""List all the cards stored for a customer using the `customer_id`. This API returns only tokens and other metadata relevant to the cards stored in Juspay Locker.
+
+Key features:
+- Returns all cards stored for a specific customer.
+- Provides card tokens and metadata from Juspay Locker.
+- Includes card details such as brand, issuer, expiry, last four digits, and card type.
+- Shows tokenization status and CVV-less support information.
+- Supports optional parameters to check CVV-less support, mandate support, and ATM PIN auth support.
+- Returns card fingerprint, card reference, and PAR for tokens.
+
+Use this tool to retrieve a customer's saved cards for payment processing, display saved payment methods in checkout flows, verify card tokenization status, or check card eligibility for specific payment features like CVV-less transactions or mandates. Essential for implementing saved card functionality and one-click payments.""",
         model=api_schema.card.JuspayListCardsPayload,
         handler=card.list_cards_juspay,
         response_schema=response_schema.list_cards_response_schema,
@@ -131,21 +159,45 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="get_card_info_juspay",
-        description="Retrieves information about a specific card BIN (Bank Identification Number).",
+        description="""Get card details using card BIN (Bank Identification Number) up to 9 digits. This Server-to-Server API can also check if a card is eligible for ATM PIN, Mandate, direct OTP payments, or tokenization.
+
+Key features:
+- Accepts card BIN with variable length ranging from 6 to 9 digits.
+- Returns card details including country, brand, bank, card type, and card sub-type.
+- Supports eligibility checks for CVV-less payments (works only for Token BINs).
+
+Use this tool to retrieve card information before processing payments, validate card eligibility for specific payment features, determine card issuer and type, or check support for advanced payment methods like mandates and tokenization. Essential for payment method validation and feature enablement.""",
         model=api_schema.card.JuspayCardInfoPayload,
         handler=card.get_card_info_juspay,
         response_schema=response_schema.card_info_response_schema,
     ),
     util.make_api_config(
         name="get_bin_list_juspay",
-        description="Retrieves a list of eligible BINs for a specific authentication type.",
+        description="""Get the list of BINs (Bank Identification Numbers) based on the authentication type.
+
+Key features:
+- Returns a list of eligible BINs for specified authentication type.
+- Supports filtering by authentication type: "OTP" for native OTP supported BINs or "VIES" for VIES supported BINs.
+- Provides BIN numbers as an array in the response.
+
+Use this tool to retrieve BINs that support specific authentication methods, validate card eligibility for OTP or VIES authentication, or filter payment options based on supported authentication types. Essential for implementing authentication-specific payment flows.""",
         model=api_schema.card.JuspayBinListPayload,
         handler=card.get_bin_list_juspay,
         response_schema=response_schema.bin_list_response_schema,
     ),
     util.make_api_config(
         name="get_saved_payment_methods",
-        description="Retrieves a customer's saved payment methods.",
+        description="""Fetch a customer's saved payment methods using the `customer_id`. This API helps create a faster and smoother checkout experience.
+
+Key features:
+- Retrieves saved payment methods for a specific customer.
+- Supports fetching Virtual Payment Addresses (VPAs), Cards, and Wallets.
+- Returns only supported payment methods under saved_payment_methods section.
+- Lists unsupported payment methods separately if present.
+- Supports two authentication methods: API Key (Basic Auth) or Client Authentication Token.
+- Accepts optional order_id parameter to retrieve specific payment methods.
+
+Use this tool to display saved payment options during checkout, enable one-click payments, retrieve customer's preferred payment methods, or create a personalized checkout experience. Essential for implementing express checkout and improving payment conversion rates.""",
         model=api_schema.upi.JuspaySavedPaymentMethodsPayload,
         handler=upi.get_saved_payment_methods,
         response_schema=response_schema.saved_payment_methods_response_schema,
@@ -173,21 +225,37 @@ AVAILABLE_TOOLS = [
     ),
     util.make_api_config(
         name="list_offers_juspay",
-        description="Lists available offers for a given order with optional coupon code.",
+        description="""API for listing the ACTIVE offers at a particular point in time based on the configurations in the offers operations dashboard.
+
+Key features:
+- Filters through complete set of merchant offers configured in the database.
+- Provides offer description and terms for each offer.
+- Shows offer eligibility for the current transaction.
+- Details offer benefits with calculation rules (Discount/Cashback/EMI Discount Value).
+- Returns order amount pre/post discount.
+- Lists eligible payment instruments/methods for an offer.
+- Includes eligible products along with offer breakup for each product.
+- Supports optional coupon code parameter.
+
+Use this tool to display available offers during checkout, validate coupon codes, calculate discount amounts, show offer eligibility based on payment methods, or provide personalized offer recommendations. Essential for implementing promotional campaigns and improving conversion rates.""",
         model=api_schema.offer.JuspayListOffersPayload,
         handler=offer.list_offers_juspay,
         response_schema=response_schema.list_offers_response_schema,
     ),
     util.make_api_config(
-        name="get_offer_order_status_juspay",
-        description="Retrieves the status of an order along with offer details.",
-        model=api_schema.offer.JuspayOfferOrderStatusPayload,
-        handler=offer.get_offer_order_status_juspay,
-        response_schema=response_schema.offer_order_status_response_schema,
-    ),
-    util.make_api_config(
         name="list_wallets",
-        description="Fetches all wallets linked to the given customer.",
+        description="""List all wallets for a customer using the `customer_id`. This API returns wallets which may or may not be linked.
+
+Key features:
+- Returns list of all wallets associated with a customer.
+- Shows both linked and unlinked wallets.
+- Provides wallet details including wallet name, token, and balance information.
+- Includes last_refreshed timestamp indicating when balance was last updated.
+- Returns sub_details array with payment method breakdown for each wallet.
+- Shows current_balance for linked wallets (may not reflect real-time balance).
+- Supports direct debit functionality for linked wallets if enabled by provider.
+
+Use this tool to display available wallet payment options, check wallet balances before payment, retrieve linked wallet information for one-click payments, or show wallet payment methods during checkout. Essential for implementing wallet-based payments and managing customer wallet preferences.""",
         model=api_schema.wallet.ListWalletsPayload,
         handler=wallet.list_wallets,
         response_schema=response_schema.list_wallets_response_schema,
