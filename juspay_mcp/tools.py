@@ -243,25 +243,6 @@ Use this tool to display available offers during checkout, validate coupon codes
         response_schema=response_schema.list_offers_response_schema,
     ),
     util.make_api_config(
-        name="get_offer_order_status_juspay",
-        description="""Retrieves the complete status of an order along with detailed offer information using the `order_id`.
-
-Key features:
-- Returns comprehensive order status and details.
-- Includes complete offer information with offer_id, offer_code, and status.
-- Provides benefit details including type (DISCOUNT/CASHBACK), calculation rules, and amounts.
-- Shows customer information (email, phone, customer_id).
-- Includes payment details (payment method, card information, transaction details).
-- Returns refund information if applicable.
-- Provides payment gateway response details.
-- Includes transaction UUID and gateway reference information.
-
-Use this tool to verify order status with applied offers, check offer benefit calculations, retrieve complete transaction details including offers, validate offer application on completed orders, or provide detailed order information for customer support. Essential for offer reconciliation and order verification.""",
-        model=api_schema.offer.JuspayOfferOrderStatusPayload,
-        handler=offer.get_offer_order_status_juspay,
-        response_schema=response_schema.offer_order_status_response_schema,
-    ),
-    util.make_api_config(
         name="list_wallets",
         description="""List all wallets for a customer using the `customer_id`. This API returns wallets which may or may not be linked.
 
