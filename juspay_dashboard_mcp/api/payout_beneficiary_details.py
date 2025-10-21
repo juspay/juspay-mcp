@@ -20,12 +20,6 @@ async def list_beneficiaries_per_customerId_juspay(payload: dict, meta_info: dic
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v2/benedetails/{customerId}
 
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
-
     Args:
         payload (dict): A dictionary with the following required key:
             - customerId: Unique identifier for the customer whose beneficiaries are to be retrieved.
@@ -62,12 +56,6 @@ async def get_beneficiary_details_juspay(payload: dict, meta_info: dict = None) 
 
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v2/benedetails/{customerId}/{beneId}
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
 
     Args:
         payload (dict): A dictionary with the following required keys:

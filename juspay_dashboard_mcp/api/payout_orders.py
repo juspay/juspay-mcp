@@ -151,7 +151,7 @@ async def get_payout_order_details_juspay(payload: dict, meta_info: dict) -> dic
         error_str = str(e)
         logging.warning(f"First attempt failed: {error_str}")
 
-        if "Could not find order" in error_str:
+        if "Could not find" in error_str:
 
             extracted_order_id = extract_order_id_from_txn_id_or_fulfillment_id(order_id)
 

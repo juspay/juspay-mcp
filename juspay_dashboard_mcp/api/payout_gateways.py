@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers
 
-async def list_configured__payout_gateways_juspay(meta_info: dict = None) -> dict:
+async def list_configured__payout_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all payout gateway credentials configured for a merchant's 
     payout operations. This API returns gateway configuration details including 
@@ -20,12 +20,6 @@ async def list_configured__payout_gateways_juspay(meta_info: dict = None) -> dic
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/gatewaycredential
 
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
-
     Returns:
         dict: The parsed JSON response containing configured payout gateway credentials,
               including gateway reference IDs, configuration status, and operational details.
@@ -38,7 +32,7 @@ async def list_configured__payout_gateways_juspay(meta_info: dict = None) -> dic
     api_url = f"{host}/api/payout/batch/dashboard/v1/gatewaycredential"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_gateways_juspay(meta_info: dict = None) -> dict:
+async def get_payout_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all available payout gateway types.
     This API provides information about gateway types that can be configured
@@ -50,12 +44,6 @@ async def get_payout_gateways_juspay(meta_info: dict = None) -> dict:
 
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/gateway
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
 
     Returns:
         dict: The parsed JSON response containing available payout gateway types
@@ -85,12 +73,6 @@ async def get_payout_gateway_details_juspay(payload: dict, meta_info: dict = Non
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/gatewaycredential/{gateway}/{rail}
 
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
-
     Args:
         payload (dict): A dictionary with the following required keys:
             - gateway: Gateway identifier/type (e.g., "RAZORPAY", "PAYU").
@@ -117,7 +99,7 @@ async def get_payout_gateway_details_juspay(payload: dict, meta_info: dict = Non
 
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_active_payout_gateways_juspay(meta_info: dict = None) -> dict:
+async def get_active_payout_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of active payout methods available for the merchant based on
     priority logic configuration. This API returns currently enabled payout methods
@@ -131,12 +113,6 @@ async def get_active_payout_gateways_juspay(meta_info: dict = None) -> dict:
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/prioritylogic/activemethods
 
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
-
     Returns:
         dict: The parsed JSON response containing active payout methods and their
               operational status based on priority logic configuration.
@@ -149,7 +125,7 @@ async def get_active_payout_gateways_juspay(meta_info: dict = None) -> dict:
     api_url = f"{host}/api/payout/batch/dashboard/v1/prioritylogic/activemethods"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_priority_logics_juspay(meta_info: dict = None) -> dict:
+async def get_payout_priority_logics_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the priority logic configuration for payout routing and gateway
     selection. This API returns the configured rules and priorities that determine
@@ -163,12 +139,6 @@ async def get_payout_priority_logics_juspay(meta_info: dict = None) -> dict:
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/prioritylogic
 
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
-
     Returns:
         dict: The parsed JSON response containing priority logic configuration
               including routing rules, gateway priorities, and selection criteria.
@@ -181,7 +151,7 @@ async def get_payout_priority_logics_juspay(meta_info: dict = None) -> dict:
     api_url = f"{host}/api/payout/batch/dashboard/v1/prioritylogic"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_weblabs_juspay(meta_info: dict = None) -> dict:
+async def get_payout_weblabs_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the WebLab configuration settings for payout operations. This API
     returns A/B testing configurations, feature flags, and experimental settings
@@ -194,12 +164,6 @@ async def get_payout_weblabs_juspay(meta_info: dict = None) -> dict:
 
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/weblabConfig
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
 
     Returns:
         dict: The parsed JSON response containing WebLab configuration settings
@@ -226,12 +190,6 @@ async def get_payout_balance_juspay(payload: dict, meta_info: dict = None) -> di
 
     The API endpoint is:
         https://portal.juspay.in/api/payout/batch/dashboard/v1/getways/balance?force={isForce}
-
-    Headers include:
-        - x-tenant-id from payload
-        - content-type: application/json
-        - authorization : login token
-        - x-token-type: Euler
 
     Args:
         isForce (str): Force refresh balance from gateways. Defaults to "false".
