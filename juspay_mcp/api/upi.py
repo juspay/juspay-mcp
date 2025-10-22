@@ -30,12 +30,15 @@ async def get_saved_payment_methods(payload: dict, meta_info: dict = None) -> di
         ValueError: If customer_id is missing.
         Exception: If the API call fails.
     """
-    customer_id = payload.get("customer_id")
+    
+    customer_id=meta_info.get("customer_id")
+    payload["customer_id"] = meta_info.get("customer_id")
+        
     if not customer_id:
         raise ValueError("The payload must include 'customer_id'")
         
     routing_id = payload.get("routing_id", customer_id)
-    payment_method = payload.get("payment_method", ["UPI_COLLECT"])
+    payment_method =["UPI_COLLECT","CARD"]
     
     api_url = ENDPOINTS["saved_payment_methods"].format(customer_id=customer_id)
     

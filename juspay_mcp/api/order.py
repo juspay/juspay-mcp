@@ -5,6 +5,8 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import httpx
+import secrets
+import string
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
 
@@ -65,14 +67,41 @@ async def create_order_juspay(payload: dict, meta_info: dict = None) -> dict:
         ValueError: If any required field is missing.
         Exception: If the API call fails (e.g., HTTP error, network issue).
     """
-    required_fields = [
-        "order_id", "amount", "currency", "customer_id", 
-        "customer_email", "customer_phone", "return_url"
-    ]
+    # Generate order_id if not provided
+    if not payload.get("order_id"):
+        # Generate alphanumeric string with max length 21
+        payload["order_id"] = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+    
+    # Get customer details from payload or meta_info
+    if not payload.get("customer_id") and meta_info:
+        payload["customer_id"] = meta_info.get("customer_id")
+    
+    if not payload.get("customer_email") and meta_info:
+        payload["customer_email"] = meta_info.get("email")
+    
+    if not payload.get("customer_phone") and meta_info:
+        payload["customer_phone"] = meta_info.get("phone_no")
+        
+    if not payload.get("return_url"):
+         payload["return_url"] = "https://example.com/return"  
+         
+    # Extract gateway_id from meta_info if not in payload
+  
+
+    payload["gateway_id"] = meta_info.get("gateway_id")
+    
+    # Extract gateway_reference_id from meta_info and add to payload with full name
+    payload["metadata.JUSPAY:gateway_reference_id"] = meta_info.get("gateway_reference_id")
+
+    # Check required fields after auto-population
+    required_fields = ["amount", "currency", "customer_id", "customer_email", "customer_phone", "return_url"]
     
     for field in required_fields:
         if not payload.get(field):
-            raise ValueError(f"The payload must include '{field}'.")
+            if field in ["customer_id", "customer_email", "customer_phone"]:
+                raise ValueError(f"The payload must include '{field}' or it must be provided in meta_info.")
+            else:
+                raise ValueError(f"The payload must include '{field}'.")
             
     # Process any boolean options
     if payload.get("get_client_auth_token"):
@@ -86,8 +115,14 @@ async def create_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     # Get routing ID if provided, otherwise use customer_id
     routing_id = payload.get("routing_id", payload.get("customer_id"))
     
+    # Add version header for API versioning
+    additional_headers = {"version": "2025-12-01"}
+    
+    # Add query parameter for client auth token support
     api_url = ENDPOINTS["create_order"]
-    return await post(api_url, payload, routing_id, meta_info)
+    api_url = f"{api_url}?options.get_client_auth_token=true"
+    
+    return await post(api_url, payload, routing_id, meta_info, additional_headers)
 
 async def update_order_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
