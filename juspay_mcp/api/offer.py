@@ -36,6 +36,10 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
     if not payload.get("order"):
         raise ValueError("The payload must include 'order' object")
     
+    # Convert amount to string if it's a number
+    if "amount" in payload["order"] and not isinstance(payload["order"]["amount"], str):
+        payload["order"]["amount"] = str(payload["order"]["amount"])
+    
     payload["payment_method_info"] = [{
         "payment_method_type": "CASH",
         "payment_method": "CASH", 
