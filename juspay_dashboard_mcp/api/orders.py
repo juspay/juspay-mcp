@@ -271,98 +271,152 @@ async def find_orders_juspay(payload: dict, meta_info: dict = None) -> dict:
     return await post(api_url, request_data, None, meta_info)
 
 
-def extract_order_id_from_txn_id(txn_id: str) -> str:
+def extract_order_id_candidates(input_id: str) -> list[str]:
     """
-    Extract order_id from txn_id by removing suffix patterns.
-
+    Generate multiple candidate order IDs from an ambiguous input.
+    Returns list of candidates in priority order to try.
+    
+    Handles various patterns:
+    - Small retry counts (≤ 25): AMEX-123-5 → tries [123, AMEX-123]
+    - Large numbers: AMEX-123-999999 → tries [123, AMEX-123, AMEX-123-999999]
+    - Silent retries: AMEX-123-5-2 → tries [123, AMEX-123]
+    - Known prefixes: zee5-UUID-1 → tries [UUID, zee5-UUID]
+    
     Examples:
-    - creditmantri-22087705-1 → 22087705
-    - paypal-juspay-JP_1752481545-1 → JP_1752481545
-    - zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
+    - creditmantri-22087705-1 → [22087705, creditmantri-22087705]
+    - paypal-juspay-JP_1752481545-1 → [JP_1752481545, paypal-juspay-JP_1752481545]
+    - zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → [6a45de15-6edd-4463-9415-f638a6709ee8, ...]
+    - AMEX-225531469-2249390 → [225531469-2249390, AMEX-225531469, 225531469, ...]
     """
-    pattern = r"-\d+(?:-\d+)?$"
-    without_suffix = re.sub(pattern, "", txn_id)
-
-   
-    if without_suffix.startswith("zee5-"):
-        return without_suffix[5:]  
-
-    else :
-        parts = without_suffix.split("-")
-        without_suffix = parts[-1] if len(parts) > 1 else without_suffix
+    candidates = []
+    
+    # Strategy 1: Remove small retry counts (≤ 25)
+    # Pattern: something-123-5 where 5 ≤ 25
+    match = re.search(r'-(\d+)$', input_id)
+    if match and int(match.group(1)) <= 25:
+        without_last = re.sub(r'-\d+$', '', input_id)
         
-    return without_suffix
+        # Try after removing merchant prefix
+        parts = without_last.split('-')
+        if len(parts) > 1:
+            # Last segment after merchant prefix
+            candidates.append(parts[-1])
+            # Everything after first segment (merchant prefix)
+            candidates.append('-'.join(parts[1:]))
+    
+    # Strategy 2: Remove TWO numeric suffixes (for silent retries)
+    # Pattern: something-123-5-2 (remove both -5-2 or just -5-2)
+    double_suffix = re.sub(r'-\d+-\d+$', '', input_id)
+    if double_suffix != input_id:
+        parts = double_suffix.split('-')
+        if len(parts) > 1:
+            candidates.append(parts[-1])
+            candidates.append('-'.join(parts[1:]))
+    
+    # Strategy 3: Remove any numeric suffix regardless of size
+    # For cases like AMEX-225531469-2249390 where 2249390 > 25
+    without_any_suffix = re.sub(r'-\d+(?:-\d+)?$', '', input_id)
+    if without_any_suffix != input_id:
+        parts = without_any_suffix.split('-')
+        if len(parts) > 1:
+            # Full string without suffix
+            candidates.append(without_any_suffix)
+            # Last segment only
+            candidates.append(parts[-1])
+            # After first segment
+            candidates.append('-'.join(parts[1:]))
+    
+    # Strategy 4: Handle known merchant prefixes specially
+    known_prefixes = ['zee5-', 'AMEX-', '6E-', 'paypal-', 'creditmantri-']
+    for prefix in known_prefixes:
+        if input_id.lower().startswith(prefix.lower()):
+            after_prefix = input_id[len(prefix):]
+            # Remove any suffix from after_prefix
+            clean = re.sub(r'-\d+(?:-\d+)?$', '', after_prefix)
+            if clean:
+                candidates.append(clean)
+            break
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_candidates = []
+    for c in candidates:
+        if c and c not in seen:
+            seen.add(c)
+            unique_candidates.append(c)
+    
+    return unique_candidates
 
 
 async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
-     Note: The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
+    Note: The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
 
-    IMPORTANT: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID might be a transaction ID (txn_id) instead of an order ID. In such cases, you should extract the order_id from the txn_id using these patterns:
+    This function accepts ANY ID format (order_id, txn_id, or ambiguous IDs) and has built-in 
+    intelligent retry logic that automatically tries multiple extraction patterns if the initial 
+    attempt fails.
 
-    Common txn_id to order_id patterns:
-    - Standard pattern: merchant-orderID-retryCount → orderID
-      Example: paypal-juspay-JP_1752481545-1 → JP_1752481545
-    - Multiple hyphens in order ID: merchant-orderID-with-hyphens-retryCount → orderID-with-hyphens
-      Example: zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
-    - Non-standard merchant prefix: prefix-orderID-retryCount → orderID
-      Example: 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817 (GoIndigo)
-    - Silent retries: merchant-orderID-retryCount-silentRetryCount → orderID
-      Example: merchant-ORDER123-1-1 → ORDER123
-
-    Pattern recognition guide:
-    1. Remove the last numeric suffix (e.g., -1, -2, etc.)
-    2. If there's still a numeric suffix, remove it too (for silent retries)
-    3. Take the part after the merchant prefix (usually after the first or second hyphen)
-    4. Some merchants like zee5 have hyphens within their order IDs, so be careful to preserve the order ID structure
-
-    If the first attempt fails with "does not exist" error, extract the order_id using the above patterns and retry the call.
-    
     Args:
         payload (dict): A dictionary containing:
-            - order_id: The unique order ID to retrieve details for (can also be a txn_id that will be automatically processed if the first attempt fails)
+            - order_id: The unique order ID to retrieve details for. Can be:
+                * Pure order ID (e.g., "22087705", "JP_1752481545")
+                * Transaction ID (e.g., "creditmantri-22087705-1", "AMEX-225531469-2249390")
+                * Any ambiguous ID format - the tool will try multiple patterns
 
     Returns:
         dict: The parsed JSON response containing order details.
 
     Raises:
-        Exception: If the API call fails.
+        Exception: If the API call fails for all attempted patterns.
     """
     order_id = payload.get("order_id")
     if not order_id:
         raise ValueError("'order_id' is required in the payload")
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
-
+    
+    # Attempt 1: Try original ID as-is
     api_url = f"{host}/api/ec/v1/orders/{order_id}"
-
     try:
-        logging.info(f"Attempting to get order details for order_id: {order_id}")
+        logging.info(f"[Attempt 1] Trying original ID: {order_id}")
         return await post(api_url, {}, None, meta_info)
-
+    
     except Exception as e:
         error_str = str(e)
-        logging.warning(f"First attempt failed: {error_str}")
-
+        logging.warning(f"[Attempt 1] Failed with original ID: {error_str}")
+        
+        # Only retry if it's a "not found" type error
         if "does not exist" in error_str or "invalid_request_error" in error_str:
-
-            extracted_order_id = extract_order_id_from_txn_id(order_id)
-
-            if extracted_order_id != order_id:
-                logging.info(f"Retrying with extracted order_id: {extracted_order_id}")
-                try:
-                    retry_api_url = f"{host}/api/ec/v1/orders/{extracted_order_id}"
-                    result = await post(retry_api_url, {}, None, meta_info)
-                    logging.info(
-                        f"Success with extracted order_id: {extracted_order_id}"
-                    )
-                    return result
-                except Exception as retry_error:
-                    logging.error(f"Retry also failed: {str(retry_error)}")
-                    raise e
-            else:
-                logging.info("Extracted order_id same as original, not retrying")
+            
+            # Generate all candidate order IDs
+            candidates = extract_order_id_candidates(order_id)
+            
+            if not candidates:
+                logging.info("No extraction candidates generated, re-raising original error")
                 raise e
+            
+            logging.info(f"Generated {len(candidates)} extraction candidates: {candidates}")
+            
+            # Try each candidate
+            for idx, candidate in enumerate(candidates, start=2):
+                try:
+                    logging.info(f"[Attempt {idx}] Trying candidate: '{candidate}'")
+                    retry_url = f"{host}/api/ec/v1/orders/{candidate}"
+                    result = await post(retry_url, {}, None, meta_info)
+                    logging.info(f"✓ SUCCESS with candidate: '{candidate}' (extracted from '{order_id}')")
+                    return result
+                
+                except Exception as retry_error:
+                    retry_error_str = str(retry_error)
+                    logging.debug(f"[Attempt {idx}] Candidate '{candidate}' failed: {retry_error_str}")
+                    continue
+            
+            # All extraction attempts failed
+            logging.error(f"All {len(candidates) + 1} attempts failed for ID: {order_id}")
+            logging.error(f"Tried: ['{order_id}'] + {candidates}")
+            raise e  # Re-raise original error
+        
         else:
+            # Different type of error, don't retry
             raise e

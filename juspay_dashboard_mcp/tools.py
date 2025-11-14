@@ -394,30 +394,34 @@ IMPORTANT: If unsure about the type of a provided ID, the agent should ask the u
     ),
     util.make_api_config(
         name="juspay_get_order_details",
-        description="""Returns complete details for a given order ID. 
+        description="""Returns complete details for a given order ID.
 
-CRITICAL RETRY LOGIC: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID is likely a transaction ID (txn_id) instead of an order ID. You MUST extract the order_id from the txn_id and retry the call.
+CRITICAL: This tool accepts ANY ID format - order_id, txn_id, or ambiguous IDs. DO NOT extract or transform the ID before calling this tool. Pass the ID EXACTLY as provided by the user/merchant. The tool has built-in intelligent retry logic that will automatically try multiple extraction patterns if the initial attempt fails.
 
-Extraction patterns (ALWAYS follow these steps):
-1. Remove the last '-' and number (e.g., '-1', '-2') from the end
-2. If there's still a '-' and number at the end, remove that too (for silent retries)  
-3. Take the part after the merchant prefix (usually after the first or second hyphen)
+Examples of acceptable inputs (pass as-is, DO NOT pre-process):
+- Pure order IDs: 22087705, JP_1752481545, 6a45de15-6edd-4463-9415-f638a6709ee8
+- Transaction IDs with retry counts: creditmantri-22087705-1, AMEX-225531469-2249390, zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1
+- Any ambiguous ID format containing hyphens and numbers
 
-Examples:
-- creditmantri-22087705-1 → 22087705
-- paypal-juspay-JP_1752481545-1 → JP_1752481545
-- zee5-6a45de15-6edd-4463-9415-f638a6709ee8-1 → 6a45de15-6edd-4463-9415-f638a6709ee8
-- 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817
-- merchant-ORDER123-1-1 → ORDER123
+The tool will:
+1. First try the ID exactly as provided
+2. If that fails with "does not exist", automatically extract and retry with multiple candidate patterns:
+   - Handles small retry counts (≤ 25): AMEX-123-5 → tries 123, AMEX-123
+   - Handles large numbers: AMEX-123-999999 → tries multiple patterns
+   - Handles known merchant prefixes: zee5-, AMEX-, 6E-, paypal-, creditmantri-
+   - Handles silent retries: merchant-ORDER-1-2 → tries ORDER
+3. Return the order details when a match is found
 
-MANDATORY: When you get "does not exist" error, immediately extract order_id using above patterns and call this tool again with the extracted order_id.
+DO NOT manually extract order_id from transaction_id before calling this tool. The tool handles this internally with sophisticated pattern matching.
 
 Key features:
-- Fetches complete order details for a specific order ID (if txn_id provided extract order_id using above logic).
-- Returns the amount in the major currency unit (e.g., rupees, dollars).
+- Intelligent multi-pattern retry logic for ambiguous IDs
+- Handles merchant prefixes (AMEX-, zee5-, 6E-, paypal-, creditmantri-, etc.)
+- Supports retry counts up to 25
+- Handles silent retries (double suffix patterns like -1-2)
+- Returns amounts in major currency unit (e.g., rupees, dollars)
 
-
-Use this tool to look up the status of a specific payment, troubleshoot a customer's order issue, verify transaction details for reconciliation, or fetch data for customer support inquiries. Essential for support teams, operations personnel, and developers who need to inspect the state of individual orders.""",
+Use this tool to retrieve complete order details. The tool intelligently handles any ID format provided.""",
         model=api_schema.orders.JuspayGetOrderDetailsPayload,
         handler=orders.get_order_details_juspay,
         response_schema=None,
