@@ -463,14 +463,17 @@ Use this tool to review and audit all configured surcharge rules. Essential for 
     ),
     util.make_api_config(
         name="list_outages_juspay",
-        description="""Returns a list of outages within a specified time range.
+        description="""Returns a list of gateway outages within a specified time range.
+
+IMPORTANT: This tool only returns outages caused by payment gateway issues. It does NOT include outages caused by Juspay's internal deployments or infrastructure issues.
 
 Key features:
-- Fetches a list of all recorded outages within a given time frame.
-- Provides details for each outage, including start and end times, status, and affected components (like payment method).
+- Fetches a list of all recorded gateway outages within a given time frame.
+- Provides details for each gateway outage, including start and end times, status, and affected components (like payment method).
 - Converts outage period timestamps to IST in the response.
+- Focuses specifically on payment gateway disruptions, not Juspay platform outages.
 
-Use this tool to check for any service disruptions or performance degradation issues. Essential for monitoring system health and understanding the impact of outages on payment processing.""",
+Use this tool to check for payment gateway service disruptions or performance degradation issues. Essential for monitoring gateway health and understanding the impact of gateway outages on payment processing.""",
         model=api_schema.outages.JuspayListOutagesPayload,
         handler=outages.list_outages_juspay,
         response_schema=response_schema.list_outages_response_schema,
