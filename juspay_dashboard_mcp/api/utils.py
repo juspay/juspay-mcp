@@ -40,10 +40,12 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
     if additional_headers:
         headers.update(additional_headers)
 
+    clean_payload = {k: v for k, v in payload.items() if k != 'juspay_meta_info'}
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with body: {payload} and headers: {headers}")
-            response = await client.post(api_url, headers=headers, json=payload)
+            logger.info(f"Calling Juspay API at: {api_url} with body: {clean_payload} and headers: {headers}")
+            response = await client.post(api_url, headers=headers, json=clean_payload)
             response.raise_for_status()
             response_data = response.json()
             logger.info(f"API Response Data: {response_data}")
@@ -54,7 +56,7 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
             raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {e}")
-            raise Exception(f"Failed to call Juspay API: {e}") from e    
+            raise Exception(f"Failed to call Juspay API: {e}") from e
 
 async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta_info: dict = None) -> str:
     """
