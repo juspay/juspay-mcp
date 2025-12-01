@@ -49,6 +49,7 @@ in
                   (old.src + "/README.md")
                   (old.src + "/juspay_mcp")
                   (old.src + "/juspay_dashboard_mcp")
+                  (old.src + "/juspay_docs_mcp")
                 ];
               };
               nativeBuildInputs =

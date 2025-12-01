@@ -21,10 +21,17 @@ from starlette.requests import Request
 
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
+
+# Determine which MCP app to use based on JUSPAY_MCP_TYPE
+JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
+
+if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
+elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
+    from juspay_docs_mcp.tools import app
 else:
     from juspay_mcp.tools import app
+
 from juspay_mcp.stdio import run_stdio
 
 # Load environment variables.
@@ -85,9 +92,12 @@ def main(host: str, port: int, mode: str):
     # Run in HTTP/SSE mode (default)
     # Define endpoint paths.
     message_endpoint_path = "/messages/"
-    if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
         sse_endpoint_path = "/juspay-dashboard"
         streamable_endpoint_path = "/juspay-dashboard-stream"
+    elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
+        sse_endpoint_path = "/juspay-docs"
+        streamable_endpoint_path = "/juspay-docs-stream"
     else:
         sse_endpoint_path = "/juspay"
         streamable_endpoint_path = "/juspay-stream"
@@ -112,8 +122,10 @@ def main(host: str, port: int, mode: str):
         logging.info(f"New SSE connection from: {request.client} - {request.method} {request.url.path}")
         
         # Set credentials for SSE connections 
-        if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
+        if JUSPAY_MCP_TYPE == "DASHBOARD":
             from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+        elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
+            from juspay_docs_mcp.tools import set_juspay_request_credentials
         else:
             from juspay_mcp.tools import set_juspay_request_credentials
             
@@ -135,22 +147,31 @@ def main(host: str, port: int, mode: str):
             finally:
                 logging.info(f"MCP Session ended for {request.client}")
 
-    async def handle_streamable_http(request):
-        """Handles StreamableHTTP requests."""
+    class StreamableHTTPHandler:
+        """ASGI app wrapper for StreamableHTTP that handles credential injection."""
         
-        logging.info(f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}")
-
-        if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
-            from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-        else:
-            from juspay_mcp.tools import set_juspay_request_credentials
+        async def __call__(self, scope, receive, send):
+            """Handle StreamableHTTP requests as an ASGI app."""
+            if scope["type"] != "http":
+                return
+                
+            request = Request(scope, receive, send)
             
-        juspay_creds = getattr(request.state, 'juspay_credentials', None)
-        set_juspay_request_credentials(juspay_creds)
+            logging.info(f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}")
 
-        await streamable_session_manager.handle_request(
-            request.scope, request.receive, request._send
-        )
+            if JUSPAY_MCP_TYPE == "DASHBOARD":
+                from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+            elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
+                from juspay_docs_mcp.tools import set_juspay_request_credentials
+            else:
+                from juspay_mcp.tools import set_juspay_request_credentials
+                
+            juspay_creds = getattr(request.state, 'juspay_credentials', None)
+            set_juspay_request_credentials(juspay_creds)
+
+            await streamable_session_manager.handle_request(scope, receive, send)
+    
+    streamable_http_app = StreamableHTTPHandler()
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
@@ -166,7 +187,7 @@ def main(host: str, port: int, mode: str):
         Route("/health/ready", endpoint=health_check, methods=["GET"]),
         Route(sse_endpoint_path, endpoint=handle_sse_connection),
         Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
-        Route(streamable_endpoint_path, endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE"]),
+        Mount(streamable_endpoint_path, app=streamable_http_app),
     ]
     
     # Add header authentication middleware

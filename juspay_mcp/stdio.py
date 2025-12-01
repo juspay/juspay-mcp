@@ -14,8 +14,13 @@ from mcp.server.models import InitializationOptions
 
 logger = logging.getLogger(__name__)
 
-if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
+# Determine which MCP app to use based on JUSPAY_MCP_TYPE
+JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
+
+if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
+elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
+    from juspay_docs_mcp.tools import app
 else:
     from juspay_mcp.tools import app
 
