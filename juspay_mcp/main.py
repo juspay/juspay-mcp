@@ -21,10 +21,24 @@ from starlette.requests import Request
 
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
-    from juspay_dashboard_mcp.tools import app
+
+# Determine which MCP app to use based on JUSPAY_MCP_TYPE
+JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
+
+MCP_APPS = {}
+
+if JUSPAY_MCP_TYPE == "DASHBOARD":
+    from juspay_dashboard_mcp.tools import app as dashboard_app
+    from juspay_docs_mcp.tools import app as docs_app
+
+    MCP_APPS["dashboard"] = dashboard_app
+    MCP_APPS["docs"] = docs_app
 else:
-    from juspay_mcp.tools import app
+    # Single default FastMCP app
+    from juspay_mcp.tools import app as default_app
+
+    MCP_APPS["default"] = default_app
+
 from juspay_mcp.stdio import run_stdio
 
 # Load environment variables.
@@ -83,11 +97,15 @@ def main(host: str, port: int, mode: str):
         return
     
     # Run in HTTP/SSE mode (default)
-    # Define endpoint paths.
     message_endpoint_path = "/messages/"
-    if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
-        sse_endpoint_path = "/juspay-dashboard"
-        streamable_endpoint_path = "/juspay-dashboard-stream"
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        # Dashboard MCP
+        sse_dashboard_endpoint_path = "/juspay-dashboard"
+        streamable_dashboard_endpoint_path = "/juspay-dashboard-stream"
+
+        # Docs MCP
+        sse_docs_endpoint_path = "/juspay-docs"
+        streamable_docs_endpoint_path = "/juspay-docs-stream"
     else:
         sse_endpoint_path = "/juspay"
         streamable_endpoint_path = "/juspay-stream"
@@ -96,82 +114,163 @@ def main(host: str, port: int, mode: str):
     logger.info("Expected headers: JUSPAY_API_KEY, JUSPAY_MERCHANT_ID, JUSPAY_WEB_LOGIN_TOKEN")
     
     sse_transport_handler = SseServerTransport(message_endpoint_path)
-    
-    streamable_session_manager = StreamableHTTPSessionManager(
-        app=app,
-        event_store=None, 
-        json_response=True, 
-        stateless=True  
-    )
 
-    async def health_check(request):
+    async def health_check(request: Request):
         return JSONResponse({"status": "ok"})
-    
-    async def handle_sse_connection(request):
-        """Handles a single client SSE connection and runs the MCP session."""
-        logging.info(f"New SSE connection from: {request.client} - {request.method} {request.url.path}")
-        
-        # Set credentials for SSE connections 
-        if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
-            from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-        else:
-            from juspay_mcp.tools import set_juspay_request_credentials
-            
-        juspay_creds = getattr(request.state, 'juspay_credentials', None)
-        set_juspay_request_credentials(juspay_creds)
-        
-        async with sse_transport_handler.connect_sse(
-            request.scope, request.receive, request._send
-        ) as streams:
-            logging.info(f"MCP Session starting for {request.client}")
-            try:
-                await app.run(
-                    streams[0],
-                    streams[1],
-                    app.create_initialization_options()
-                )
-            except Exception as e:
-                logging.error(f"Error during MCP session for {request.client}: {e}")
-            finally:
-                logging.info(f"MCP Session ended for {request.client}")
 
-    async def handle_streamable_http(request):
-        """Handles StreamableHTTP requests."""
-        
-        logging.info(f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}")
+    def make_sse_handler(active_app_key: str):
+        """
+        Returns an async endpoint function bound to a specific MCP app
+        (dashboard / docs / default).
+        """
+        active_app = MCP_APPS[active_app_key]
 
-        if os.getenv("JUSPAY_MCP_TYPE") == "DASHBOARD":
-            from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-        else:
-            from juspay_mcp.tools import set_juspay_request_credentials
-            
-        juspay_creds = getattr(request.state, 'juspay_credentials', None)
-        set_juspay_request_credentials(juspay_creds)
+        async def handler(request: Request):
+            logging.info(
+                f"New SSE connection from: {request.client} - {request.method} {request.url.path}"
+            )
 
-        await streamable_session_manager.handle_request(
-            request.scope, request.receive, request._send
+            # Choose correct set_juspay_request_credentials based on which app is active
+            if JUSPAY_MCP_TYPE == "DASHBOARD":
+                if active_app_key == "dashboard":
+                    from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                elif active_app_key == "docs":
+                    from juspay_docs_mcp.tools import set_juspay_request_credentials
+                else:
+                    # Fallback (should not happen in DASHBOARD mode)
+                    from juspay_mcp.tools import set_juspay_request_credentials
+            else:
+                from juspay_mcp.tools import set_juspay_request_credentials
+
+            juspay_creds = getattr(request.state, "juspay_credentials", None)
+            set_juspay_request_credentials(juspay_creds)
+
+            async with sse_transport_handler.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                logging.info(f"MCP Session starting for {request.client}")
+                try:
+                    await active_app.run(
+                        streams[0],
+                        streams[1],
+                        active_app.create_initialization_options(),
+                    )
+                except Exception as e:
+                    logging.error(
+                        f"Error during MCP session for {request.client}: {e}"
+                    )
+                finally:
+                    logging.info(f"MCP Session ended for {request.client}")
+
+        return handler
+
+    def make_streamable_http_app(active_app_key: str):
+        """
+        Returns an ASGI app wrapper + its StreamableHTTPSessionManager,
+        both bound to a specific MCP app.
+        """
+        active_app = MCP_APPS[active_app_key]
+
+        session_manager = StreamableHTTPSessionManager(
+            app=active_app,
+            event_store=None,
+            json_response=True,
+            stateless=True,
         )
 
-    @contextlib.asynccontextmanager
-    async def lifespan(app):
-        """Application lifespan context manager."""
-        async with streamable_session_manager.run():
-            logger.info("StreamableHTTP session manager started")
-            yield
-        logger.info("StreamableHTTP session manager stopped")
+        class StreamableHTTPHandler:
+            """ASGI app wrapper for StreamableHTTP that handles credential injection."""
+            
+            async def __call__(self, scope, receive, send):
+                if scope["type"] != "http":
+                    return
 
-    # Prepare routes and middleware with header-based authentication
+                request = Request(scope, receive, send)
+
+                logging.info(
+                    f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}"
+                )
+
+                # Choose correct set_juspay_request_credentials based on which app is active
+                if JUSPAY_MCP_TYPE == "DASHBOARD":
+                    if active_app_key == "dashboard":
+                        from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                    elif active_app_key == "docs":
+                        from juspay_docs_mcp.tools import set_juspay_request_credentials
+                    else:
+                        from juspay_mcp.tools import set_juspay_request_credentials
+                else:
+                    from juspay_mcp.tools import set_juspay_request_credentials
+
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+
+                await session_manager.handle_request(scope, receive, send)
+
+        return StreamableHTTPHandler(), session_manager
+
     routes = [
         Route("/health", endpoint=health_check, methods=["GET"]),
         Route("/health/ready", endpoint=health_check, methods=["GET"]),
-        Route(sse_endpoint_path, endpoint=handle_sse_connection),
         Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
-        Route(streamable_endpoint_path, endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE"]),
     ]
-    
+
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        # Dashboard MCP
+        dashboard_sse_handler = make_sse_handler("dashboard")
+        dashboard_http_app, dashboard_session_mgr = make_streamable_http_app("dashboard")
+
+        # Docs MCP
+        docs_sse_handler = make_sse_handler("docs")
+        docs_http_app, docs_session_mgr = make_streamable_http_app("docs")
+
+        routes.extend(
+            [
+                # Dashboard MCP endpoints
+                Route(sse_dashboard_endpoint_path, endpoint=dashboard_sse_handler),
+                Mount(
+                    streamable_dashboard_endpoint_path,
+                    app=dashboard_http_app,
+                ),
+                # Docs MCP endpoints
+                Route(sse_docs_endpoint_path, endpoint=docs_sse_handler),
+                Mount(
+                    streamable_docs_endpoint_path,
+                    app=docs_http_app,
+                ),
+            ]
+        )
+
+        @contextlib.asynccontextmanager
+        async def lifespan(app):
+            """Application lifespan context manager for multiple MCP apps."""
+            async with dashboard_session_mgr.run(), docs_session_mgr.run():
+                logger.info("StreamableHTTP session managers (dashboard, docs) started")
+                yield
+            logger.info("StreamableHTTP session managers (dashboard, docs) stopped")
+
+    else:
+        default_sse_handler = make_sse_handler("default")
+        default_http_app, default_session_mgr = make_streamable_http_app("default")
+
+        routes.extend(
+            [
+                Route(sse_endpoint_path, endpoint=default_sse_handler),
+                Mount(streamable_endpoint_path, app=default_http_app),
+            ]
+        )
+
+        @contextlib.asynccontextmanager
+        async def lifespan(app):
+            """Application lifespan context manager for single MCP app."""
+            async with default_session_mgr.run():
+                logger.info("StreamableHTTP session manager started")
+                yield
+            logger.info("StreamableHTTP session manager stopped")
+
     # Add header authentication middleware
     middleware = [
-        Middleware(JuspayHeaderAuthMiddleware)
+        Middleware(JuspayHeaderAuthMiddleware),
     ]
 
     starlette_app = Starlette(
@@ -181,10 +280,20 @@ def main(host: str, port: int, mode: str):
         middleware=middleware,
     )
 
-    logger.info(f"Starting MCP server on:")
-    logger.info(f"  SSE endpoint: http://{host}:{port}{sse_endpoint_path}")
-    logger.info(f"  StreamableHTTP endpoint: http://{host}:{port}{streamable_endpoint_path}")
+    # Log endpoints
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        logger.info("Starting MCP server (DASHBOARD mode) on:")
+        logger.info(f"  Dashboard SSE endpoint:        http://{host}:{port}{sse_dashboard_endpoint_path}")
+        logger.info(f"  Dashboard Streamable endpoint: http://{host}:{port}{streamable_dashboard_endpoint_path}")
+        logger.info(f"  Docs SSE endpoint:             http://{host}:{port}{sse_docs_endpoint_path}")
+        logger.info(f"  Docs Streamable endpoint:      http://{host}:{port}{streamable_docs_endpoint_path}")
+    else:
+        logger.info("Starting MCP server on:")
+        logger.info(f"  SSE endpoint:                  http://{host}:{port}{sse_endpoint_path}")
+        logger.info(f"  StreamableHTTP endpoint:       http://{host}:{port}{streamable_endpoint_path}")
+
     uvicorn.run(starlette_app, host=host, port=port)
+
 
 if __name__ == "__main__":
     main()

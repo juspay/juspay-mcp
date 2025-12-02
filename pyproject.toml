@@ -15,10 +15,15 @@ dependencies = [
     "starlette>=0.46.1",
     "uvicorn>=0.34.0",
     "requests==2.32.3",
+    "markdownify>=0.11.0",
+    "pydantic>=2.0.0",
 ]
 
 [tool.setuptools]
-packages = ["juspay_mcp", "juspay_mcp.api", "juspay_mcp.api_schema", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api", "juspay_dashboard_mcp.api_schema"]
+packages = ["juspay_mcp", "juspay_mcp.api", "juspay_mcp.api_schema", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api", "juspay_dashboard_mcp.api_schema", "juspay_docs_mcp", "juspay_docs_mcp.mcpdoc"]
+
+[tool.setuptools.package-data]
+juspay_docs_mcp = ["transcripts.json", "dataset/*.json"]
 
 [project.scripts]
 juspay-mcp = "juspay_mcp.main:main"
