@@ -164,10 +164,12 @@ def main(host: str, port: int, mode: str):
 
         return handler
 
-    def make_streamable_http_app(active_app_key: str):
+    def make_streamable_http_handler(active_app_key: str):
         """
-        Returns an ASGI app wrapper + its StreamableHTTPSessionManager,
+        Returns a Route-compatible endpoint function + its StreamableHTTPSessionManager,
         both bound to a specific MCP app.
+        
+        Uses Route instead of Mount to avoid 307 trailing slash redirects.
         """
         active_app = MCP_APPS[active_app_key]
 
@@ -178,36 +180,30 @@ def main(host: str, port: int, mode: str):
             stateless=True,
         )
 
-        class StreamableHTTPHandler:
-            """ASGI app wrapper for StreamableHTTP that handles credential injection."""
-            
-            async def __call__(self, scope, receive, send):
-                if scope["type"] != "http":
-                    return
+        async def handle_streamable_http(request: Request):
+            """Route-compatible endpoint for StreamableHTTP that handles credential injection."""
+            logging.info(
+                f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}"
+            )
 
-                request = Request(scope, receive, send)
-
-                logging.info(
-                    f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}"
-                )
-
-                # Choose correct set_juspay_request_credentials based on which app is active
-                if JUSPAY_MCP_TYPE == "DASHBOARD":
-                    if active_app_key == "dashboard":
-                        from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-                    elif active_app_key == "docs":
-                        from juspay_docs_mcp.tools import set_juspay_request_credentials
-                    else:
-                        from juspay_mcp.tools import set_juspay_request_credentials
+            # Choose correct set_juspay_request_credentials based on which app is active
+            if JUSPAY_MCP_TYPE == "DASHBOARD":
+                if active_app_key == "dashboard":
+                    from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                elif active_app_key == "docs":
+                    from juspay_docs_mcp.tools import set_juspay_request_credentials
                 else:
                     from juspay_mcp.tools import set_juspay_request_credentials
+            else:
+                from juspay_mcp.tools import set_juspay_request_credentials
 
-                juspay_creds = getattr(request.state, "juspay_credentials", None)
-                set_juspay_request_credentials(juspay_creds)
+            juspay_creds = getattr(request.state, "juspay_credentials", None)
+            set_juspay_request_credentials(juspay_creds)
 
-                await session_manager.handle_request(scope, receive, send)
+            # Call session manager with the request's scope, receive, send
+            await session_manager.handle_request(request.scope, request.receive, request._send)
 
-        return StreamableHTTPHandler(), session_manager
+        return handle_streamable_http, session_manager
 
     routes = [
         Route("/health", endpoint=health_check, methods=["GET"]),
@@ -218,25 +214,27 @@ def main(host: str, port: int, mode: str):
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
         dashboard_sse_handler = make_sse_handler("dashboard")
-        dashboard_http_app, dashboard_session_mgr = make_streamable_http_app("dashboard")
+        dashboard_http_handler, dashboard_session_mgr = make_streamable_http_handler("dashboard")
 
         # Docs MCP
         docs_sse_handler = make_sse_handler("docs")
-        docs_http_app, docs_session_mgr = make_streamable_http_app("docs")
+        docs_http_handler, docs_session_mgr = make_streamable_http_handler("docs")
 
         routes.extend(
             [
                 # Dashboard MCP endpoints
                 Route(sse_dashboard_endpoint_path, endpoint=dashboard_sse_handler),
-                Mount(
+                Route(
                     streamable_dashboard_endpoint_path,
-                    app=dashboard_http_app,
+                    endpoint=dashboard_http_handler,
+                    methods=["GET", "POST", "DELETE"],
                 ),
                 # Docs MCP endpoints
                 Route(sse_docs_endpoint_path, endpoint=docs_sse_handler),
-                Mount(
+                Route(
                     streamable_docs_endpoint_path,
-                    app=docs_http_app,
+                    endpoint=docs_http_handler,
+                    methods=["GET", "POST", "DELETE"],
                 ),
             ]
         )
@@ -251,12 +249,16 @@ def main(host: str, port: int, mode: str):
 
     else:
         default_sse_handler = make_sse_handler("default")
-        default_http_app, default_session_mgr = make_streamable_http_app("default")
+        default_http_handler, default_session_mgr = make_streamable_http_handler("default")
 
         routes.extend(
             [
                 Route(sse_endpoint_path, endpoint=default_sse_handler),
-                Mount(streamable_endpoint_path, app=default_http_app),
+                Route(
+                    streamable_endpoint_path,
+                    endpoint=default_http_handler,
+                    methods=["GET", "POST", "DELETE"],
+                ),
             ]
         )
 
