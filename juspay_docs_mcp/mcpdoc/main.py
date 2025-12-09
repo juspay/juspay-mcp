@@ -6,7 +6,7 @@
 
 import os
 import re
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 from pydantic import Field
 from urllib.parse import urlparse, urljoin
 
@@ -296,6 +296,210 @@ def create_server(
     fetch_docs_description = _get_fetch_description(
         has_local_sources=bool(local_sources)
     )
+
+    validate_integration_tool_description = """
+        Validate your Juspay integration with this tool.
+        This tool helps ensure that your integration is set up correctly and follows best practices.
+        It checks for common issues and provides guidance on how to resolve them.
+        Do not assume anything, always look for documentation to validate each step of the integration.
+        Do not say that "it should be correct" without validating from documentation.
+    """
+
+    @server.tool(description=validate_integration_tool_description)
+    async def validate_integration(
+        platform: Annotated[
+            Literal["android", "ios", "react_native", "flutter", "web", "backend"],
+            Field(description="The platform for which validation is requested, e.g., android, ios, react_native, web, this can be platform where Juspay SDKs are being integrated"),
+        ],
+        clientId: Annotated[
+            str,
+            Field(description="The client identifier for the merchant, merchants can get this from their Juspay dashboard"),
+        ],
+        merchantId: Annotated[
+            str,
+            Field(description="The merchant identifier for the merchant, merchants can get this from their Juspay dashboard"),
+        ],
+        integrationType: Annotated[
+            Literal["payment-page-cat", "payment-page-signature", "express-checkout", "api"],
+            Field(description="The type of integration being used, options: payment-page-cat: Juspay Payment Page with Client Auth Token (CAT) based authentication, payment-page-signature: Juspay Payment Page with Signature based authentication, express-checkout: Juspay Express Checkout (Headless SDK), api: Juspay Server-to-Server API integration, only for backend"),
+        ],
+    ) -> Any:
+        """
+        Validate your Juspay integration setup.
+
+        Args:
+            platform: The platform for which validation is requested (android, ios, react_native, web)
+            clientId: The client identifier for the merchant
+            merchantId: The merchant identifier
+            integrationType: The type of integration (payment-page-cat, payment-page-signature, express-checkout, api)
+        Returns:
+            A string indicating the validation result and any issues found
+        """
+
+        response = f"""
+        Validation for {integrationType} integration on {platform} platform:
+        - Client ID: {clientId}
+        - Merchant ID: {merchantId}
+
+        CRITICAL: The steps given below are only guidelines, you MUST validate each step from the official Juspay documentation to ensure correctness. Do not assume anything without validating from documentation using the `list_doc_sources` and `fetch_docs` tools.
+        Do not write any code snippets until you see the documentation using the `list_doc_sources` and `fetch_docs` tools.
+        """
+        
+        payment_page_common_steps = [
+            "Ensure that the Juspay SDK is correctly initialized with the clientId and merchantId, refer to documentation for exact code.",
+            "Verify that the action in the process payload is set to \"paymentPage\", refer to documentation for exact code.",
+            "Check the initiate and process payloads' service is \"in.juspay.hyperpay\", refer to documentation for exact code.",
+            "Ensure that the callbacks are implemented to handle SDK responses, refer to documentation for exact code.",
+            "Check that the payment page is loading without errors and that the callbacks are functioning as expected, refer to documentation for exact code.",
+        ]
+
+        payment_page_cat_common_steps = payment_page_common_steps + [
+            "Ensure that the Client Auth Token (clientAuthToken) is generated correctly and included in the process payload, refer to documentation for exact code.",
+            "Verify that the CAT generation logic follows Juspay's security guidelines, refer to documentation for exact code.",
+        ]
+
+        payment_page_signature_common_steps = payment_page_common_steps + [
+            "Ensure that the signature is generated correctly using the merchant's private key and included in the process payload, refer to documentation for exact code.",
+            "Verify that the signature generation logic follows Juspay's security guidelines, refer to documentation for exact code.",
+        ]
+
+        android_sdk_steps = [
+            "Ensure juspay maven in allprojects -> repositories in project build.gradle, refer to documentation for exact code.",
+            "Ensure that the Juspay Gradle Plugin is added in build.gradle, refer to documentation for exact code.",
+        ]
+
+        ios_sdk_steps = [
+            "Verify whether Podfile has the Juspay specific code added from the documentation, refer to documentation for exact code.",
+            "Ensure MerchantConfig.txt file is present with clientId in it in root project folder.",
+        ]
+
+        react_native_sdk_steps = [
+            "Ensure that the Juspay React Native SDK is installed and linked correctly, refer to documentation for exact code.",
+        ] + [android_sdk_steps[0]] + ios_sdk_steps
+
+        flutter_sdk_steps = [
+            "Ensure that the Juspay Flutter SDK is added in pubspec.yaml, refer to documentation for exact code.",
+        ] + [android_sdk_steps[0]] + ios_sdk_steps
+
+        match integrationType:
+            case "payment-page-cat" | "payment-page-signature":
+                match platform:
+                    case "android":
+                        for idx, step in enumerate(android_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                        for idx, step in enumerate(
+                            payment_page_cat_common_steps if integrationType == "payment-page-cat" else payment_page_signature_common_steps,
+                            start=3
+                        ):
+                            response += f"{idx}. {step}\n"
+                    case "react_native":
+                        for idx, step in enumerate(react_native_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                        for idx, step in enumerate(
+                            payment_page_cat_common_steps if integrationType == "payment-page-cat" else payment_page_signature_common_steps,
+                            start=4
+                        ):
+                            response += f"{idx}. {step}\n"
+                    case "ios":
+                        for idx, step in enumerate(ios_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                        for idx, step in enumerate(
+                            payment_page_cat_common_steps if integrationType == "payment-page-cat" else payment_page_signature_common_steps,
+                            start=3
+                        ):
+                            response += f"{idx}. {step}\n"
+                    case "flutter":
+                        for idx, step in enumerate(flutter_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                        for idx, step in enumerate(
+                            payment_page_cat_common_steps if integrationType == "payment-page-cat" else payment_page_signature_common_steps,
+                            start=4
+                        ):
+                            response += f"{idx}. {step}\n"
+                    case "web":
+                        response += f"""
+                        1. Ensure that the Juspay Web SDK script is included in your HTML, refer to documentation for exact code.
+                        2. Verify that the SDK is initialized with the correct clientId and merchantId, refer to documentation for exact code.
+                        3. Check that the payment page is loading without errors and that the callbacks are functioning as expected, refer to documentation for exact code.
+                        """
+                    case _:
+                        return "Error: payment page integration is only valid for frontend platforms (android, ios, react_native, flutter, web)."
+                pass
+            case "express-checkout":
+                match platform:
+                    case "android":
+                        for idx, step in enumerate(android_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                    case "react_native":
+                        for idx, step in enumerate(react_native_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                    case "ios":
+                        for idx, step in enumerate(ios_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                    case "flutter":
+                        for idx, step in enumerate(flutter_sdk_steps, start=1):
+                            response += f"{idx}. {step}\n"
+                    case "web":
+                        response += f"""
+                        1. Ensure that the Juspay Web SDK script is included in your HTML, refer to documentation for exact code.
+                        2. Verify that the SDK is initialized with the correct clientId and merchantId, refer to documentation for exact code.
+                        3. Check that the payment options are loading without errors and that the callbacks are functioning as expected, refer to documentation for exact code.
+                        """
+                    case _:
+                        return "Error: express-checkout integration is only valid for frontend platforms (android, ios, react_native, flutter, web)."
+                response += "\n- Check for the service identifier in the initiate and process payloads is set to `in.juspay.hyperapi`, refer to documentation for exact code.\n"
+                response += "\n- Refer to the docs of each ecFlow to validate specific steps for the chosen express checkout flow, refer to documentation for exact code.\n"
+                pass
+            case "api":
+                response += """
+                1. Ensure that the Juspay Server-to-Server API integration is set up correctly, refer to documentation for exact code.
+                2. Verify that the API requests include the correct headers eg., x-merchantid, refer to documentation for exact code.
+                3. Following APIs need to be there:
+                - Customer Creation API
+                - Session Creation API
+                - Order Creation API
+                - Payment Method APIs (Cards, UPI, Wallets, Netbanking etc. based on merchant requirement)
+                - Payment Processing API
+                4. For customer creation, ensure that customer_object_id is user identifier in your system, refer to documentation for exact code.
+                5. Check that the API responses are handled correctly and that error handling is implemented as per documentation, refer to documentation for exact code.
+                6. Ensure that the integration follows Juspay's security guidelines, refer to documentation for exact code.
+                7. Webhooks:
+                - Ensure that webhooks are set up to receive payment status updates, refer to documentation for exact code.
+                - Verify that the webhook endpoints are secure and can handle incoming requests from Juspay, refer to documentation for exact code.
+                - Do not assume webhook as source of truth without validating by calling the order status API, refer to documentation for exact code.
+                8. Testing:
+                - Test the integration in a sandbox environment before going live, refer to documentation for exact code.
+                - Use test cards and payment methods provided by Juspay for testing purposes, refer to documentation for exact code.
+                9. Finally, ensure that all required fields in the API requests are populated correctly and that the payloads conform to the specifications outlined in the documentation, refer to documentation for exact code.
+                10. Always refer to the official Juspay API documentation for the most up-to-date information and best practices, refer to documentation for exact code.
+                """
+                pass
+            case _:
+                return "Error: Unknown integration type."
+            
+        response += "\n"
+        response += """
+        To see the documentation, use the list_doc_sources tool to get the relevant documentation source URL.
+        Then find the relevant documentation page using the fetch_docs tool.
+
+        CRITICAL: After fixing everything, run this `validate_integration` tool again to ensure everything is working as expected, if not reiterate.
+        """
+
+        response += """
+        
+        """
+
+        return [
+            {
+                "type": "text",
+                "text": response  # your long validation response string
+            },
+            {
+                "type": "tool",
+                "name": "list_doc_sources",
+                "arguments": {}
+            }
+        ]
 
     @server.tool(description=fetch_docs_description)
     async def fetch_docs(url: str) -> str:
