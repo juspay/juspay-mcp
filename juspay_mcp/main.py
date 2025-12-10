@@ -242,10 +242,16 @@ def main(host: str, port: int, mode: str):
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for multiple MCP apps."""
-            async with dashboard_session_mgr.run(), docs_session_mgr.run():
-                logger.info("StreamableHTTP session managers (dashboard, docs) started")
+            async with contextlib.AsyncExitStack() as stack:
+                await stack.enter_async_context(dashboard_session_mgr.run())
+                logger.info("Dashboard StreamableHTTP session manager started")
+                
+                await stack.enter_async_context(docs_session_mgr.run())
+                logger.info("Docs StreamableHTTP session manager started")
+                
+                logger.info("All StreamableHTTP session managers started successfully")
                 yield
-            logger.info("StreamableHTTP session managers (dashboard, docs) stopped")
+            logger.info("StreamableHTTP session managers stopped")
 
     else:
         default_sse_handler = make_sse_handler("default")
@@ -265,8 +271,9 @@ def main(host: str, port: int, mode: str):
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for single MCP app."""
-            async with default_session_mgr.run():
-                logger.info("StreamableHTTP session manager started")
+            async with contextlib.AsyncExitStack() as stack:
+                await stack.enter_async_context(default_session_mgr.run())
+                logger.info("StreamableHTTP session manager started successfully")
                 yield
             logger.info("StreamableHTTP session manager stopped")
 
@@ -294,7 +301,7 @@ def main(host: str, port: int, mode: str):
         logger.info(f"  SSE endpoint:                  http://{host}:{port}{sse_endpoint_path}")
         logger.info(f"  StreamableHTTP endpoint:       http://{host}:{port}{streamable_endpoint_path}")
 
-    uvicorn.run(starlette_app, host=host, port=port)
+    uvicorn.run(starlette_app, host=host, port=port, lifespan="on")
 
 
 if __name__ == "__main__":
