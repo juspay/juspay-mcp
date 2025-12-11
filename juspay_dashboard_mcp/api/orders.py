@@ -17,6 +17,41 @@ import logging
 
 dotenv.load_dotenv()
 
+logger = logging.getLogger(__name__)
+
+# Field aliases: {array_key: {original_field: alias_field}}
+# Add new aliases here as needed to make field names more LLM-friendly
+FIELD_ALIASES = {
+    "webhooks": {"isWebHookNotified": "merchant_accepted_webhook"},
+}
+
+
+def _apply_aliases(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply configured field aliases to order response (replaces original field).
+    
+    This function iterates through the FIELD_ALIASES configuration and replaces
+    original field names with their aliases in the API response. This makes
+    field names more understandable for LLMs processing the response.
+    
+    Args:
+        data: The API response dictionary to process
+        
+    Returns:
+        The processed dictionary with field names replaced according to FIELD_ALIASES
+    """
+    if not data:
+        return data
+    for key, mappings in FIELD_ALIASES.items():
+        if isinstance(data.get(key), list):
+            for item in data[key]:
+                if isinstance(item, dict):
+                    for orig, alias in mappings.items():
+                        if orig in item:
+                            value = item.pop(orig)  # Remove original
+                            item[alias] = value     # Add with new name
+                            logger.info(f"[FIELD_ALIAS] Replaced: {key}.{orig} -> {alias} (value={value})")
+    return data
+
 
 def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
     """
@@ -380,7 +415,8 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     api_url = f"{host}/api/ec/v1/orders/{order_id}"
     try:
         logging.info(f"[Attempt 1] Trying original ID: {order_id}")
-        return await post(api_url, {}, None, meta_info)
+        result = await post(api_url, {}, None, meta_info)
+        return _apply_aliases(result)
     
     except Exception as e:
         error_str = str(e)
@@ -405,7 +441,7 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
                     retry_url = f"{host}/api/ec/v1/orders/{candidate}"
                     result = await post(retry_url, {}, None, meta_info)
                     logging.info(f"✓ SUCCESS with candidate: '{candidate}' (extracted from '{order_id}')")
-                    return result
+                    return _apply_aliases(result)
                 
                 except Exception as retry_error:
                     retry_error_str = str(retry_error)
