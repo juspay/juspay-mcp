@@ -18,6 +18,10 @@ class JuspayReportDetailsPayload(WithHeaders):
         ...,
         description="Name of the user requesting the report."
     )
+    merchantId: Optional[str] = Field(
+        None,
+        description="Merchant identifier (admin only, optional)."
+    )
 
 class JuspayListReportPayload(WithHeaders):
     merchantId: str = Field(

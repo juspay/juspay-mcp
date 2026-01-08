@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, call, ist_to_utc, sanitize_merchant_id
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
@@ -388,6 +388,10 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
     Note: The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
 
+    The API endpoint is:
+        https://portal.juspay.in/api/ec/v1/orders/{order_id} (for non-admin users)
+        https://portal.juspay.in/ec/v1/admin/orders/{order_id} (for admin users)
+
     This function accepts ANY ID format (order_id, txn_id, or ambiguous IDs) and has built-in 
     intelligent retry logic that automatically tries multiple extraction patterns if the initial 
     attempt fails.
@@ -398,24 +402,48 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
                 * Pure order ID (e.g., "22087705", "JP_1752481545")
                 * Transaction ID (e.g., "creditmantri-22087705-1", "AMEX-225531469-2249390")
                 * Any ambiguous ID format - the tool will try multiple patterns
+            - merchantId: Merchant ID (admin only, optional)
 
     Returns:
         dict: The parsed JSON response containing order details.
 
     Raises:
+        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails for all attempted patterns.
     """
     order_id = payload.get("order_id")
     if not order_id:
         raise ValueError("'order_id' is required in the payload")
 
-    host = await get_juspay_host_from_api(meta_info=meta_info)
+    host, isadmin = await get_admin_host(meta_info=meta_info)
+    
+    # Get merchantId from meta_info for authorization check
+    mid_from_meta = None
+    if meta_info:
+        token_response = meta_info.get("token_response", {})
+        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
+    
+    # Authorization check - non-admin can't query other merchants
+    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
+        raise ValueError("You are not authorized to access order details for this merchantId")
+    
+    # Build request data
+    request_data = {}
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+        if merchant_id:
+            request_data["merchantId"] = merchant_id
+    
+    # Conditional URL based on admin status
+    if isadmin:
+        api_url = f"{host}/ec/v1/admin/orders/{order_id}"
+    else:
+        api_url = f"{host}/api/ec/v1/orders/{order_id}"
     
     # Attempt 1: Try original ID as-is
-    api_url = f"{host}/api/ec/v1/orders/{order_id}"
     try:
         logging.info(f"[Attempt 1] Trying original ID: {order_id}")
-        result = await post(api_url, {}, None, meta_info)
+        result = await post(api_url, request_data, None, meta_info)
         return _apply_aliases(result)
     
     except Exception as e:
@@ -438,8 +466,11 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
             for idx, candidate in enumerate(candidates, start=2):
                 try:
                     logging.info(f"[Attempt {idx}] Trying candidate: '{candidate}'")
-                    retry_url = f"{host}/api/ec/v1/orders/{candidate}"
-                    result = await post(retry_url, {}, None, meta_info)
+                    if isadmin:
+                        retry_url = f"{host}/ec/v1/admin/orders/{candidate}"
+                    else:
+                        retry_url = f"{host}/api/ec/v1/orders/{candidate}"
+                    result = await post(retry_url, request_data, None, meta_info)
                     logging.info(f"✓ SUCCESS with candidate: '{candidate}' (extracted from '{order_id}')")
                     return _apply_aliases(result)
                 

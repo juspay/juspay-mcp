@@ -187,6 +187,37 @@ def utc_to_ist(utc_time_string: str) -> str:
         logging.error(f"Error converting utc to ist: {str(e)}")
         return utc_time_string
 
+# Placeholder values that LLM may send instead of actual merchantId
+MERCHANT_ID_PLACEHOLDERS = [
+    'prompt_user_if_needed', 
+    'PROMPT_USER', 
+    'prompt_user',
+    'prompt_user_if_not_provided',
+    'ask_user',
+    'required',
+    'REQUIRED',
+    '',
+    None
+]
+
+def sanitize_merchant_id(merchant_id_from_payload: str, mid_from_meta: str) -> str:
+    """
+    Sanitizes merchantId by filtering out placeholder values.
+    If merchantId from payload is a placeholder, returns merchantId from meta_info.
+    
+    Args:
+        merchant_id_from_payload: The merchantId value from the request payload
+        mid_from_meta: The merchantId value from meta_info/token_response
+        
+    Returns:
+        The valid merchantId to use (from payload if valid, else from meta_info)
+    """
+    # Check if payload merchantId is a placeholder value
+    if merchant_id_from_payload in MERCHANT_ID_PLACEHOLDERS:
+        logger.info(f"merchantId from payload '{merchant_id_from_payload}' is a placeholder, using meta_info value: {mid_from_meta}")
+        return mid_from_meta
+    return merchant_id_from_payload or mid_from_meta
+
 def make_payout_additional_headers(meta_info: dict = None) -> dict:
     """
     Constructs the Authorization header using the token from meta_info or environment variable.
