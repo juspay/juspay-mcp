@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--host", default="127.0.0.1", help="Host to bind the server to.")
-@click.option("--port", default=8000, type=int, help="Port to listen on for SSE.")
+@click.option("--port", default=3000, type=int, help="Port to listen on for SSE.")
 @click.option("--mode", default="http", type=click.Choice(['http', 'stdio']), 
               help="Server mode: 'http' for HTTP/SSE server or 'stdio' for stdio server.")
 def main(host: str, port: int, mode: str):

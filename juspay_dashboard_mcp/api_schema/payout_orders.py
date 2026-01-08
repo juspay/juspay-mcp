@@ -36,3 +36,47 @@ class JuspayGetPayoutOrderDetailsPayload(WithHeaders):
         ..., 
         description="Unique payout order ID for which details are to be fetched. Can also be a fulfillment ID or transaction ID, which will be automatically processed to extract the base order ID if the initial request fails."
     )
+
+
+class JuspayCreatePayoutOrderPayload(WithHeaders):
+    """Payload for creating a payout order request with Juspay.
+    
+    Accepts simple flat values (name, ifsc, account, amount) - nested fulfillments payload is constructed automatically.
+    Supports bank account transfers using account number and IFSC code.
+    """
+    amount: float = Field(
+        ...,
+        description="Payout amount in major currency unit (e.g., rupees)."
+    )
+    name: str = Field(
+        ...,
+        description="Beneficiary's name as per bank account."
+    )
+    ifsc: str = Field(
+        ...,
+        description="IFSC code of the beneficiary's bank branch."
+    )
+    account: str = Field(
+        ...,
+        description="Bank account number of the beneficiary."
+    )
+    orderId: Optional[str] = Field(
+        None,
+        description="Unique order ID for the payout request. Optional - auto-generated if not provided."
+    )
+    customerId: Optional[str] = Field(
+        None,
+        description="Unique customer identifier. Optional - taken from meta_info.customer_id if not provided."
+    )
+    customerPhone: Optional[str] = Field(
+        None,
+        description="Customer mobile number. Optional - taken from meta_info.phone_no if not provided."
+    )
+    customerEmail: Optional[str] = Field(
+        None,
+        description="Customer email address. Optional - taken from meta_info.email if not provided."
+    )
+    remark: Optional[str] = Field(
+        None,
+        description="Optional remark for the payout transaction."
+    )

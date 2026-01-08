@@ -13,6 +13,10 @@ import os
 import dotenv
 import re
 import logging
+import uuid
+import random
+import string
+import base64
 
 dotenv.load_dotenv()
 
@@ -96,6 +100,144 @@ def extract_order_id_from_txn_id_or_fulfillment_id(txn_id: str) -> str:
     input_id = re.sub(r"-f\d+$", "", input_id)
     
     return input_id
+
+
+async def create_payout_order_juspay(payload: dict, meta_info: dict = None) -> dict:
+    """
+    Creates a payout order request with Juspay for bank account disbursement.
+    
+    Accepts simple flat values (name, ifsc, account, amount) - nested fulfillments payload is constructed automatically.
+    Supports bank account transfers using account number and IFSC code.
+
+    Args:
+        payload (dict): A dictionary containing:
+            - amount: Payout amount in major currency unit (required)
+            - name: Beneficiary's name as per bank account (required)
+            - ifsc: IFSC code of the beneficiary's bank branch (required)
+            - account: Bank account number of the beneficiary (required)
+            - orderId: Unique order ID (optional - auto-generated if not provided)
+            - customerId: Unique customer identifier (optional - taken from meta_info.customer_id)
+            - customerPhone: Customer's phone number (optional - taken from meta_info.phone_no)
+            - customerEmail: Customer's email address (optional - taken from meta_info.email)
+            - remark: Optional remark for the payout transaction
+
+    Returns:
+        dict: The parsed JSON response from the Juspay Create Payout Order API containing:
+            - Order details including order ID, status, and timestamps
+            - Fulfillment information with beneficiary details
+            - Transaction processing details
+
+    Raises:
+        ValueError: If required parameters are missing.
+        Exception: If the API call fails.
+    """
+    # Get values from meta_info as fallback
+    meta_info = meta_info or {}
+    
+    # Get customer details from meta_info if not provided in payload
+    customer_id = payload.get("customerId")
+    if not customer_id and meta_info:
+        customer_id = meta_info.get("customer_id")
+    
+    customer_email = payload.get("customerEmail")
+    if not customer_email and meta_info:
+        customer_email = meta_info.get("email")
+    
+    customer_phone = payload.get("customerPhone")
+    if not customer_phone and meta_info:
+        customer_phone = meta_info.get("phone_no")
+    
+    # Validate required flat values
+    order_id = payload.get("orderId")
+    amount = payload.get("amount")
+    name = payload.get("name")
+    ifsc = payload.get("ifsc")
+    account = payload.get("account")
+    remark = payload.get("remark")
+    
+    # Auto-generate orderId if not provided
+    if not order_id:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        order_id = f"payout_{timestamp}_{random_suffix}"
+        logging.info(f"Auto-generated orderId: {order_id}")
+    
+    if amount is None:
+        raise ValueError("'amount' is required in the payload")
+    if not name:
+        raise ValueError("'name' is required in the payload")
+    if not ifsc:
+        raise ValueError("'ifsc' is required in the payload")
+    if not account:
+        raise ValueError("'account' is required in the payload")
+    if not customer_id:
+        raise ValueError("'customerId' is required (provide in payload or configure in meta_info)")
+
+    # Construct the API URL
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    api_url = f"https://api.juspay.in/payout/merchant/v1/orders/"
+
+    # Build nested fulfillments from flat values
+    fulfillment = {
+        "amount": amount,
+        "beneficiaryDetails": {
+            "type": "ACCOUNT_IFSC",
+            "details": {
+                "name": name,
+                "ifsc": ifsc,
+                "account": account
+            }
+        }
+    }
+    
+    # Add remark to additionalInfo if provided
+    if remark:
+        fulfillment["additionalInfo"] = {"remark": remark}
+
+    # Build request body - type is hardcoded to "FULFILL_ONLY"
+    request_body = {
+        "orderId": order_id,
+        "amount": amount,
+        "fulfillments": [fulfillment],
+        "customerId": customer_id,
+        "type": "FULFILL_ONLY"
+    }
+    
+    # Add optional fields only if provided (from payload or meta_info)
+    if customer_phone:
+        request_body["customerPhone"] = customer_phone
+    if customer_email:
+        request_body["customerEmail"] = customer_email
+
+    # Prepare additional headers with Basic Authorization
+    additional_headers = {
+        "Content-Type": "application/json"
+    }
+    
+    # Get API key from meta_info and add Basic Authorization
+    api_key = meta_info.get("juspay_api_key")
+    if api_key:
+        # Base64 encode the API key for Basic Authorization
+        encoded_key = base64.b64encode(api_key.encode()).decode()
+        additional_headers["Authorization"] = f"Basic {encoded_key}"
+        logging.info("Using Basic Authorization from meta_info API key")
+    
+    # Get merchant ID from meta_info
+    merchant_id = meta_info.get("juspay_merchant_id")
+    if merchant_id:
+        additional_headers["x-merchantid"] = merchant_id
+    
+    # Add routing ID header if provided
+    routing_id = payload.get("routingId") or customer_id
+    if routing_id:
+        additional_headers["x-routing-id"] = routing_id
+
+    logging.info(f"Creating payout order: {api_url} with body: {request_body}")
+    
+    # Import post function from utils
+    from juspay_dashboard_mcp.api.utils import post
+    
+    return await post(api_url, request_body, additional_headers, meta_info)
 
 
 async def get_payout_order_details_juspay(payload: dict, meta_info: dict) -> dict:
