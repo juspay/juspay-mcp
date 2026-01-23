@@ -57,16 +57,19 @@ async def get_offer_details_juspay(payload: dict, meta_info: dict = None) -> dic
     if not isadmin and payload.get("merchant_id") and mid_from_meta and payload.get("merchant_id") != mid_from_meta:
         raise ValueError("You are not authorized to access offer details for this merchantId")
     
+    # Apply sanitize logic for admin users
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchant_id"), mid_from_meta)
+        if merchant_id:
+            payload["merchant_id"] = merchant_id
+    
     # Get merchant_id from payload or meta_info
     merchant_id = payload.get("merchant_id") or mid_from_meta
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/offers/dashboard/detail?merchant_id={merchant_id}"
-    else:
-        api_url = f"{host}/api/offers/dashboard/detail?merchant_id={merchant_id}"
+    # Both admin and non-admin use the /api/ prefix
+    api_url = f"{host}/api/offers/dashboard/detail?merchant_id={merchant_id}"
     
     return await post(api_url, payload, None, meta_info)
 
@@ -119,6 +122,12 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
     if not isadmin and payload.get("merchant_id") and mid_from_meta and payload.get("merchant_id") != mid_from_meta:
         raise ValueError("You are not authorized to access offers for this merchantId")
     
+    # Apply sanitize logic for admin users
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchant_id"), mid_from_meta)
+        if merchant_id:
+            payload["merchant_id"] = merchant_id
+    
     # Get merchant_id from payload or meta_info
     merchant_id = payload.get("merchant_id") or mid_from_meta
     if not merchant_id:
@@ -140,10 +149,7 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
         "created_at": created_at,
     }
 
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
-    else:
-        api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
+    # Both admin and non-admin use the /api/ prefix
+    api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
 
     return await post(api_url, payload_updated, None, meta_info)
