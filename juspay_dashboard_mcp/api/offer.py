@@ -18,7 +18,7 @@ async def get_offer_details_juspay(payload: dict, meta_info: dict = None) -> dic
     Retrieves detailed information for a specific offer.
 
     The API endpoint is:
-        https://portal.juspay.in/api/offers/dashboard/detail (for non-admin users)
+        https://portal.juspay.in/api/offers/dashboard/detail (for non-admin users) 
         https://portal.juspay.in/offers/dashboard/detail (for admin users)
 
     The call uses URL parameters:
