@@ -241,3 +241,7 @@ class JuspayGetOrderDetailsPayload(WithHeaders):
     order_id: str = Field(
         ..., description="Order ID for which details are to be fetched."
     )
+    merchantId: Optional[str] = Field(
+        None,
+        description="Merchant ID for which to retrieve order details (admin only, optional)."
+    )

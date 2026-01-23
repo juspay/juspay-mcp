@@ -28,6 +28,10 @@ class JuspayListPaymentLinksV1Payload(WithHeaders):
         description="End date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
     )
     offset: Optional[int] = Field(0, description="Pagination offset (default: 0)")
+    merchantId: Optional[str] = Field(
+        None,
+        description="Merchant ID for which to list payment links (admin only, optional)."
+    )
     
 class PaymentMethodOption(BaseModel):
     paymentMethodType: str = Field(
@@ -357,4 +361,4 @@ class JuspayCreateAutopayLinkPayload(WithHeaders):
 
     class Config:
         allow_population_by_field_name = True
-        extra = "allow"    
+        extra = "allow"

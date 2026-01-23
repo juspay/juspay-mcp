@@ -11,11 +11,17 @@ from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 class JuspayConflictSettingsPayload(WithHeaders):
     """Schema for conflict settings API."""
-    pass  # No specific fields required beyond the common headers
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant ID for which to retrieve conflict settings (admin only, optional)."
+    )
 
 class JuspayGeneralSettingsPayload(WithHeaders):
     """Schema for general settings API."""
-    pass  # No specific fields required beyond the common headers
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant ID for which to retrieve general settings (admin only, optional)."
+    )
 
 class JuspayMandateSettingsPayload(WithHeaders):
     merchantId: Optional[str] = Field(
@@ -25,12 +31,21 @@ class JuspayMandateSettingsPayload(WithHeaders):
 
 class JuspayPriorityLogicSettingsPayload(WithHeaders):
     """Schema for priority logic settings API."""
-    pass  # No specific fields required beyond the common headers
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant ID for which to retrieve priority logic settings (admin only, optional)."
+    )
 
 class JuspayRoutingSettingsPayload(WithHeaders):
     """Schema for routing settings API."""
-    pass  # No specific fields required beyond the common headers
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant ID for which to retrieve routing settings (admin only, optional)."
+    )
 
 class JuspayWebhookSettingsPayload(WithHeaders):
     """Schema for webhook settings API."""
-    pass  # No specific fields required beyond the common headers
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant ID for which to retrieve webhook settings (admin only, optional)."
+    )

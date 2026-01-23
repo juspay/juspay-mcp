@@ -14,6 +14,10 @@ class JuspayGetUserPayload(WithHeaders):
         ..., 
         description="Unique identifier for the user to retrieve."
     )
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant identifier (admin only, optional)."
+    )
 
 class JuspayGetUserDetailsPayload(WithHeaders):
     userId: str = Field(
@@ -25,4 +29,8 @@ class JuspayListUsersV2Payload(WithHeaders):
     offset: Optional[int] = Field(
         0, 
         description="Pagination offset for the user list (default: 0)."
+    )
+    merchantId: Optional[str] = Field(
+        None, 
+        description="Merchant identifier (admin only, optional)."
     )

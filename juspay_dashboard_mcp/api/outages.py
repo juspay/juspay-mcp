@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_admin_host
+from juspay_dashboard_mcp.api.utils import post, get_admin_host, sanitize_merchant_id
 import logging
 import os
 from datetime import datetime, timedelta
@@ -114,8 +114,10 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
     if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
         raise ValueError("You are not authorized to view outages for this merchantId")
     
-    if isadmin and payload.get("merchantId"):
-        request_data["merchantId"] = payload["merchantId"]
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+        if merchant_id:
+            request_data["merchantId"] = merchant_id
 
     if isadmin:
         api_url = f"{host}/api/ec/v1/admin/outage/list"

@@ -17,6 +17,10 @@ class JuspayAlertDetailsPayload(WithHeaders):
         ...,
         description="User name associated with the alert."
     )
+    merchantId: Optional[str] = Field(
+        None,
+        description="Merchant identifier (admin only, optional)."
+    )
 
 class JuspayListAlertsPayload(WithHeaders):
     merchant_id: str = Field(

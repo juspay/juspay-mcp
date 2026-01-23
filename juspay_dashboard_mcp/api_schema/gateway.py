@@ -37,14 +37,19 @@ class JuspayGetGatewayDetailsPayload(WithHeaders):
 
 class JuspayListGatewaySchemePayload(WithHeaders):
     """
-    No input required. Returns a list of all available payment gateways that can be configured on PGCC.
+    Returns a list of all available payment gateways that can be configured on PGCC.
     """
-    pass
+    merchantId: Optional[str] = Field(
+        None,
+        description="Merchant identifier (admin only, optional)."
+    )
 
 
 class JuspayGetMerchantGatewaysPmDetailsPayload(WithHeaders):
     """
     Fetches all gateways and their supported payment methods for the merchant.
-    No input required.
     """
-    pass
+    merchantId: Optional[str] = Field(
+        None,
+        description="Merchant identifier (admin only, optional)."
+    )
