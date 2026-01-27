@@ -44,18 +44,29 @@ def get_common_headers(payload: dict, meta_info: dict = None):
     """
     Returns common headers used by all API calls.
     Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
+    For OAuth auth_type, uses Authorization: Bearer header instead of x-web-logintoken.
     """
     if "x-web-logintoken" not in (meta_info or {}):
         verify_env_vars()
 
     token = meta_info.get("x-web-logintoken", JUSPAY_WEB_LOGIN_TOKEN)
+    
+    # Check if auth_type is 'oauth' in token_response
+    token_response = meta_info.get("token_response", {}) if meta_info else {}
+    auth_type = token_response.get("auth_type")
 
     default_headers = {
          "Content-Type": "application/json",
         "accept": "*/*",
         "x-request-id": f"mcp-tool-{os.urandom(6).hex()}",
-        "x-web-logintoken": f"{token}",
     }
+    
+    # For OAuth auth_type, use Authorization header (token already includes "Bearer " prefix)
+    # Otherwise, use x-web-logintoken header
+    if auth_type == "oauth":
+        default_headers["Authorization"] = token
+    else:
+        default_headers["x-web-logintoken"] = f"{token}"
 
     if payload.get("tenant_id"):
         default_headers["x-tenant-id"] = payload.pop("tenant_id")

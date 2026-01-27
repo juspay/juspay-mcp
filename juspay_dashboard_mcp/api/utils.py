@@ -62,34 +62,59 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     """
     Returns the Juspay host URL based on token validation.
     Calls the validate API and uses the 'validHost' field from the response.
+    If auth_type is 'oauth' in token_response, calls OAuth authorize API but returns https://portal.juspay.in.
     """
-    validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
-
     token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
     logger.info(f"Using token for validation: {token_to_use}")  
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 
-    try:
-        json_payload = {"token": token_to_use}
-        request_api_headers = get_common_headers(json_payload, meta_info)
-        if headers: # headers from function signature
-            request_api_headers.update(headers)
+    # Check if auth_type is 'oauth' in token_response
+    token_response = meta_info.get("token_response", {}) if meta_info else {}
+    auth_type = token_response.get("auth_type")
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                validate_url,
-                headers=request_api_headers,
-                json=json_payload
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            valid_host = data.get("validHost")
-            if not valid_host:
-                raise Exception("validHost not found in Juspay token validation response.")
-            if not valid_host.startswith("http"):
-                valid_host = f"https://{valid_host}"
-            return valid_host
+    try:
+        if auth_type == "oauth":
+            # Use OAuth V2 authorize endpoint for authorization
+            # Token already includes "Bearer " prefix
+            # Construct full URL manually to avoid double-encoding of pre-encoded params
+            resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
+            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
+            oauth_headers = {
+                "Authorization": token_to_use,
+            }
+
+            logger.info(f"OAuth authorization - Request URL: GET {url}")
+            logger.info(f"OAuth authorization - Request Headers: {oauth_headers}")
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url, headers=oauth_headers)
+                resp.raise_for_status()
+                # Authorization successful, always return https://portal.juspay.in for OAuth
+                logger.info("OAuth auth_type detected, returning https://portal.juspay.in")
+                return "https://portal.juspay.in"
+        else:
+            # For non-OAuth, use regular token validation endpoint
+            validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
+            json_payload = {"token": token_to_use}
+            request_api_headers = get_common_headers(json_payload, meta_info)
+            if headers: # headers from function signature
+                request_api_headers.update(headers)
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    validate_url,
+                    headers=request_api_headers,
+                    json=json_payload
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                valid_host = data.get("validHost")
+                if not valid_host:
+                    raise Exception("validHost not found in Juspay token validation response.")
+                if not valid_host.startswith("http"):
+                    valid_host = f"https://{valid_host}"
+                return valid_host
     except Exception as e:
         logger.error(f"Token validation failed: {e}")
         raise
@@ -98,42 +123,73 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
     """
     Returns the Juspay host URL based on token validation and a boolean indicating if context is JUSPAY.
     Calls the validate API and uses the 'validHost' field from the response.
+    If auth_type is 'oauth' in token_response, calls OAuth authorize API but returns https://portal.juspay.in.
     
     Returns:
         tuple: (valid_host, isadmin)
             - valid_host: The host URL string
             - isadmin: True if context is "JUSPAY", False otherwise
     """
-    validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
-
     token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 
+    # Check if auth_type is 'oauth' in token_response
+    token_response = meta_info.get("token_response", {}) if meta_info else {}
+    auth_type = token_response.get("auth_type")
+
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                validate_url,
-                headers={
-                    "accept": "*/*",
-                    "accept-language": "en-US,en;q=0.9",
-                    "content-type": "application/json"
-                },
-                json={"token": token_to_use}
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            context = data.get("context")
-            # Check if context is JUSPAY
-            isadmin = context == "JUSPAY" 
+        if auth_type == "oauth":
+            # Use OAuth V2 authorize endpoint for authorization
+            # Token already includes "Bearer " prefix
+            # Construct full URL manually to avoid double-encoding of pre-encoded params
+            resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
+            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
+            oauth_headers = {
+                "Authorization": token_to_use,
+            }
+
+            logger.info(f"OAuth authorization (admin) - Request URL: GET {url}")
+            logger.info(f"OAuth authorization (admin) - Request Headers: {oauth_headers}")
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url, headers=oauth_headers)
+                resp.raise_for_status()
+                data = resp.json()
+                context = data.get("context")
+                # Check if context is JUSPAY
+                isadmin = context == "JUSPAY"
+                
+                # Always return https://portal.juspay.in for OAuth
+                logger.info("OAuth auth_type detected (admin), returning https://portal.juspay.in")
+                return "https://portal.juspay.in", isadmin
+        else:
+            # Use regular token validation endpoint
+            validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
             
-            valid_host = data.get("validHost")
-            if not valid_host:
-                raise Exception("validHost not found in Juspay token validation response.")
-            if not valid_host.startswith("http"):
-                valid_host = f"https://{valid_host}"
-            
-            return valid_host, isadmin
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    validate_url,
+                    headers={
+                        "accept": "*/*",
+                        "accept-language": "en-US,en;q=0.9",
+                        "content-type": "application/json"
+                    },
+                    json={"token": token_to_use}
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                context = data.get("context")
+                # Check if context is JUSPAY
+                isadmin = context == "JUSPAY" 
+                
+                valid_host = data.get("validHost")
+                if not valid_host:
+                    raise Exception("validHost not found in Juspay token validation response.")
+                if not valid_host.startswith("http"):
+                    valid_host = f"https://{valid_host}"
+                
+                return valid_host, isadmin
     except Exception as e:
         logger.error(f"Token validation failed: {e}")
         raise
