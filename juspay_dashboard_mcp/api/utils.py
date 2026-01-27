@@ -77,18 +77,18 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
         if auth_type == "oauth":
             # Use OAuth V2 authorize endpoint for authorization
             # Token already includes "Bearer " prefix
-            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize"
+            # Construct full URL manually to avoid double-encoding of pre-encoded params
+            resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
+            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
             oauth_headers = {
                 "Authorization": token_to_use,
             }
-            params = {"resource": '{"COMMON" : "R"}'}
 
             logger.info(f"OAuth authorization - Request URL: GET {url}")
             logger.info(f"OAuth authorization - Request Headers: {oauth_headers}")
-            logger.info(f"OAuth authorization - Request Params: {params}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, headers=oauth_headers, params=params)
+                resp = await client.get(url, headers=oauth_headers)
                 resp.raise_for_status()
                 # Authorization successful, always return https://portal.juspay.in for OAuth
                 logger.info("OAuth auth_type detected, returning https://portal.juspay.in")
@@ -142,18 +142,18 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
         if auth_type == "oauth":
             # Use OAuth V2 authorize endpoint for authorization
             # Token already includes "Bearer " prefix
-            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize"
+            # Construct full URL manually to avoid double-encoding of pre-encoded params
+            resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
+            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
             oauth_headers = {
                 "Authorization": token_to_use,
             }
-            params = {"resource": '{"COMMON" : "R"}'}
 
             logger.info(f"OAuth authorization (admin) - Request URL: GET {url}")
             logger.info(f"OAuth authorization (admin) - Request Headers: {oauth_headers}")
-            logger.info(f"OAuth authorization (admin) - Request Params: {params}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, headers=oauth_headers, params=params)
+                resp = await client.get(url, headers=oauth_headers)
                 resp.raise_for_status()
                 data = resp.json()
                 context = data.get("context")
