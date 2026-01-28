@@ -68,7 +68,11 @@ def get_common_headers(payload: dict, meta_info: dict = None):
     else:
         default_headers["x-web-logintoken"] = f"{token}"
 
-    if payload.get("tenant_id"):
+    # Always include x-tenant-id from meta_info if available
+    if meta_info and meta_info.get("tenant_id"):
+        default_headers["x-tenant-id"] = meta_info.get("tenant_id")
+    # Also check payload for tenant_id (for backward compatibility)
+    elif payload.get("tenant_id"):
         default_headers["x-tenant-id"] = payload.pop("tenant_id")
 
     if payload.get("cookie"):
