@@ -65,12 +65,19 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
         else:
             token = JUSPAY_WEB_LOGIN_TOKEN
 
+    token_response = (meta_info or {}).get("token_response") or {}
+    auth_type = token_response.get("auth_type")
+
     default_headers = {
         "Content-Type": "application/json",
         "accept": "*/*",
         "x-request-id": f"mcp-tool-{os.urandom(6).hex()}",
-        "x-web-logintoken": f"{token}",
     }
+
+    if auth_type == "oauth":
+        default_headers["Authorization"] = token
+    else:
+        default_headers["x-web-logintoken"] = f"{token}"
 
     if payload.get("tenant_id"):
         default_headers["x-tenant-id"] = payload.pop("tenant_id")
