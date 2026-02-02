@@ -111,7 +111,6 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
             }
 
             logger.info(f"OAuth authorization - Request URL: GET {url}")
-            logger.info(f"OAuth authorization - Request Headers: {oauth_headers}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, headers=oauth_headers)
@@ -183,7 +182,6 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
             }
 
             logger.info(f"OAuth authorization - Request URL: GET {url}")
-            logger.info(f"OAuth authorization - Request Headers: {oauth_headers}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, headers=oauth_headers)
