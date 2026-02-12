@@ -23,6 +23,8 @@ from juspay_dashboard_mcp.api_schema.qapi import (
     QApiErrorResponse,
     QApiPayload,
 )
+from juspay_dashboard_mcp.api.utils import get_juspay_credentials
+from juspay_dashboard_mcp.config import get_common_headers
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +121,7 @@ def convert_utc_to_ist_in_qapi_response(
         return response_json
 
 
-def call_query_api(payload: QApiPayload) -> dict:
+def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
     """
     Utility function to call the query API with the provided payload.
 
@@ -168,16 +170,15 @@ def call_query_api(payload: QApiPayload) -> dict:
                 mode="json", by_alias=True
             )
 
+        # Prepare headers using dynamic credentials if present
+        juspay_creds = get_juspay_credentials()
+        headers = get_common_headers({}, meta_info, juspay_creds)
+
         # Call the internal analytics API
-        logging.debug(f"QAPI Call: Sending payload: {serialized_payload}")
-        web_login_token = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
         response = requests.post(
             "https://portal.juspay.in/api/q/query",
             data=json_dumps_with_datetime(serialized_payload),
-            headers={
-                "X-Web-LoginToken": web_login_token,
-                "Content-Type": "application/json",
-            },
+            headers=headers,
         )
         logging.info(f"QAPI Response Raw (IST expected): {response.text}")
         response.raise_for_status()  # Raise exception for HTTP errors
@@ -201,7 +202,7 @@ def call_query_api(payload: QApiPayload) -> dict:
         ).dict()
 
 
-async def q_api(payload: dict) -> QApiResponse:
+async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
     """
     Tool for querying data from the analytics API.
 
@@ -239,4 +240,4 @@ async def q_api(payload: dict) -> QApiResponse:
     # Log the payload for debugging
     logging.debug(f"QAPI Tool: Creating payload: {json.dumps(q_api_payload.model_dump())}")
 
-    return await asyncio.to_thread(call_query_api, q_api_payload)
+    return await asyncio.to_thread(call_query_api, q_api_payload, meta_info)
