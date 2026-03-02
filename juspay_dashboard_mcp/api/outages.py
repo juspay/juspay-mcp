@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_admin_host
+from juspay_dashboard_mcp.api.utils import post, get_admin_host, sanitize_merchant_id
 import logging
 import os
 from datetime import datetime, timedelta
@@ -103,18 +103,28 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
         "endTime": end_time_utc
     }
     
-    if payload.get("merchantId"):
-        request_data["merchantId"] = payload["merchantId"]
     
     host, isadmin = await get_admin_host(meta_info=meta_info)
     
+    mid_from_meta = None
+    if meta_info:
+        token_response = meta_info.get("token_response", {})
+        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
+    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
+        raise ValueError("You are not authorized to view outages for this merchantId")
+    
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+        if merchant_id:
+            request_data["merchantId"] = merchant_id
+
     if isadmin:
         api_url = f"{host}/api/ec/v1/admin/outage/list"
     else:
         api_url = f"{host}/api/ec/v1/outage/list"
     
-    response =await post(api_url,payload, None, meta_info)
+    response =await post(api_url,request_data, None, meta_info)
     
     if isinstance(response, list):
         for outage in response:

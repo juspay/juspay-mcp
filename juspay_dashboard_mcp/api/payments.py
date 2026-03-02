@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, ist_to_utc
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, ist_to_utc , sanitize_merchant_id
 
 import random
 import string
@@ -62,23 +62,44 @@ async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) ->
     """
     Calls the Juspay Portal API to retrieve a list of payment links within a specified time range.
 
+    The API endpoint is:
+        https://portal.juspay.in/api/ec/v1/paymentLinks/list (for non-admin users)
+        https://portal.juspay.in/ec/v1/admin/paymentLinks/list (for admin users)
+
     Args:
         payload (dict): Should contain 'qFilters', 'date_from', and 'date_to' as required by the API.
             - qFilters: Query filters for the API (dict)
             - date_from: Start date/time in ISO 8601 format (required)
             - date_to: End date/time in ISO 8601 format (required)
             - offset: Pagination offset (optional, default 0)
+            - merchantId: Merchant ID (admin only, optional)
 
     Returns:
         dict: The parsed JSON response from the List Payment Links API.
 
     Raises:
+        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host = await get_juspay_host_from_api(meta_info=meta_info)
-    api_url = f"{host}/api/ec/v1/paymentLinks/list"
+    host, isadmin = await get_admin_host(meta_info=meta_info)
+    
+    # Get merchantId from meta_info for authorization check
+    mid_from_meta = None
+    if meta_info:
+        token_response = meta_info.get("token_response", {})
+        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
+    
+    # Authorization check - non-admin can't query other merchants
+    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
+        raise ValueError("You are not authorized to access payment links for this merchantId")
 
     request_payload = {}
+    
+    # Add merchantId for admin calls
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+        if merchant_id:
+            request_payload["merchantId"] = merchant_id
 
     if "qFilters" in payload:
         request_payload["qFilters"] = payload["qFilters"]
@@ -104,6 +125,12 @@ async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) ->
     request_payload["filters"] = {
         "dateCreated": {"gte": date_from_str, "lte": date_to_str}
     }
+    
+    # Conditional URL based on admin status
+    if isadmin:
+        api_url = f"{host}/ec/v1/admin/paymentLinks/list"
+    else:
+        api_url = f"{host}/api/ec/v1/paymentLinks/list"
 
     return await post(api_url, request_payload, None, meta_info)
 
@@ -169,6 +196,8 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
 
     if "payment_page_client_id" in payload:
         request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+    elif meta_info and "token_response" in meta_info and "merchantId" in meta_info["token_response"]:
+        request_data["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
     else:
         raise Exception("The payment page client id is missing. Can you please provide it?")
 
@@ -345,8 +374,11 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
     Raises:
         Exception: If the API call fails or required autopay fields are missing.
     """
-    
-    if "payment_page_client_id" not in payload:
+    if "payment_page_client_id" in payload:
+        payment_page_client_id = payload["payment_page_client_id"]
+    elif meta_info and "token_response" in meta_info and "merchantId" in meta_info["token_response"]:
+        payment_page_client_id = meta_info["token_response"]["merchantId"]
+    else:
         raise Exception("The payment page client id is missing. Can you please provide it?")
     required_autopay_fields = [
         "amount",
@@ -390,8 +422,7 @@ async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> d
         if field in payload:
             request_data[field] = payload[field]
 
-    if "payment_page_client_id" in payload:
-        request_data["payment_page_client_id"] = payload["payment_page_client_id"]
+    request_data["payment_page_client_id"] = payment_page_client_id
 
     wallet_enabled = payload.get("walletCheckBox", True)
     cards_enabled = payload.get("cardsCheckBox", True)

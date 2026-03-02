@@ -186,10 +186,12 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, headers=oauth_headers)
                 resp.raise_for_status()
-                # Authorization successful, return JUSPAY_BASE_URL for OAuth
-                logger.info(f"OAuth auth_type detected, returning {JUSPAY_BASE_URL}")
-                # For OAuth, we assume admin context (you may want to adjust this based on your requirements)
-                return JUSPAY_BASE_URL, True
+                data = resp.json()
+                context = data.get("context")
+                # Check if context is JUSPAY
+                isadmin = context == "JUSPAY"
+                logger.info(f"OAuth auth_type detected, context: {context}, isadmin: {isadmin}, returning {JUSPAY_BASE_URL}")
+                return JUSPAY_BASE_URL, isadmin
         else:
             # For non-OAuth, use regular token validation endpoint
             validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
@@ -269,3 +271,33 @@ def utc_to_ist(utc_time_string: str) -> str:
     except Exception as e:
         logging.error(f"Error converting utc to ist: {str(e)}")
         return utc_time_string
+    
+MERCHANT_ID_PLACEHOLDERS = [
+    'prompt_user_if_needed', 
+    'PROMPT_USER', 
+    'prompt_user',
+    'prompt_user_if_not_provided',
+    'ask_user',
+    'required',
+    'REQUIRED',
+    '',
+    None
+]    
+
+def sanitize_merchant_id(merchant_id_from_payload: str, mid_from_meta: str) -> str:
+    """
+    Sanitizes merchantId by filtering out placeholder values.
+    If merchantId from payload is a placeholder, returns merchantId from meta_info.
+    
+    Args:
+        merchant_id_from_payload: The merchantId value from the request payload
+        mid_from_meta: The merchantId value from meta_info/token_response
+        
+    Returns:
+        The valid merchantId to use (from payload if valid, else from meta_info)
+    """
+    # Check if payload merchantId is a placeholder value
+    if merchant_id_from_payload in MERCHANT_ID_PLACEHOLDERS:
+        logger.info(f"merchantId from payload '{merchant_id_from_payload}' is a placeholder, using meta_info value: {mid_from_meta}")
+        return mid_from_meta
+    return merchant_id_from_payload or mid_from_meta

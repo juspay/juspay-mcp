@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc
+from juspay_dashboard_mcp.api.utils import post, get_admin_host, call, ist_to_utc, sanitize_merchant_id
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
@@ -63,6 +63,10 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Portal API to retrieve a list of orders within a specified time range.
 
+    The API endpoint is:
+        https://portal.juspay.in/ec/v4/orders (for non-admin users)
+        https://portal.juspay.in/ec/v4/admin/orders (for admin users)
+
     Args:
         payload (dict): A dictionary containing:
             - dateFrom: Start date/time in ISO format (e.g., '2025-04-15T18:30:00Z')
@@ -72,6 +76,7 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
             - paymentStatus: Optional filter for payment status
             - orderType: Optional filter for order type
             - flatFilters: Optional flat filter structure that gets converted to qFilters
+            - merchantId: Optional merchant ID (admin only)
 
     Returns:
         dict: The parsed JSON response from the List Orders API.
@@ -80,6 +85,18 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
         ValueError: If required parameters are missing or date formats are invalid.
         Exception: If the API call fails.
     """
+    host, isadmin = await get_admin_host(meta_info=meta_info)
+    
+    # Get merchantId from meta_info for authorization check
+    mid_from_meta = None
+    if meta_info:
+        token_response = meta_info.get("token_response", {})
+        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
+    
+    # Authorization check - non-admin can't query other merchants
+    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
+        raise ValueError("You are not authorized to access orders for this merchantId")
+    
     date_from_str = payload.get("dateFrom")
     date_to_str = payload.get("dateTo")
     if not date_from_str or not date_to_str:
@@ -181,9 +198,19 @@ async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
         "domain": payload.get("domain", "txnsELS"),
         "sortDimension": "order_created_at",
     }
+    
+    # Add merchantId for admin users
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+        if merchant_id:
+            request_data["merchantId"] = merchant_id
 
-    host = await get_juspay_host_from_api(meta_info=meta_info)
-    api_url = f"{host}/ec/v4/orders"
+    # Conditional URL based on admin status
+    if isadmin:
+        api_url = f"{host}/ec/v4/admin/orders"
+    else:
+        api_url = f"{host}/ec/v4/orders"
+    
     return await post(api_url, request_data, None, meta_info)
 
 
@@ -215,6 +242,10 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
      Note: The api returns the amount in major or primary currency unit (e.g., rupees, dollars).
 
+    The API endpoint is:
+        https://portal.juspay.in/api/ec/v1/orders/{order_id} (for non-admin users)
+        https://portal.juspay.in/ec/v1/admin/orders/{order_id} (for admin users)
+
     IMPORTANT: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID might be a transaction ID (txn_id) instead of an order ID. In such cases, you should extract the order_id from the txn_id using these patterns:
 
     Common txn_id to order_id patterns:
@@ -238,24 +269,47 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
     Args:
         payload (dict): A dictionary containing:
             - order_id: The unique order ID to retrieve details for (can also be a txn_id that will be automatically processed if the first attempt fails)
+            - merchantId: Optional merchant ID (admin only)
 
     Returns:
         dict: The parsed JSON response containing order details.
 
     Raises:
+        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
     order_id = payload.get("order_id")
     if not order_id:
         raise ValueError("'order_id' is required in the payload")
 
-    host = await get_juspay_host_from_api(meta_info=meta_info)
+    host, isadmin = await get_admin_host(meta_info=meta_info)
+    
+    # Get merchantId from meta_info for authorization check
+    mid_from_meta = None
+    if meta_info:
+        token_response = meta_info.get("token_response", {})
+        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
+    
+    # Authorization check - non-admin can't query other merchants
+    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
+        raise ValueError("You are not authorized to access order details for this merchantId")
+    
+    # Build request data
+    request_data = {}
+    if isadmin:
+        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+        if merchant_id:
+            request_data["merchantId"] = merchant_id
 
-    api_url = f"{host}/api/ec/v1/orders/{order_id}"
+    # Conditional URL based on admin status
+    if isadmin:
+        api_url = f"{host}/ec/v1/admin/orders/{order_id}"
+    else:
+        api_url = f"{host}/api/ec/v1/orders/{order_id}"
 
     try:
         logging.info(f"Attempting to get order details for order_id: {order_id}")
-        return await post(api_url, {}, None, meta_info)
+        return await post(api_url, request_data, None, meta_info)
 
     except Exception as e:
         error_str = str(e)
@@ -268,8 +322,11 @@ async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
             if extracted_order_id != order_id:
                 logging.info(f"Retrying with extracted order_id: {extracted_order_id}")
                 try:
-                    retry_api_url = f"{host}/api/ec/v1/orders/{extracted_order_id}"
-                    result = await post(retry_api_url, {}, None, meta_info)
+                    if isadmin:
+                        retry_api_url = f"{host}/ec/v1/admin/orders/{extracted_order_id}"
+                    else:
+                        retry_api_url = f"{host}/api/ec/v1/orders/{extracted_order_id}"
+                    result = await post(retry_api_url, request_data, None, meta_info)
                     logging.info(
                         f"Success with extracted order_id: {extracted_order_id}"
                     )
