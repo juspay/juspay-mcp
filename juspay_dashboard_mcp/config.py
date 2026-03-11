@@ -75,7 +75,7 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
     }
 
     if auth_type == "oauth":
-        default_headers["Authorization"] = token
+        default_headers["x-web-logintoken"] = token
     else:
         default_headers["x-web-logintoken"] = f"{token}"
 
