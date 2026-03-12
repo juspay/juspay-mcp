@@ -74,10 +74,7 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
         "x-request-id": f"mcp-tool-{os.urandom(6).hex()}",
     }
 
-    if auth_type == "oauth":
-        default_headers["Authorization"] = token
-    else:
-        default_headers["x-web-logintoken"] = f"{token}"
+    default_headers["x-web-logintoken"] = token
 
     if payload.get("tenant_id"):
         default_headers["x-tenant-id"] = payload.pop("tenant_id")
