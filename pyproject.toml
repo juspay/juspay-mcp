@@ -20,10 +20,10 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["juspay_mcp", "juspay_mcp.api", "juspay_mcp.api_schema", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api", "juspay_dashboard_mcp.api_schema", "juspay_docs_mcp", "juspay_docs_mcp.mcpdoc"]
+packages = ["juspay_mcp", "juspay_mcp.api", "juspay_mcp.api_schema", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api", "juspay_dashboard_mcp.api_schema", "juspay_docs_mcp", "juspay_docs_mcp.mcpdoc", "juspay_docs_mcp.skills"]
 
 [tool.setuptools.package-data]
-juspay_docs_mcp = ["transcripts.json", "dataset/*.json"]
+juspay_docs_mcp = ["transcripts.json", "dataset/*.json", "skills/*.md"]
 
 [project.scripts]
 juspay-mcp = "juspay_mcp.main:main"
