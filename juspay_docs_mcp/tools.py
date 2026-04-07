@@ -119,34 +119,14 @@ mcp = create_server(
     server_instructions="\n".join(instructions),
 )
 
-# === Migration Skills ===
+# === Intent-Based Juspay Integration Tools ===
+# PSP-agnostic: any AI agent provides an intent + platform, gets Juspay code from .md files.
 
-# Available migration skills
-migration_skills = [
-    {
-        "source_psp": "adyen",
-        "name": "Adyen to Juspay Migration Skill",
-        "file": "adyen_to_juspay.md",
-        "description": "Complete migration guide from Adyen (Drop-in, Sessions, Components, API) to Juspay (HyperCheckout, Express Checkout, API). Covers all platforms: Web, Android, iOS, React Native, Flutter.",
-        "platforms": ["web", "android", "ios", "react_native", "flutter"],
-        "covers": [
-            "session/order creation",
-            "frontend SDK integration",
-            "webhooks",
-            "order status",
-            "refunds",
-            "payment result handling",
-            "environment variables",
-            "dependency management",
-            "testing",
-            "production readiness",
-        ],
-    },
-]
-
-# Juspay doc URLs for validation
 JUSPAY_DOC_BASE = "https://juspay.io/in/docs/hyper-checkout"
-JUSPAY_PLATFORM_MAP = {
+JUSPAY_EC_DOC_BASE = "https://juspay.io/in/docs/ec-headless"
+JUSPAY_API_DOC_BASE = "https://juspay.io/in/docs/ec-api-global"
+
+PLATFORM_DOC_MAP = {
     "web": "web",
     "android": "android",
     "ios": "ios",
@@ -154,167 +134,196 @@ JUSPAY_PLATFORM_MAP = {
     "flutter": "flutter",
 }
 
+SKILLS_DIR = os.path.join(os.path.dirname(__file__), "skills")
 
-def _load_skill_file(filename: str) -> str:
-    """Load a migration skill file from the skills directory."""
-    skills_dir = os.path.join(os.path.dirname(__file__), "skills")
-    filepath = os.path.join(skills_dir, filename)
+# All available intents — each maps to a .md file in skills/
+AVAILABLE_INTENTS = {
+    # Flows (start here to understand the full picture)
+    "flow_hypercheckout": "Complete end-to-end payment flow for HyperCheckout (Payment Page). Covers: prerequisites → SDK init → session creation → payment page → response → verification → webhooks. Start here for hosted UI integrations.",
+    "flow_express_checkout": "Complete end-to-end flow for Express Checkout (Headless SDK). Covers: customer creation → order creation → payment methods → custom UI → payment → verification. Start here for custom UI integrations.",
+    # Individual intents
+    "environment_setup": "Set up environment variables, API keys, and credentials for Juspay integration.",
+    "customer_management": "Create and retrieve customers via Juspay API. Required for Express Checkout; optional for HyperCheckout (auto-created by /session).",
+    "create_order_session": "Create an order and payment session on the server. Returns payment_links (web) or sdk_payload (native SDKs).",
+    "sdk_setup": "Install and configure the Juspay SDK for the target platform (dependencies, gradle, pods, etc.).",
+    "initiate_sdk": "Initialize the Juspay SDK on app/screen load. Must complete before opening payment page. (Not needed for web.)",
+    "open_payment_page": "Launch the Juspay payment UI — redirect/iframe on web, or SDK process() call on native platforms.",
+    "handle_payment_response": "Handle the payment result from the SDK callback or return_url redirect. Includes server-side verification.",
+    "order_status": "Check order status via server-to-server API call. Used to verify payments before fulfilling orders.",
+    "refund": "Process a refund via server-to-server API call.",
+    "webhook": "Handle incoming Juspay webhook notifications on your server.",
+}
+
+
+def _load_skill(intent: str) -> str:
+    """Load a skill markdown file by intent name."""
+    filepath = os.path.join(SKILLS_DIR, f"{intent}.md")
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return f"Error: Skill file not found: {filename}"
+        return f"Error: Skill file not found at {filepath}"
     except Exception as e:
         return f"Error reading skill file: {str(e)}"
 
 
+def _inject_values(content: str, platform: str, merchant_id: str | None = None, client_id: str | None = None) -> str:
+    """Replace placeholders in skill content with actual values."""
+    platform_doc = PLATFORM_DOC_MAP.get(platform, platform)
+    if merchant_id:
+        content = content.replace("<MERCHANT_ID>", merchant_id)
+    if client_id:
+        content = content.replace("<CLIENT_ID>", client_id)
+    content = content.replace("{DOC_BASE}", JUSPAY_DOC_BASE)
+    content = content.replace("{EC_DOC_BASE}", JUSPAY_EC_DOC_BASE)
+    content = content.replace("{API_DOC_BASE}", JUSPAY_API_DOC_BASE)
+    content = content.replace("{platform}", platform_doc)
+    return content
+
+
+# ── MCP Tool Definitions ──
+
 @mcp.tool()
-def list_migration_skills(
-    source_psp: Annotated[
-        str,
-        Field(description="The payment service provider you are migrating FROM (e.g., 'adyen'). Case-insensitive."),
-    ],
-) -> str:
+def list_juspay_intents() -> str:
     """
-    List available migration skills for moving from a source payment provider to Juspay.
+    List all available Juspay integration intents.
 
-    Migration skills are comprehensive, step-by-step guides that cover:
-    - Credential and environment mapping
-    - Backend API migration (session creation, webhooks, refunds, order status)
-    - Frontend SDK migration for all supported platforms
-    - Testing and production readiness checklists
+    Returns the set of payment intents you can query, each with a description.
+    Use this to understand what Juspay code snippets are available.
 
-    Call this tool first to see what migrations are available.
-    Then use `get_migration_skill` to fetch the full migration guide.
+    After finding the right intent, call `get_juspay_code` with the intent and platform.
 
-    Currently supported source PSPs: adyen
-    Future support planned for: stripe, razorpay, braintree, paypal
+    This tool is PSP-agnostic — it works whether you're migrating from Adyen, Stripe,
+    Razorpay, Braintree, PayPal, or building a new integration from scratch.
     """
-    source = source_psp.strip().lower()
-    matching = [s for s in migration_skills if s["source_psp"] == source]
+    result = "# Available Juspay Integration Intents\n\n"
+    result += "Call `get_juspay_code(intent, platform)` with any of these intents:\n\n"
 
-    if not matching:
-        available = list(set(s["source_psp"] for s in migration_skills))
-        return (
-            f"No migration skill found for '{source_psp}'.\n\n"
-            f"Available source PSPs: {', '.join(available)}\n\n"
-            "If you need a migration from a different PSP, the general approach is:\n"
-            "1. Use `list_doc_sources` to find Juspay integration documentation\n"
-            "2. Use `fetch_docs` to read the integration guide for your target platform\n"
-            "3. Manually map your current PSP's concepts to Juspay equivalents"
-        )
+    result += "## START HERE: Full Integration Flows\n"
+    result += "These give you the complete picture — step-by-step from start to finish:\n\n"
+    result += "1. **`flow_hypercheckout`** — " + AVAILABLE_INTENTS["flow_hypercheckout"] + "\n"
+    result += "2. **`flow_express_checkout`** — " + AVAILABLE_INTENTS["flow_express_checkout"] + "\n"
 
-    result = f"# Migration Skills: {source_psp.title()} -> Juspay\n\n"
-    for skill in matching:
-        result += f"## {skill['name']}\n"
-        result += f"**Description:** {skill['description']}\n\n"
-        result += f"**Supported Platforms:** {', '.join(skill['platforms'])}\n\n"
-        result += f"**Covers:**\n"
-        for item in skill["covers"]:
-            result += f"- {item}\n"
-        result += "\n"
+    result += "\n## Individual Intents (for specific steps)\n"
+    step_order = [
+        "environment_setup",
+        "customer_management",
+        "sdk_setup",
+        "create_order_session",
+        "initiate_sdk",
+        "open_payment_page",
+        "handle_payment_response",
+        "order_status",
+        "webhook",
+        "refund",
+    ]
 
-    result += (
-        "---\n\n"
-        "**Next step:** Call `get_migration_skill` with the following parameters:\n"
-        f"- `source_psp`: \"{source}\"\n"
-        "- `platform`: your target platform (web, android, ios, react_native, flutter)\n"
-        "- `merchant_id`: your Juspay Merchant ID (from Juspay Dashboard)\n"
-        "- `client_id`: your Juspay Client ID (from Juspay Dashboard)\n\n"
-        "**IMPORTANT:** You MUST ask the merchant for their actual `merchant_id` and `client_id` values. "
-        "These cannot be mocked or placeholder values."
-    )
+    for i, intent in enumerate(step_order, 1):
+        desc = AVAILABLE_INTENTS[intent]
+        result += f"{i}. **`{intent}`** — {desc}\n"
+
+    result += "\n## Supported Platforms\n"
+    result += "- `web` — Browser (redirect or iframe, no SDK package needed)\n"
+    result += "- `android` — Native Android (HyperSDK via Gradle)\n"
+    result += "- `ios` — Native iOS (HyperSDK via CocoaPods)\n"
+    result += "- `react_native` — React Native (hyper-sdk-react via npm)\n"
+    result += "- `flutter` — Flutter (hypersdkflutter via pub.dev)\n"
+
+    result += "\n## Migration Workflow\n"
+    result += "To migrate from any PSP to Juspay:\n"
+    result += "1. Start with `flow_hypercheckout` or `flow_express_checkout` to understand the full picture\n"
+    result += "2. Identify which intents your current code implements\n"
+    result += "3. Call `get_juspay_code` for each intent + your platform\n"
+    result += "4. Replace existing PSP code with the returned Juspay code\n"
+    result += "5. Use `validate_juspay_integration` when done\n"
+    result += "\n**IMPORTANT:** Before calling `get_juspay_code`, ask the merchant for:\n"
+    result += "- **Juspay Merchant ID** (from Dashboard > Settings > Profile)\n"
+    result += "- **Juspay Client ID** (from Dashboard > Settings > Profile)\n"
+    result += "These are NEVER mockable.\n"
+
     return result
 
 
 @mcp.tool()
-def get_migration_skill(
-    source_psp: Annotated[
-        str,
-        Field(description="The payment provider migrating FROM (e.g., 'adyen')"),
+def get_juspay_code(
+    intent: Annotated[
+        Literal[
+            "flow_hypercheckout",
+            "flow_express_checkout",
+            "environment_setup",
+            "customer_management",
+            "create_order_session",
+            "sdk_setup",
+            "initiate_sdk",
+            "open_payment_page",
+            "handle_payment_response",
+            "order_status",
+            "refund",
+            "webhook",
+        ],
+        Field(description="The payment integration intent. Start with 'flow_hypercheckout' or 'flow_express_checkout' for the full picture."),
     ],
     platform: Annotated[
         Literal["web", "android", "ios", "react_native", "flutter"],
-        Field(description="The target platform for migration"),
+        Field(description="Target platform"),
     ],
     merchant_id: Annotated[
-        str,
-        Field(description="The merchant's Juspay Merchant ID from the Juspay Dashboard. MUST be a real value, not a placeholder."),
-    ],
+        Optional[str],
+        Field(description="Juspay Merchant ID. Required for sdk_setup, initiate_sdk, create_order_session. Must be a real value from Juspay Dashboard, not a placeholder."),
+    ] = None,
     client_id: Annotated[
-        str,
-        Field(description="The merchant's Juspay Client ID from the Juspay Dashboard. MUST be a real value, not a placeholder."),
-    ],
+        Optional[str],
+        Field(description="Juspay Client ID. Required for sdk_setup, initiate_sdk, create_order_session. Must be a real value from Juspay Dashboard, not a placeholder."),
+    ] = None,
 ) -> str:
     """
-    Fetch the complete migration skill document for migrating from a source PSP to Juspay.
+    Get production-ready Juspay code for a specific payment intent and platform.
 
-    This returns a comprehensive, step-by-step migration guide that any AI agent can follow.
-    The guide includes code examples, concept mappings, and validation checklists.
+    This tool is PSP-AGNOSTIC — it works for migration from any payment provider
+    (Adyen, Stripe, Razorpay, Braintree, PayPal) or for new integrations.
 
-    IMPORTANT:
-    - merchant_id and client_id MUST be real values from the Juspay Dashboard
-    - DO NOT use placeholder values like "your_merchant_id" or "test_merchant"
-    - Ask the merchant to provide these values before calling this tool
+    The AI agent should:
+    1. Analyze the merchant's existing code to identify which intents are used
+    2. Call this tool for each intent to get the Juspay equivalent
+    3. Replace the existing PSP code with the returned Juspay code
 
-    After receiving the skill document:
-    1. Read through the entire document first to understand the full scope
-    2. Follow the phases in order (Phase 0 through Phase 10)
-    3. Replace all placeholder values (<YOUR_MERCHANT_ID>, <YOUR_CLIENT_ID>) with the actual values
-    4. Focus on the platform-specific sections relevant to the merchant's platform
-    5. After migration, use `validate_juspay_integration` to verify completeness
-    6. Use `fetch_docs` to look up any Juspay documentation URLs referenced in the skill
+    For intents that need credentials (sdk_setup, initiate_sdk, create_order_session),
+    you MUST provide merchant_id and client_id. Ask the merchant for these first.
+
+    Returns: Complete code snippet with API details, code examples (multi-language
+    for server-side intents), configuration, and links to official Juspay documentation.
+    Use `fetch_docs` to get the latest docs for any URL returned.
     """
-    source = source_psp.strip().lower()
-    matching = [s for s in migration_skills if s["source_psp"] == source]
-
-    if not matching:
-        available = list(set(s["source_psp"] for s in migration_skills))
+    if intent not in AVAILABLE_INTENTS:
         return (
-            f"No migration skill found for '{source_psp}'. "
-            f"Available: {', '.join(available)}"
+            f"Unknown intent '{intent}'.\n"
+            f"Available intents: {', '.join(AVAILABLE_INTENTS.keys())}"
         )
 
-    skill = matching[0]
-    if platform not in skill["platforms"]:
-        return (
-            f"Platform '{platform}' is not supported for {skill['name']}. "
-            f"Supported platforms: {', '.join(skill['platforms'])}"
+    # Load the skill markdown file
+    content = _load_skill(intent)
+    if content.startswith("Error:"):
+        return content
+
+    # Inject credentials and doc URLs
+    content = _inject_values(content, platform, merchant_id, client_id)
+
+    # Add header
+    header = f"**Intent:** `{intent}` | **Platform:** `{platform}`"
+    if merchant_id:
+        header += f" | **Merchant:** `{merchant_id}`"
+    if client_id:
+        header += f" | **Client:** `{client_id}`"
+    header += "\n\n---\n"
+
+    # Add credential warning if needed
+    needs_creds = intent in ("sdk_setup", "initiate_sdk", "create_order_session")
+    if needs_creds and (not merchant_id or not client_id):
+        header += (
+            "\n> **WARNING:** merchant_id and/or client_id were not provided. "
+            "Placeholders `<MERCHANT_ID>` / `<CLIENT_ID>` are in the code below. "
+            "Ask the merchant for real values from Juspay Dashboard before using this code.\n\n"
         )
-
-    # Load the skill file
-    content = _load_skill_file(skill["file"])
-
-    # Inject merchant-specific values
-    content = content.replace("<YOUR_MERCHANT_ID>", merchant_id)
-    content = content.replace("<YOUR_JUSPAY_CLIENT_ID>", client_id)
-    content = content.replace("<YOUR_CLIENT_ID>", client_id)
-
-    # Add platform-specific header
-    platform_label = JUSPAY_PLATFORM_MAP.get(platform, platform)
-    header = (
-        f"# Migration Skill Loaded: {skill['name']}\n"
-        f"**Target Platform:** {platform_label}\n"
-        f"**Merchant ID:** {merchant_id}\n"
-        f"**Client ID:** {client_id}\n\n"
-        f"## Instructions for AI Agent\n"
-        f"1. This document contains migration steps for ALL platforms. Focus on **{platform_label}** sections.\n"
-        f"2. The backend migration (Phase 2) is platform-agnostic — always apply it.\n"
-        f"3. For frontend, follow Phase 3 (Web), Phase 4 (Android), Phase 5 (iOS), Phase 6 (React Native), or Phase 7 (Flutter) as appropriate.\n"
-        f"4. All placeholder values have been replaced with the merchant's actual credentials.\n"
-        f"5. After completing migration, call `validate_juspay_integration` to verify.\n"
-        f"6. For any doc URL in the checklist, use `fetch_docs` to get the latest documentation.\n\n"
-        f"## Relevant Juspay Documentation URLs for {platform_label}\n"
-        f"- Overview: {JUSPAY_DOC_BASE}/{platform_label}/overview/integration-architecture.md\n"
-        f"- Session API: {JUSPAY_DOC_BASE}/{platform_label}/base-sdk-integration/session.md\n"
-        f"- SDK Setup: {JUSPAY_DOC_BASE}/{platform_label}/base-sdk-integration/getting-sdk.md\n"
-        f"- Webhooks: {JUSPAY_DOC_BASE}/{platform_label}/base-sdk-integration/webhooks.md\n"
-        f"- Order Status: {JUSPAY_DOC_BASE}/{platform_label}/base-sdk-integration/order-status-api.md\n"
-        f"- Refunds: {JUSPAY_DOC_BASE}/{platform_label}/base-sdk-integration/refund-order-api.md\n"
-        f"- Test Resources: {JUSPAY_DOC_BASE}/{platform_label}/resources/test-resources.md\n"
-        f"- Error Codes: {JUSPAY_DOC_BASE}/{platform_label}/resources/error-codes.md\n\n"
-        f"---\n\n"
-    )
 
     return header + content
 
@@ -325,252 +334,64 @@ def validate_juspay_integration(
         Literal["web", "android", "ios", "react_native", "flutter"],
         Field(description="The platform being validated"),
     ],
-    integration_type: Annotated[
-        Literal["payment-page", "express-checkout", "api"],
-        Field(description="The Juspay integration type used. 'payment-page' for HyperCheckout (recommended for Adyen Drop-in migrants), 'express-checkout' for Headless SDK, 'api' for direct API integration."),
-    ],
-    backend_session_api: Annotated[
-        bool,
-        Field(description="Has the backend session/order creation endpoint been migrated?"),
-    ],
-    backend_order_status_api: Annotated[
-        bool,
-        Field(description="Has the backend order status endpoint been migrated?"),
-    ],
-    backend_refund_api: Annotated[
-        bool,
-        Field(description="Has the backend refund endpoint been migrated?"),
-    ],
-    backend_webhook_handler: Annotated[
-        bool,
-        Field(description="Has the webhook handler been migrated?"),
-    ],
-    frontend_sdk_installed: Annotated[
-        bool,
-        Field(description="Has the Juspay SDK been installed for the target platform?"),
-    ],
-    frontend_sdk_initiate: Annotated[
-        bool,
-        Field(description="Has the SDK initiate call been implemented?"),
-    ],
-    frontend_sdk_process: Annotated[
-        bool,
-        Field(description="Has the SDK process call (payment page launch) been implemented?"),
-    ],
-    frontend_result_handling: Annotated[
-        bool,
-        Field(description="Has payment result handling been implemented with server-side verification?"),
-    ],
-    adyen_dependencies_removed: Annotated[
-        bool,
-        Field(description="Have all Adyen SDK packages and imports been removed?"),
-    ],
-    adyen_env_vars_removed: Annotated[
-        bool,
-        Field(description="Have all ADYEN_* environment variables been replaced with JUSPAY_* equivalents?"),
-    ],
-    sandbox_tested: Annotated[
-        bool,
-        Field(description="Has the integration been tested in Juspay sandbox?"),
-    ],
-    server_side_verification: Annotated[
-        bool,
-        Field(description="Is Order Status API called server-side to verify payment before fulfilling orders? This is a CRITICAL security requirement."),
-    ],
+    has_session_api: Annotated[bool, Field(description="Backend: Session/order creation endpoint implemented?")],
+    has_order_status_api: Annotated[bool, Field(description="Backend: Order status endpoint implemented?")],
+    has_refund_api: Annotated[bool, Field(description="Backend: Refund endpoint implemented?")],
+    has_webhook_handler: Annotated[bool, Field(description="Backend: Webhook handler implemented?")],
+    has_sdk_setup: Annotated[bool, Field(description="Frontend: SDK installed and configured?")],
+    has_payment_page: Annotated[bool, Field(description="Frontend: Payment page launch implemented?")],
+    has_response_handling: Annotated[bool, Field(description="Frontend: Payment response handling implemented?")],
+    has_server_side_verification: Annotated[bool, Field(description="Security: Order Status API called server-side before fulfilling orders?")],
+    has_sandbox_test: Annotated[bool, Field(description="Testing: Full payment flow tested in Juspay sandbox?")],
 ) -> str:
     """
-    Validate that a Juspay integration migration is complete and correct.
+    Validate that a Juspay integration is complete.
 
-    This tool checks each component of the migration against Juspay's requirements
-    and returns a detailed pass/fail report with remediation steps.
-
-    Call this tool AFTER completing the migration to verify nothing was missed.
-    For any failed checks, use `fetch_docs` to look up the relevant Juspay documentation.
+    Call this after implementing all intents to get a pass/fail checklist.
+    For any failed check, call `get_juspay_code` with the relevant intent to get the code.
     """
-    platform_label = JUSPAY_PLATFORM_MAP.get(platform, platform)
-    checks = []
-    passed = 0
-    failed = 0
-    critical_failures = []
+    platform_doc = PLATFORM_DOC_MAP.get(platform, platform)
+    checks = [
+        ("Backend: Session API", has_session_api, True, "create_order_session"),
+        ("Backend: Order Status API", has_order_status_api, True, "order_status"),
+        ("Backend: Refund API", has_refund_api, False, "refund"),
+        ("Backend: Webhook Handler", has_webhook_handler, True, "webhook"),
+        ("Frontend: SDK Setup", has_sdk_setup, True, "sdk_setup"),
+        ("Frontend: Payment Page", has_payment_page, True, "open_payment_page"),
+        ("Frontend: Response Handling", has_response_handling, True, "handle_payment_response"),
+        ("Security: Server-Side Verification", has_server_side_verification, True, "order_status"),
+        ("Testing: Sandbox Tested", has_sandbox_test, True, None),
+    ]
 
-    def add_check(name: str, status: bool, category: str, critical: bool = False,
-                  doc_path: str = "", remediation: str = ""):
-        nonlocal passed, failed
-        if status:
-            passed += 1
-            checks.append(f"  PASS  {category} > {name}")
-        else:
-            failed += 1
-            entry = f"  FAIL  {category} > {name}"
-            if remediation:
-                entry += f"\n         -> {remediation}"
-            if doc_path:
-                doc_url = f"{JUSPAY_DOC_BASE}/{platform_label}/{doc_path}"
-                entry += f"\n         -> Docs: {doc_url}"
-            checks.append(entry)
-            if critical:
-                critical_failures.append(name)
+    passed = sum(1 for _, ok, _, _ in checks if ok)
+    total = len(checks)
+    critical_fails = [(name, intent) for name, ok, crit, intent in checks if not ok and crit]
 
-    # Backend checks
-    add_check(
-        "Session/Order API migrated",
-        backend_session_api,
-        "Backend",
-        critical=True,
-        doc_path="base-sdk-integration/session.md",
-        remediation="Implement POST /session endpoint. See Phase 2.2 in migration skill.",
-    )
-    add_check(
-        "Order Status API migrated",
-        backend_order_status_api,
-        "Backend",
-        critical=True,
-        doc_path="base-sdk-integration/order-status-api.md",
-        remediation="Implement GET /orders/{order_id} endpoint. See Phase 2.3 in migration skill.",
-    )
-    add_check(
-        "Refund API migrated",
-        backend_refund_api,
-        "Backend",
-        doc_path="base-sdk-integration/refund-order-api.md",
-        remediation="Implement POST /orders/{order_id}/refunds endpoint. See Phase 2.4 in migration skill.",
-    )
-    add_check(
-        "Webhook handler migrated",
-        backend_webhook_handler,
-        "Backend",
-        critical=True,
-        doc_path="base-sdk-integration/webhooks.md",
-        remediation="Implement webhook handler with Basic Auth validation. Must return HTTP 200. See Phase 2.5 in migration skill.",
-    )
+    report = f"# Juspay Integration Validation — {platform}\n\n"
+    report += f"**Score: {passed}/{total}** ({passed/total*100:.0f}%)\n\n"
 
-    # Frontend checks
-    if platform == "web":
-        add_check(
-            "Juspay payment page integration (redirect or iframe)",
-            frontend_sdk_installed and frontend_sdk_process,
-            "Frontend",
-            critical=True,
-            doc_path="base-sdk-integration/open-hypercheckout-screen.md",
-            remediation="Web uses URL redirect or iframe. No SDK package needed. See Phase 3 in migration skill.",
-        )
+    if not critical_fails and passed == total:
+        report += "## Status: READY FOR PRODUCTION\n\n"
+    elif critical_fails:
+        report += "## Status: NOT READY — CRITICAL ISSUES\n\n"
     else:
-        add_check(
-            "Juspay SDK installed",
-            frontend_sdk_installed,
-            "Frontend",
-            critical=True,
-            doc_path="base-sdk-integration/getting-sdk.md",
-            remediation=f"Install Juspay HyperSDK for {platform_label}. See Phase {'4' if platform == 'android' else '5' if platform == 'ios' else '6' if platform == 'react_native' else '7'} in migration skill.",
-        )
-        add_check(
-            "SDK initiate implemented",
-            frontend_sdk_initiate,
-            "Frontend",
-            critical=True,
-            doc_path="base-sdk-integration/initiating-sdk.md",
-            remediation="Call hyperServices.initiate() / HyperSdkReact.initiate() / hyperSDK.initiate() on screen load.",
-        )
-        add_check(
-            "SDK process implemented",
-            frontend_sdk_process,
-            "Frontend",
-            critical=True,
-            doc_path="base-sdk-integration/open-hypercheckout-screen.md",
-            remediation="Call process() with sdk_payload from your backend /session endpoint.",
-        )
+        report += "## Status: MOSTLY READY — MINOR ISSUES\n\n"
 
-    add_check(
-        "Payment result handling implemented",
-        frontend_result_handling,
-        "Frontend",
-        critical=True,
-        doc_path="base-sdk-integration/handle-payment-response.md",
-        remediation="Handle process_result event / return_url redirect. MUST verify server-side.",
-    )
+    report += "| Check | Status | Fix |\n|---|---|---|\n"
+    for name, ok, critical, intent in checks:
+        status = "PASS" if ok else ("**FAIL (critical)**" if critical else "FAIL")
+        fix = ""
+        if not ok and intent:
+            fix = f'`get_juspay_code("{intent}", "{platform}")`'
+        elif not ok:
+            fix = f"Test in sandbox: `fetch_docs(\"{JUSPAY_DOC_BASE}/{platform_doc}/resources/test-resources.md\")`"
+        report += f"| {name} | {status} | {fix} |\n"
 
-    # Security checks
-    add_check(
-        "Server-side order verification",
-        server_side_verification,
-        "Security",
-        critical=True,
-        doc_path="base-sdk-integration/order-status-api.md",
-        remediation="CRITICAL: Always call Order Status API server-side before fulfilling orders. Never trust client-side status.",
-    )
-
-    # Cleanup checks
-    add_check(
-        "Adyen dependencies removed",
-        adyen_dependencies_removed,
-        "Cleanup",
-        remediation="Remove all Adyen SDK packages (npm, gradle, pods, pub.dev) and imports.",
-    )
-    add_check(
-        "Adyen env vars replaced",
-        adyen_env_vars_removed,
-        "Cleanup",
-        remediation="Replace ADYEN_API_KEY, ADYEN_MERCHANT_ACCOUNT, ADYEN_CLIENT_KEY, ADYEN_HMAC_KEY with JUSPAY equivalents.",
-    )
-
-    # Testing check
-    add_check(
-        "Sandbox tested",
-        sandbox_tested,
-        "Testing",
-        critical=True,
-        doc_path="resources/test-resources.md",
-        remediation="Test the full payment flow in Juspay sandbox before going to production.",
-    )
-
-    # Build report
-    total = passed + failed
-    score = (passed / total * 100) if total > 0 else 0
-
-    report = f"# Juspay Integration Validation Report\n\n"
-    report += f"**Platform:** {platform_label}\n"
-    report += f"**Integration Type:** {integration_type}\n"
-    report += f"**Score:** {passed}/{total} checks passed ({score:.0f}%)\n\n"
-
-    if critical_failures:
-        report += f"## CRITICAL FAILURES ({len(critical_failures)})\n"
-        report += "These MUST be fixed before going to production:\n"
-        for cf in critical_failures:
-            report += f"- {cf}\n"
-        report += "\n"
-
-    if score == 100:
-        report += "## Status: READY FOR PRODUCTION\n"
-        report += "All checks passed. Proceed with:\n"
+    if passed == total:
+        report += "\n**Next steps:**\n"
         report += "1. Switch `JUSPAY_BASE_URL` to `https://api.juspay.in`\n"
         report += "2. Update SDK environment to `production`\n"
-        report += "3. Use production API keys from Juspay Dashboard\n"
-        report += "4. Run a live test transaction with a real payment method\n\n"
-    elif critical_failures:
-        report += "## Status: NOT READY - CRITICAL ISSUES\n"
-        report += "Fix the critical failures listed above before proceeding.\n\n"
-    else:
-        report += "## Status: MOSTLY READY - MINOR ISSUES\n"
-        report += "No critical failures, but fix the remaining issues for a complete migration.\n\n"
-
-    report += "## Detailed Results\n\n"
-    report += "```\n"
-    for check in checks:
-        report += check + "\n"
-    report += "```\n\n"
-
-    report += "## Next Steps\n\n"
-    if not sandbox_tested:
-        report += "1. **Test in sandbox** - Use Juspay's Dummy PG for end-to-end testing\n"
-        report += f"   Fetch test resources: `fetch_docs(\"{JUSPAY_DOC_BASE}/{platform_label}/resources/test-resources.md\")`\n\n"
-    if failed > 0:
-        report += "For any FAIL items above, use `fetch_docs` with the provided documentation URL to get detailed implementation guidance.\n\n"
-    report += (
-        "For comprehensive validation, also verify:\n"
-        f"- Sample payloads: `fetch_docs(\"{JUSPAY_DOC_BASE}/{platform_label}/resources/sample-payloads.md\")`\n"
-        f"- Error codes: `fetch_docs(\"{JUSPAY_DOC_BASE}/{platform_label}/resources/error-codes.md\")`\n"
-        f"- Transaction statuses: `fetch_docs(\"{JUSPAY_DOC_BASE}/{platform_label}/resources/transaction-status.md\")`\n"
-    )
+        report += "3. Use production API keys\n"
 
     return report
 
