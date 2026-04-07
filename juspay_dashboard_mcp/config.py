@@ -63,10 +63,7 @@ def get_common_headers(payload: dict, meta_info: dict = None):
     
     # For OAuth auth_type, use Authorization header (token already includes "Bearer " prefix)
     # Otherwise, use x-web-logintoken header
-    if auth_type == "oauth":
-        default_headers["Authorization"] = token
-    else:
-        default_headers["x-web-logintoken"] = f"{token}"
+    default_headers["x-web-logintoken"] = f"{token}"
 
     # Always include x-tenant-id from meta_info if available
     if meta_info and meta_info.get("tenant_id"):
