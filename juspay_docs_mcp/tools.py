@@ -35,6 +35,7 @@ instructions = [
     "1. Payment-Page / Express Checkout : Hosted UI which merchant can use with a single call to Juspay SDK",
     "2. Headless Express Checkout : An SDK which simplifies the contract to all Juspay APIs with some basic UIs like loader, OTP screen etc. The merchant builds their own payment page but invoke corresponding function on the Headless SDK to handle invoking Juspay Payment APIs",
     "3. API Integration: S2S integration where merchant directly calls Juspay Rest APIs",
+    "Juspay also provides some specific SDKs for specific payment methods like UPI TPAP SDK, UPI Plugin SDK, BNPL SDK etc. which are basically built on top of the above 3 types of integrations with some specific features for that payment method. For example UPI TPAP SDK is basically a wrapper on top of Headless SDK with some specific features to handle UPI payments and make it seamless for merchants to integrate UPI payments.",
     "",
     "The Juspay SDKs are cross platform built on inhouse build cross-platform framework like react-native. When a merchant wants to interact with Juspay SDKs, the communication is divided into two actions `initiate` and `process`. This contract in seamless across SDKs either payment-page or headless integrations.",
     "When a merchant is using payment-page, the merchant call initiate and process calls on Juspay SDK with a service identifier of `in.juspay.hyperpay`, which loads Juspay's native UI on a specific platform. On attempting payment from Juspay's UI the corresponding actions are invoked on the headless SDK by the Juspay Payment Page to do payment / call  Juspay APIs.",
@@ -51,7 +52,7 @@ instructions = [
     "**STOP: Before providing ANY integration guidance or using documentation tools, you MUST gather these details:**",
     "Required Information:",
     "1. **merchant_id** - Juspay merchant identifier",
-    "2. **integration_type** - Payment Page / Headless / API",
+    "2. **integration_type** - Payment Page / Headless / API / UPI TPAP / UPI Plugin",
     "3. **platform** - iOS / Android / Web / React Native",
     "4. **auth_method** - Signature-based or API Key-based",
     "5. **backend_endpoint** - (if signature auth) Merchant's order creation API",
@@ -83,6 +84,16 @@ doc_sources = [
         "name": "Name: Juspay EC - Express Checkout Headless Docs\n\nOfficial documentation of Juspay Express Checkout. Documentation contains info about the Juspay EC Headless APIs including wallets, cards, UPI, Netbanking, BNPL, Rewards payment methods and other payment services. To navigate this effectively, try to narrow down the platform, environment required.",
         "llms_txt": "https://juspay.io/in/docs/ec-headless/llms.txt",
         "description": "Official documentation of Juspay EC Headless. Documentation contains info about the Juspay EC Headless APIs including wallets, cards, UPI, Netbanking, BNPL, Rewards payment methods and other payment services. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI TPAP SDK Docs\n\nOfficial documentation of Juspay UPI TPAP SDK. UPI TPAP SDK by Juspay is a developer toolkit that enables Third-Party Application Providers (TPAPs) to integrate UPI payment capabilities directly into their applications. To navigate this effectively, try to narrow down the platform, environment required.",
+        "llms_txt": "https://juspay.io/in/docs/upi-tpap-sdk/llms.txt",
+        "description": "Official documentation of Juspay UPI TPAP SDK. UPI TPAP SDK by Juspay is a developer toolkit that enables Third-Party Application Providers (TPAPs) to integrate UPI payment capabilities directly into their applications. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI Plugin SDK Docs\n\nOfficial documentation of Juspay UPI Plugin SDK. SDK that lets apps embed native, in-app UPI payments (no redirection) with a ready UI and full payment flow handling.. To navigate this effectively, try to narrow down the platform, environment required.",
+        "llms_txt": "https://juspay.io/in/docs/upi-plugin-sdk/llms.txt",
+        "description": "Official documentation of Juspay UPI Plugin SDK. SDK that lets apps embed native, in-app UPI payments (no redirection) with a ready UI and full payment flow handling. To navigate this effectively, try to narrow down the platform, environment required."
     },
     {
         "name": "Name: Juspay Airborne \n Airborne empowers developers to effortlessly integrate Over-The-Air (OTA) update capabilities into their Android, iOS, and React Native applications",

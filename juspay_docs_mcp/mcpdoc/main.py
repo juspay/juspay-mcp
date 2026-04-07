@@ -226,8 +226,8 @@ def create_server(
             Field(description="The merchant identifier for the merchant, merchants can get this from their Juspay dashboard"),
         ],
         integration_type: Annotated[
-            Literal["payment-page-cat", "payment-page-signature", "express-checkout", "api"],
-            Field(description="The type of integration being used, options: payment-page-cat: Juspay Payment Page with Client Auth Token (CAT) based authentication, payment-page-signature: Juspay Payment Page with Signature based authentication, express-checkout: Juspay Express Checkout (Headless SDK), api: Juspay Server-to-Server API integration, only for backend"),
+            Literal["payment-page-cat", "payment-page-signature", "express-checkout", "api", "upi-tpap-sdk", "upi-plugin-sdk"],
+            Field(description="The type of integration being used, options: payment-page-cat: Juspay Payment Page with Client Auth Token (CAT) based authentication, payment-page-signature: Juspay Payment Page with Signature based authentication, express-checkout: Juspay Express Checkout (Headless SDK), api: Juspay Server-to-Server API integration, only for backend, upi-tpap-sdk: Juspay UPI TPAP SDK integration, upi-plugin-sdk: Juspay UPI Plugin SDK integration"),
         ],
         ec_flow: Annotated[
             Optional[
@@ -268,6 +268,8 @@ def create_server(
                 payment-page-signature: Juspay Payment Page with Signature based authentication
                 express-checkout: Juspay Express Checkout (Headless SDK)
                 api: Juspay Server-to-Server API integration, only for backend
+                upi-tpap-sdk: Juspay UPI TPAP SDK integration
+                upi-plugin-sdk: Juspay UPI Plugin SDK integration
             ecFlow: (Optional) Required only for express-checkout flows, specify the express checkout flow for which documentation is requested
         Returns:
             A string containing a formatted list of documentation sources with their URLs or file paths
