@@ -118,6 +118,7 @@ def _get_server_instructions(doc_sources: list[DocSource], server_instructions: 
         "Pass the platform, clientId, merchantId and integrationType to get relevant documentation source URLs or file paths.",
         "It's CRITICAL for you to ask for clientId, merchantId and integrationType to get the most relevant documentation source.",
         "DO NOT PASS ANY PLACEHOLDERS for clientId, merchantId and integrationType, ALWAYS ASK THE USER TO PROVIDE ACTUAL VALUES.",
+        "For UPI SDK integrations (upi-tpap-sdk, upi-plugin-sdk), you MUST also ask for auth_type (cat, rsa, or direct-jws) and issuing_psp (the issuing PSP identifier, e.g., YBL, ICICI, AXIS). These are required and issuing_psp cannot be mocked.",
         "This tool will return a URL for each documentation source.",
     ]
 
@@ -234,7 +235,17 @@ def create_server(
                 Literal["payment-options", "cards", "upi", "wallets", "netbanking", "native-otp", "juspay-safe", "cred-checkout", "consumer-finance", "enach"]
             ],
             Field(description="Required only for express-checkout flows or if integrationType is express-checkout, specify the express checkout flow for which documentation is requested, options: payment-options, cards, upi, wallets, netbanking, native-otp, juspay-safe, cred-checkout, consumer-finance, enach"),
-        ] = None
+        ] = None,
+        auth_type: Annotated[
+            Optional[
+                Literal["cat", "rsa", "direct-jws"]
+            ],
+            Field(description="Required for UPI SDK integrations (upi-tpap-sdk, upi-plugin-sdk). The authentication model: cat (API Key-based, routed through Juspay backend), rsa (Signature-based, routed through Juspay backend), direct-jws (PSP-direct, JWS signed by app/bank, no Juspay backend). For non-UPI integrations this is determined by the integration_type itself."),
+        ] = None,
+        issuing_psp: Annotated[
+            Optional[str],
+            Field(description="Required for UPI SDK integrations (upi-tpap-sdk, upi-plugin-sdk). The issuing PSP (Payment Service Provider) identifier for the merchant's UPI integration. Merchants must provide this value — it cannot be mocked. Examples: 'YBL', 'ICICI', 'AXIS', etc."),
+        ] = None,
     ) -> str:
         """
         List all available documentation sources.
@@ -252,12 +263,19 @@ def create_server(
 
         Always ask for ecFlow if integrationType is express-checkout, to get the most relevant documentation source. This is critical step as it helps determine which instrument they want to integrate. DO NOT proceed if no ecFlow is provided in case of integrationType is express-checkout.
 
+        For UPI SDK integrations (upi-tpap-sdk, upi-plugin-sdk), ALWAYS ask for:
+        - auth_type: The authentication model (cat, rsa, or direct-jws). This determines which documentation source to use.
+        - issuing_psp: The issuing PSP identifier. This is required for UPI integrations and cannot be mocked.
+        DO NOT proceed with UPI SDK integrations without both auth_type and issuing_psp.
+
         Guidelines:
         - Always ask for platform, clientId, merchantId and integrationType to get the most relevant documentation source.
         - DO NOT PASS ANY PLACEHOLDERS for clientId, merchantId and integrationType, ALWAYS ASK THE USER TO PROVIDE ACTUAL VALUES.
         - If integrationType is express-checkout, ALWAYS ask for ecFlow to get the most relevant documentation source.
-        - It's important to note that while mocking also, you can never mock client id and merchant id. These are unique identifiers assigned to each merchant by Juspay and are essential for processing payments and identifying the merchant's account within the Juspay system.
-        - You can only mock data in payloads like amount, order id, customer details, payment method details etc. But client id and merchant id must always be valid and correspond to an actual merchant account in Juspay's system.
+        - If integrationType is upi-tpap-sdk or upi-plugin-sdk, ALWAYS ask for auth_type and issuing_psp.
+        - issuing_psp cannot be mocked — it must be a real PSP identifier provided by the merchant.
+        - It's important to note that while mocking also, you can never mock client id, merchant id, or issuing_psp. These are unique identifiers and are essential for processing payments and identifying the merchant's account within the Juspay system.
+        - You can only mock data in payloads like amount, order id, customer details, payment method details etc. But client id, merchant id, and issuing_psp must always be valid.
         
         Args:
             platform: The platform for which documentation is requested (android, ios, react_native, web)
@@ -271,9 +289,18 @@ def create_server(
                 upi-tpap-sdk: Juspay UPI TPAP SDK integration
                 upi-plugin-sdk: Juspay UPI Plugin SDK integration
             ecFlow: (Optional) Required only for express-checkout flows, specify the express checkout flow for which documentation is requested
+            auth_type: (Optional) Required for UPI SDK integrations. Authentication model: cat, rsa, or direct-jws
+            issuing_psp: (Optional) Required for UPI SDK integrations. The issuing PSP identifier (e.g., YBL, ICICI, AXIS)
         Returns:
             A string containing a formatted list of documentation sources with their URLs or file paths
         """
+
+        # Validate UPI-specific required parameters
+        is_upi_integration = integration_type in ("upi-tpap-sdk", "upi-plugin-sdk")
+        if is_upi_integration and not auth_type:
+            return "Error: auth_type is required for UPI SDK integrations (upi-tpap-sdk, upi-plugin-sdk). Please ask the merchant for their authentication model: cat (API Key), rsa (Signature), or direct-jws (PSP-direct JWS)."
+        if is_upi_integration and not issuing_psp:
+            return "Error: issuing_psp is required for UPI SDK integrations (upi-tpap-sdk, upi-plugin-sdk). Please ask the merchant to provide their issuing PSP identifier (e.g., YBL, ICICI, AXIS). This cannot be mocked."
 
         content = f"""
         Use below for replacing placeholders:
@@ -282,16 +309,41 @@ def create_server(
         Try finding the most relevant documentation source based on the platform (e.g., Android, iOS, Web), integration type (e.g., payment-page, express-checkout, api), and merchantId provided.
         Integration type provided: {integration_type}
         EC Flow provided: {ec_flow}
+        Auth Type provided: {auth_type}
+        Issuing PSP provided: {issuing_psp}
         """
+        # Filter doc sources based on integration type and auth_type
+        # For UPI integrations, only return the relevant doc source based on auth_type
+        upi_doc_mapping = {
+            # (integration_type, auth_type) -> list of keywords to match in doc source name
+            ("upi-tpap-sdk", "cat"): ["TPAP SDK Docs (CAT/RSA)"],
+            ("upi-tpap-sdk", "rsa"): ["TPAP SDK Docs (CAT/RSA)"],
+            ("upi-tpap-sdk", "direct-jws"): ["TPAP Direct SDK Docs (Direct - JWS)"],
+            ("upi-plugin-sdk", "cat"): ["Plugin SDK Docs (CAT/RSA)"],
+            ("upi-plugin-sdk", "rsa"): ["Plugin SDK Docs (CAT/RSA)"],
+            ("upi-plugin-sdk", "direct-jws"): ["Plugin Direct PSP Docs (Direct - JWS)"],
+        }
+
+        upi_keywords = ["UPI TPAP", "UPI Plugin", "UPI Bank Integration"]
+
         for entry_ in doc_sources:
             url_or_path = entry_["llms_txt"]
+            name = entry_.get("name", extract_domain(url_or_path) if _is_http_or_https(url_or_path) else os.path.basename(url_or_path))
+
+            # For UPI integrations, filter to only show relevant doc sources
+            if is_upi_integration:
+                matching_keywords = upi_doc_mapping.get((integration_type, auth_type), [])
+                if not any(kw in name for kw in matching_keywords):
+                    continue
+            else:
+                # For non-UPI integrations, exclude UPI-specific doc sources
+                if any(kw in name for kw in upi_keywords):
+                    continue
 
             if _is_http_or_https(url_or_path):
-                name = entry_.get("name", extract_domain(url_or_path))
                 content += f"{name}\nURL: {url_or_path}\n\n"
             else:
                 path = _normalize_path(url_or_path)
-                name = entry_.get("name", path)
                 content += f"{name}\nPath: {path}\n\n"
         return content
 
