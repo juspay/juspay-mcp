@@ -9,8 +9,8 @@ from typing import List, Optional
 from juspay_mcp.api_schema.routing import WithRoutingId
 
 class JuspaySavedPaymentMethodsPayload(WithRoutingId):
-    customer_id: str = Field(..., description="Unique identifier of the customer whose payment methods to retrieve.")
-    payment_method: List[str] = Field(["UPI_COLLECT"], description="List of payment method types to retrieve.", enum=["UPI_COLLECT"])
+    customer_id: Optional[str] = Field(None, description="Unique identifier of the customer whose payment methods to retrieve.")
+    payment_method: Optional[List[str]] = Field(["UPI_COLLECT"], description="List of payment method types to retrieve.", enum=["UPI_COLLECT"])
 
 
 class JuspayUpiCollectPayload(WithRoutingId):
@@ -31,4 +31,3 @@ class JuspayUpiIntentPayload(WithRoutingId):
     upi_app: Optional[str] = Field(None, description="Specific UPI app to open (e.g., 'com.phonepe.app').")
     sdk_params: bool = Field(True, description="Whether to include SDK parameters in the response.")
     redirect_after_payment: bool = Field(True, description="Whether to redirect after payment.")
-

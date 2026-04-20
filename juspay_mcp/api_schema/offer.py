@@ -4,13 +4,13 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from juspay_mcp.api_schema.routing import WithRoutingId
 
 class OrderInfo(BaseModel):
     order_id: str = Field(..., description="Unique identifier for the order.")
-    amount: str = Field(..., description="Order amount as a string (e.g., '12000').")
+    amount: Union[str, int, float] = Field(..., description="Order amount as a string, int, or float (e.g., '12000', 12000, 12000.50).")
     currency: str = Field(..., description="Currency code (e.g., 'INR').")
 
 
