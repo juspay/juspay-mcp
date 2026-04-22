@@ -35,10 +35,12 @@ instructions = [
     "1. Payment-Page / Express Checkout : Hosted UI which merchant can use with a single call to Juspay SDK",
     "2. Headless Express Checkout : An SDK which simplifies the contract to all Juspay APIs with some basic UIs like loader, OTP screen etc. The merchant builds their own payment page but invoke corresponding function on the Headless SDK to handle invoking Juspay Payment APIs",
     "3. API Integration: S2S integration where merchant directly calls Juspay Rest APIs",
+    "Juspay also provides some specific SDKs for specific payment methods like UPI TPAP SDK, UPI Plugin SDK, BNPL SDK etc. which are basically built on top of the above 3 types of integrations with some specific features for that payment method. For example UPI TPAP SDK is basically a wrapper on top of Headless SDK with some specific features to handle UPI payments and make it seamless for merchants to integrate UPI payments.",
     "",
     "The Juspay SDKs are cross platform built on inhouse build cross-platform framework like react-native. When a merchant wants to interact with Juspay SDKs, the communication is divided into two actions `initiate` and `process`. This contract in seamless across SDKs either payment-page or headless integrations.",
     "When a merchant is using payment-page, the merchant call initiate and process calls on Juspay SDK with a service identifier of `in.juspay.hyperpay`, which loads Juspay's native UI on a specific platform. On attempting payment from Juspay's UI the corresponding actions are invoked on the headless SDK by the Juspay Payment Page to do payment / call  Juspay APIs.",
     "When a merchant wants to use headless SDK, they use `in.juspay.ec` as the service identifies and directly call the headless SDK.",
+    "HyperUPI SDKs (TPAP, Plugin, Bank Integration) always use service identifier `in.juspay.hyperapi` regardless of auth model.",
     "All SDKs actions are process calls which only works when a Juspay SDK is initiated, so on load of merchant cart view, merchant is advised to initiate Juspay SDKs (which doesn't render any UI) and on corresponding user actions merchant do the process calls to finally load payment-page or do the payment in headless mode.",
     "Invoking Juspay SDKs invoke `initiate` & `process` in the correct order, to receive updates / responses from Juspay SDKs, callbacks are used. A merchant on instantiating Juspay SDK registers a callback which gets updates in a specific format depending on the action. The callback is very important to accurately handle journeys from merchant UI to Juspay UI and back. For example backpress actions, API responses, use payment responses (process_result) all are supposed to be handled within this callback.",
     "This is a high level brief intro to how Juspay SDKs are supposed to be used, read the documentation to fully understand the integrations with examples payloads for different payment-methods",
@@ -51,9 +53,9 @@ instructions = [
     "**STOP: Before providing ANY integration guidance or using documentation tools, you MUST gather these details:**",
     "Required Information:",
     "1. **merchant_id** - Juspay merchant identifier",
-    "2. **integration_type** - Payment Page / Headless / API",
-    "3. **platform** - iOS / Android / Web / React Native",
-    "4. **auth_method** - Signature-based or API Key-based",
+    "2. **integration_type** - Payment Page / Headless / API / UPI TPAP / UPI TPAP Direct / UPI Plugin / UPI Plugin Direct / UPI Bank Integration",
+    "3. **platform** - iOS / Android / Web / React Native (note: UPI Bank Integration only supports React Native)",
+    "4. **auth_method** - Signature-based or API Key-based. For HyperUPI SDKs also ask: CAT (API Key) / RSA (Signature) for standard Juspay backend auth, or Direct (JWS) for PSP-direct",
     "5. **backend_endpoint** - (if signature auth) Merchant's order creation API",
     "",
     "To navigate the documentations and handle user queries about Juspay SDKs / APIs: ",
@@ -83,6 +85,31 @@ doc_sources = [
         "name": "Name: Juspay EC - Express Checkout Headless Docs\n\nOfficial documentation of Juspay Express Checkout. Documentation contains info about the Juspay EC Headless APIs including wallets, cards, UPI, Netbanking, BNPL, Rewards payment methods and other payment services. To navigate this effectively, try to narrow down the platform, environment required.",
         "llms_txt": "https://juspay.io/in/docs/ec-headless/llms.txt",
         "description": "Official documentation of Juspay EC Headless. Documentation contains info about the Juspay EC Headless APIs including wallets, cards, UPI, Netbanking, BNPL, Rewards payment methods and other payment services. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI TPAP SDK Docs (CAT/RSA)\n\nOfficial documentation of Juspay UPI TPAP SDK using CAT (API Key) or RSA (Signature) authentication via Juspay's backend. UPI TPAP SDK by Juspay is a developer toolkit that enables Third-Party Application Providers (TPAPs) to integrate UPI payment capabilities directly into their applications. To navigate this effectively, try to narrow down the platform, environment required.",
+        "llms_txt": "https://juspay.io/in/docs/upi-tpap-sdk/llms.txt",
+        "description": "Official documentation of Juspay UPI TPAP SDK (CAT/RSA). Enables TPAP UPI integration using API Key or Signature-based auth routed through Juspay's backend. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI TPAP Direct SDK Docs (Direct - JWS)\n\nOfficial documentation of Juspay UPI TPAP Direct SDK using Direct authentication (JWS). UPI TPAP Direct SDK by Juspay is a developer toolkit that enables Third-Party Application Providers (TPAPs) to integrate UPI payment capabilities directly into their applications using JWS-based direct authentication. To navigate this effectively, try to narrow down the platform, environment required.",
+        "llms_txt": "https://juspay.io/in/docs/upi-tpap-direct-sdk/llms.txt",
+        "description": "Official documentation of Juspay UPI TPAP Direct SDK (Direct - JWS). Enables TPAP UPI integration using JWS-based direct authentication. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI Plugin SDK Docs (CAT/RSA)\n\nOfficial documentation of Juspay UPI Plugin SDK using CAT (API Key) or RSA (Signature) authentication via Juspay's backend. SDK that lets apps embed native, in-app UPI payments (no redirection) with a ready UI and full payment flow handling. To navigate this effectively, try to narrow down the platform, environment required.",
+        "llms_txt": "https://juspay.io/in/docs/upi-plugin-sdk/llms.txt",
+        "description": "Official documentation of Juspay UPI Plugin SDK (CAT/RSA). SDK that lets apps embed native, in-app UPI payments (no redirection) with a ready UI and full payment flow handling, using API Key or Signature-based auth routed through Juspay's backend. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI Plugin Direct PSP Docs (Direct - JWS)\n\nOfficial documentation of Juspay UPI Plugin Direct PSP using Direct authentication (JWS). SDK that lets PSP apps embed native, in-app UPI payments using JWS-based direct authentication with no redirection. To navigate this effectively, try to narrow down the platform, environment required.",
+        "llms_txt": "https://juspay.io/in/docs/upi-plugin-direct-psp/llms.txt",
+        "description": "Official documentation of Juspay UPI Plugin Direct PSP (Direct - JWS). Enables PSP UPI plugin integration using JWS-based direct authentication. To navigate this effectively, try to narrow down the platform, environment required."
+    },
+    {
+        "name": "Name: Juspay UPI Bank Integration Docs (Direct - JWS, React Native)\n\nOfficial documentation of Juspay UPI Bank Integration for React Native using Direct authentication (JWS). Covers pre-requisites, setup, and integration steps for banks integrating UPI payment capabilities via the React Native SDK. Only React Native platform is covered.",
+        "llms_txt": "https://juspay.io/in/docs/upi-bank-integration/react-native/llms.txt",
+        "description": "Official documentation of Juspay UPI Bank Integration (Direct - JWS, React Native only). Covers bank-side UPI integration using JWS-based direct authentication on React Native. To navigate this effectively, start with the pre-requisites and overview pages."
     },
     {
         "name": "Name: Juspay Airborne \n Airborne empowers developers to effortlessly integrate Over-The-Air (OTA) update capabilities into their Android, iOS, and React Native applications",
