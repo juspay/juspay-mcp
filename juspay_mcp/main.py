@@ -30,9 +30,11 @@ MCP_APPS = {}
 if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app as dashboard_app
     from juspay_docs_mcp.tools import app as docs_app
+    from juspay_docs_mcp.tools import app as migration_app
 
     MCP_APPS["dashboard"] = dashboard_app
     MCP_APPS["docs"] = docs_app
+    MCP_APPS["migration"] = migration_app
 else:
     # Single default FastMCP app
     from juspay_mcp.tools import app as default_app
@@ -103,7 +105,7 @@ def main(host: str, port: int, mode: str):
         sse_dashboard_endpoint_path = "/juspay-dashboard"
         streamable_dashboard_endpoint_path = "/juspay-dashboard-stream"
 
-        # Docs MCP
+        # Docs + Migration MCP (migration tools are part of the docs app)
         sse_docs_endpoint_path = "/juspay-docs"
         streamable_docs_endpoint_path = "/juspay-docs-stream"
     else:
@@ -245,10 +247,10 @@ def main(host: str, port: int, mode: str):
             async with contextlib.AsyncExitStack() as stack:
                 await stack.enter_async_context(dashboard_session_mgr.run())
                 logger.info("Dashboard StreamableHTTP session manager started")
-                
+
                 await stack.enter_async_context(docs_session_mgr.run())
                 logger.info("Docs StreamableHTTP session manager started")
-                
+
                 logger.info("All StreamableHTTP session managers started successfully")
                 yield
             logger.info("StreamableHTTP session managers stopped")
