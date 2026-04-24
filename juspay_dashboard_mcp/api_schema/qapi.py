@@ -13,6 +13,7 @@ from pydantic import BaseModel, RootModel, Field, ConfigDict, model_validator
 #################################
 
 MetricEnum = Literal[
+    # kvorders
     "total_amount",
     "success_volume",
     "success_rate",
@@ -21,8 +22,76 @@ MetricEnum = Literal[
     "average_latency",
     "order_with_transactions",
     "order_with_transactions_gmv",
+    "new_order",
+    "new_order_rate",
+    "tp_50_latency",
+    "tp_90_latency",
+    "tp_95_latency",
+    "tp_99_latency",
+    "tp_100_latency",
+    # kvrefundtxns
+    "total_volume",
+    "pending_rate",
+    "manual_review_rate",
+    "manual_review_count",
+    "refund_pending_5days",
+    "mean_turn_around_time",
+    "refund_arn_availability_volume",
+    "refund_arn_availability_rate",
+    "complete_refunds_volume",
+    # fulfillmentorders
+    "processed_amount",
+    "first_attempt_success_volume",
+    "first_attempt_success_rate",
+    "average_txn_latency",
+    "average_order_latency",
+    "failure_volume",
+    "reversed_volume",
+    "reversed_rate",
+    "fulfillment_txn_latency_metric",
+    "fulfillment_order_latency_metric",
+    # sdklogs
+    "total_order_volume",
+    "conversion_rate",
+    # kvcustomer
+    "total_customers",
+    "success_customers",
+    "success_amount",
+    "total_orders",
+    # kvmandates
+    "total_mandates",
+    "expired_mandates",
+    "revoked_mandates",
+    # mandateexecutionkv
+    "merchant_calls_notification_api",
+    "notification_sent_to_pg",
+    "notification_successful",
+    "merchant_calls_txns",
+    "mandate_execute_sent_to_pg",
+    "notification_retried_count",
+    "notification_retried_success_count",
+    "notification_retried_success_rate",
+    "mandate_execute_retried_count",
+    "mandate_execute_retried_success_count",
+    "mandate_execute_retried_success_rate",
+    "mandate_execute_retried_failure_count",
+    "mandate_execute_retried_failure_rate",
+    # kvtxns
+    "offer_availed_rate",
+    "saved_mandate_txns_volume",
+    "saved_mandate_txns_amount",
+    "saved_txns_volume",
+    "saved_txns_amount",
+    "saved_txns_amount_gateway",
+    "saved_txns_volume_gateway",
+    "started_txns_rate",
+    "juspay_declined_txns_rate",
+    # apirequests
+    "status_2xx_rate",
+    "status_4xx_rate",
+    "status_5xx_rate",
 ]
-Metric = Union[MetricEnum, List[MetricEnum]]
+Metric = Union[MetricEnum, str, List[Union[MetricEnum, str]]]
 
 #################################
 #            Dimensions          #
@@ -36,7 +105,7 @@ class Granularity(BaseModel):
 
 class DimensionObject(BaseModel):
     granularity: Granularity
-    intervalCol: Literal["order_created_at"]
+    intervalCol: str  # domain-specific timestamp column, e.g. order_created_at / txn_initiated / refund_date
     timeZone: Literal["Asia/Kolkata"]
 
 
@@ -141,7 +210,7 @@ DimensionString = Literal[
     "is_upicc",
 ]
 
-class DimensionList(RootModel[List[Union[DimensionString, DimensionObject]]]):
+class DimensionList(RootModel[List[Union[DimensionString, DimensionObject, str]]]):
     pass
 
 
@@ -375,7 +444,7 @@ class IsUpiccFilter(_EnumFilterBase):
 #  3. Generic catch‑all filter for everything else
 # ────────────────────────────────────────────────────────────────────────────────
 class FieldFilter(BaseModel):
-    field: FilterFieldDimensionEnum
+    field: str  # accepts any dimension from any domain (not just kvorders DimensionString)
     condition: FilterCondition
     val: Union[str, bool, float, None, List[Union[str, None, bool]], ValObject]
 
@@ -434,7 +503,7 @@ OrFilter.model_rebuild()
 
 
 class SortedOn(BaseModel):
-    sortDimension: MetricEnum
+    sortDimension: str  # any metric from any domain returned by qapi_info
     ordering: Literal["Asc", "Desc"]
 
 
@@ -484,19 +553,42 @@ class QApiCompareResponse(BaseModel):
 #################################
 
 
+QApiDomain = Literal[
+    "kvorders",
+    "kvtxns",
+    "kvrefundtxns",
+    "kvoffers",
+    "mandateexecutionkv",
+    "fulfillmentorders",
+    "sdklogs",
+    "kvcustomer",
+    "kvmandates",
+    "unauthtxns",
+    "apirequests",
+]
+
+
 class QApiPayload(BaseModel):
     """Pydantic model for the Q API payload"""
 
-    domain: Literal["kvorders"] = "kvorders"
+    domain: QApiDomain = "kvorders"
     metric: Metric
     interval: Interval
     filters: Optional[Filter] = None
     dimensions: DimensionList = []
     sortedOn: Optional[SortedOn] = None
 
+
 class ToolQApiPayload(BaseModel):
     """Pydantic model for the Tool Interface Q API payload"""
 
+    domain: QApiDomain = Field(
+        default="kvorders",
+        description=(
+            "Analytics domain to query. Use the domain returned by qapi_info. "
+            "Defaults to 'kvorders'."
+        ),
+    )
     metric: Metric
     interval: Interval
     filters: Optional[Filter] = None
@@ -605,7 +697,15 @@ class FieldLookupBatchResponse(RootModel[List[DimensionLookupResult]]):
 
 
 api_description = """
-    Calls an internal /q analytics API with the provided analytics payload. 
+    Calls an internal /q analytics API with the provided analytics payload.
+
+    MANDATORY CALL ORDERING: Always call tools in this sequence for analytics queries:
+      1. qapi_info                  — discover dimensions, filters, and metrics for the domain
+      2. qapi_field_value_discovery — look up valid filter values for specific dimensions (if needed)
+      3. q_api                      — execute the actual analytics query (this tool, step 3)
+
+    Never call q_api without first calling qapi_info for the same domain.
+
     REMEMBER! try to apply all required the filters, dimensions, etc. in least amount of function tool calls.
     CAN do more calls if all the filters, dimensions, etc. in the query's context are not possible in a single call.
 

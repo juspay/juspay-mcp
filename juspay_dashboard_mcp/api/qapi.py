@@ -23,6 +23,8 @@ from juspay_dashboard_mcp.api_schema.qapi import (
     QApiErrorResponse,
     QApiPayload,
 )
+from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
+from juspay_dashboard_mcp.api.utils import get_juspay_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -119,89 +121,71 @@ def convert_utc_to_ist_in_qapi_response(
         return response_json
 
 
-def call_query_api(payload: QApiPayload) -> dict:
+def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
     """
     Utility function to call the query API with the provided payload.
-
-    Args:
-        payload: The payload to send to the query API (QApiPayload model)
-
-    Returns:
-        The parsed response from the API as QApiResponse (either QApiSuccessResponse or QApiErrorResponse)
+    Resolves credentials via context var first, then meta_info, then env var fallback.
     """
+    serialized_payload = {}
     try:
-        # Create a serialized copy of the payload for the API
-        serialized_payload = {}
-
-        # Add domain and metric
         serialized_payload["domain"] = payload.domain
         serialized_payload["metric"] = payload.metric
 
-        # Process interval - ensure we convert datetimes to strings
         logging.info(
             f"QAPI Input: Original interval (IST expected): Start={payload.interval.start}, End={payload.interval.end}"
         )
-        interval_dict = {}
-        interval_dict["start"] = ist_to_utc(payload.interval.start)
-        interval_dict["end"] = ist_to_utc(payload.interval.end)
+        serialized_payload["interval"] = {
+            "start": ist_to_utc(payload.interval.start),
+            "end":   ist_to_utc(payload.interval.end),
+        }
         logging.info(
-            f"QAPI Call: Converted interval (UTC): Start={interval_dict['start']}, End={interval_dict['end']}"
+            f"QAPI Call: Converted interval (UTC): Start={serialized_payload['interval']['start']}, End={serialized_payload['interval']['end']}"
         )
-        serialized_payload["interval"] = interval_dict
 
-        # Process filters if present
         if payload.filters:
             serialized_payload["filters"] = payload.filters.model_dump(
                 mode="json", by_alias=True
             )
 
-        # Process dimensions
         serialized_payload["dimensions"] = (
             payload.dimensions.model_dump(mode="json", by_alias=True)
             if payload.dimensions
             else []
         )
 
-        # Process sortedOn if present
         if payload.sortedOn:
             serialized_payload["sortedOn"] = payload.sortedOn.model_dump(
                 mode="json", by_alias=True
             )
 
-        # Call the internal analytics API
-        logging.debug(f"QAPI Call: Sending payload: {serialized_payload}")
-        web_login_token = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
+        juspay_creds = get_juspay_credentials()
+        headers = get_common_headers({}, meta_info, juspay_creds)
+        headers["Content-Type"] = "application/json"
+
+        api_url = f"{JUSPAY_BASE_URL}/api/q/query"
+        logging.debug(f"QAPI Call: url={api_url} payload={serialized_payload}")
+
         response = requests.post(
-            "https://portal.juspay.in/api/q/query",
+            api_url,
             data=json_dumps_with_datetime(serialized_payload),
-            headers={
-                "X-Web-LoginToken": web_login_token,
-                "Content-Type": "application/json",
-            },
+            headers=headers,
         )
         logging.info(f"QAPI Response Raw (IST expected): {response.text}")
-        response.raise_for_status()  # Raise exception for HTTP errors
+        response.raise_for_status()
 
-        # Parse JSONL response
         response_json = [json.loads(line) for line in response.text.splitlines()]
         validated_response = QApiSuccessResponse.model_validate(response_json)
-        logging.info(
-            f"QAPI Return: Parsed response (IST expected): {validated_response}"
-        )
+        logging.info(f"QAPI Return: Parsed response (IST expected): {validated_response}")
         return validated_response.dict()
     except Exception as e:
         logging.error(f"Error calling query API: {str(e)}")
         return QApiErrorResponse(
             error=f"Failed to execute query: {str(e)}",
-            payload_attempted=(
-                serialized_payload
-                if "serialized_payload" in locals()
-                else payload.model_dump()
-            ),
+            payload_attempted=serialized_payload or payload.model_dump(),
         ).dict()
 
 
-async def q_api(payload: dict) -> QApiResponse:
+async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
     """
     Tool for querying data from the analytics API.
 
@@ -217,6 +201,7 @@ async def q_api(payload: dict) -> QApiResponse:
     Returns:
         QApiResponse with the query results (Timestamps should be IST)
     """
+    domain = payload.get("domain", "kvorders")
     metric = payload.get("metric")
     interval = payload.get("interval")
     dimensions = payload.get("dimensions")
@@ -224,11 +209,11 @@ async def q_api(payload: dict) -> QApiResponse:
     sortedOn = payload.get("sortedOn")
 
     logging.info(
-        f"QAPI Tool Input: Interval={interval}, Metric={metric}, Dimensions={dimensions}, Filters={filters}, SortedOn={sortedOn}"
+        f"QAPI Tool Input: Domain={domain}, Interval={interval}, Metric={metric}, Dimensions={dimensions}, Filters={filters}, SortedOn={sortedOn}"
     )
     # Construct the payload using the QApiPayload model with proper types
     q_api_payload = QApiPayload(
-        domain="kvorders",
+        domain=domain,
         metric=metric,
         interval=interval,
         filters=filters,
@@ -239,4 +224,4 @@ async def q_api(payload: dict) -> QApiResponse:
     # Log the payload for debugging
     logging.debug(f"QAPI Tool: Creating payload: {json.dumps(q_api_payload.model_dump())}")
 
-    return await asyncio.to_thread(call_query_api, q_api_payload)
+    return await asyncio.to_thread(call_query_api, q_api_payload, meta_info)
