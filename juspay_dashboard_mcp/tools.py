@@ -439,6 +439,54 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
         response_schema=None,
     ),
     util.make_api_config(
+        name="qapi_info",
+        description="""Returns the available dimensions, filters, and metrics for a given analytics domain.
+
+MANDATORY CALL ORDERING: Always call tools in this sequence for analytics queries:
+  1. qapi_info       — discover dimensions, filters, and metrics for the domain
+  2. qapi_field_value_discovery — look up valid filter values for specific dimensions (if needed)
+  3. q_api           — execute the actual analytics query
+
+Call this tool (step 1) before calling qapi_field_value_discovery or q_api for the same domain.
+
+Key features:
+- Lists all queryable dimensions and filters for the domain.
+- Lists all available metrics (hardcoded per domain).
+
+Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
+
+IMPORTANT: Never summarise the output — the exact field names are required for constructing downstream q_api queries.""",
+        model=api_schema.qapi_info.QApiInfoPayload,
+        handler=qapi_info.qapi_info,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="qapi_field_value_discovery",
+        description="""Fuzzy field-value lookup for dimensions in a given analytics domain.
+
+MANDATORY CALL ORDERING: Always call tools in this sequence for analytics queries:
+  1. qapi_info       — discover dimensions, filters, and metrics for the domain
+  2. qapi_field_value_discovery — look up valid filter values for specific dimensions (this tool, step 2)
+  3. q_api           — execute the actual analytics query
+
+This tool must only be called after qapi_info has been called for the same domain.
+Use it to discover valid filter values before building a q_api query.
+For each requested dimension it fetches candidate values from Q-API and ranks them against your
+search queries using fuzzy string matching.
+
+Key features:
+- Batch lookup: supply multiple dimension requests in a single call.
+- Fuzzy matching: ranks candidates by similarity to each query string.
+- Returns an unsupported_message for metrics, timestamp columns, or high-cardinality dimensions.
+
+Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
+
+IMPORTANT: Never summarise the output — exact values are required for q_api filters.""",
+        model=api_schema.qapi_info.QApiFieldValueDiscoveryPayload,
+        handler=qapi_info.qapi_field_value_discovery,
+        response_schema=None,
+    ),
+    util.make_api_config(
     name="rag_tool_juspay",
     description="Use this tool when you need to retrieve information about Juspay's products, services, APIs, integration guides, or technical documentation . The Data source for this tool is  https://juspay.io/in/docs (Juspay's Product Documentation) . This tool provides comprehensive info regarding Juspay's product documnetations.",
     model=api_schema.rag_tool.JuspayRagQueryPayload,
