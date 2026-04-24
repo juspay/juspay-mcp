@@ -530,13 +530,13 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         model_cls = tool_entry.get("model")
         if (model_cls):
             try:
-                payload = model_cls(**arguments)  
-                payload_dict = payload.dict(exclude_none=True) 
+                payload = model_cls(**arguments)
+                payload_dict = payload.dict(exclude_none=True)
             except Exception as e:
                 raise ValueError(f"Validation error: {str(e)}")
         else:
-            payload_dict = arguments 
-        
+            payload_dict = arguments
+
         juspay_creds = get_juspay_request_credentials()
         if juspay_creds:
             logger.info("Using header credentials for Juspay Dashboard API calls")
@@ -545,7 +545,7 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
             logger.info("No header credentials found, falling back to environment variables")
             set_juspay_credentials(None)
 
-        meta_info = arguments.pop("juspay_meta_info", None)
+        meta_info = payload_dict.pop("juspay_meta_info", None)
 
         sig = inspect.signature(handler)
         param_count = len(sig.parameters)
@@ -554,13 +554,13 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
             response = await handler()
 
         elif param_count == 1:
-            if arguments or not meta_info:
-                response = await handler(arguments)
+            if payload_dict or not meta_info:
+                response = await handler(payload_dict)
             else:
                 response = await handler(meta_info)
 
         elif param_count == 2:
-            response = await handler(arguments, meta_info)
+            response = await handler(payload_dict, meta_info)
 
         else:
             raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
