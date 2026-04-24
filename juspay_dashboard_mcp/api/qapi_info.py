@@ -157,19 +157,19 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
 
     # Fetch domain info to validate dimensions
     info_url = f"{JUSPAY_BASE_URL}/api/q/query?api=info&domain={domain}"
-    info_dimensions: set[str] = set()
+    info_fields: set[str] = set()
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(info_url, headers=headers)
             resp.raise_for_status()
             raw = resp.json()
-            info_dimensions = set(raw.get("dimension", []))
+            info_fields = set(raw.get("dimension", [])) | set(raw.get("filter", []))
     except Exception as e:
         logger.error(f"qapi_field_value_discovery: failed to fetch info for domain={domain}: {e}")
 
     valid_metrics = set(DOMAIN_METRICS.get(domain, []))
     ts_col = DOMAIN_TIMESTAMP_COLUMNS.get(domain, DOMAIN_TIMESTAMP_COLUMNS["default"])
-    supported_dimensions = info_dimensions - HIGH_CARDINALITY_DIMENSIONS
+    supported_dimensions = info_fields - HIGH_CARDINALITY_DIMENSIONS
 
     results = []
     for req in requests_list:

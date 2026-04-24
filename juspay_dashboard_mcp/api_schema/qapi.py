@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+import json as _json
 from typing import List, Literal, Union, Dict, Any, Optional
 from datetime import datetime
 from pydantic import BaseModel, RootModel, Field, ConfigDict, model_validator
@@ -589,11 +590,25 @@ class ToolQApiPayload(BaseModel):
             "Defaults to 'kvorders'."
         ),
     )
-    metric: Metric
-    interval: Interval
-    filters: Optional[Filter] = None
-    dimensions: DimensionList = []
-    sortedOn: Optional[SortedOn] = None
+    metric: Union[Metric, str, List[str]]
+    interval: Union[Interval, str]
+    filters: Optional[Union[Filter, str]] = None
+    dimensions: Union[DimensionList, str] = []
+    sortedOn: Optional[Union[SortedOn, str]] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def coerce_json_strings(cls, values):
+        for field in ('interval', 'filters', 'dimensions', 'sortedOn', 'metric'):
+            v = values.get(field)
+            if isinstance(v, str):
+                try:
+                    parsed = _json.loads(v)
+                    if isinstance(parsed, (dict, list)):
+                        values[field] = parsed
+                except (ValueError, TypeError):
+                    pass
+        return values
 
 
 
