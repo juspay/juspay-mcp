@@ -545,7 +545,7 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
             logger.info("No header credentials found, falling back to environment variables")
             set_juspay_credentials(None)
 
-        meta_info = payload_dict.pop("juspay_meta_info", None)
+        meta_info = arguments.pop("juspay_meta_info", None)
 
         sig = inspect.signature(handler)
         param_count = len(sig.parameters)
