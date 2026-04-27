@@ -14,7 +14,7 @@ import contextlib
 
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -84,7 +84,7 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
 
 @click.command()
 @click.option("--host", default="0.0.0.0", help="Host to bind the server to.")
-@click.option("--port", default=8080, type=int, help="Port to listen on for SSE.")
+@click.option("--port", default=3000, type=int, help="Port to listen on for SSE.")
 @click.option("--mode", default="http", type=click.Choice(['http', 'stdio']), 
               help="Server mode: 'http' for HTTP/SSE server or 'stdio' for stdio server.")
 def main(host: str, port: int, mode: str):
@@ -168,8 +168,6 @@ def main(host: str, port: int, mode: str):
         """
         Returns a Route-compatible endpoint function + its StreamableHTTPSessionManager,
         both bound to a specific MCP app.
-        
-        Uses Route instead of Mount to avoid 307 trailing slash redirects.
         """
         active_app = MCP_APPS[active_app_key]
 
@@ -179,6 +177,11 @@ def main(host: str, port: int, mode: str):
             json_response=True,
             stateless=True,
         )
+
+        class _AlreadySentResponse(Response):
+            """No-op response — session_manager already wrote to send."""
+            async def __call__(self, scope, receive, send):
+                pass
 
         async def handle_streamable_http(request: Request):
             """Route-compatible endpoint for StreamableHTTP that handles credential injection."""
@@ -200,8 +203,9 @@ def main(host: str, port: int, mode: str):
             juspay_creds = getattr(request.state, "juspay_credentials", None)
             set_juspay_request_credentials(juspay_creds)
 
-            # Call session manager with the request's scope, receive, send
+            # session_manager writes the full HTTP response directly to send
             await session_manager.handle_request(request.scope, request.receive, request._send)
+            return _AlreadySentResponse()
 
         return handle_streamable_http, session_manager
 
@@ -242,15 +246,12 @@ def main(host: str, port: int, mode: str):
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for multiple MCP apps."""
-            async with contextlib.AsyncExitStack() as stack:
-                await stack.enter_async_context(dashboard_session_mgr.run())
+            async with dashboard_session_mgr.run():
                 logger.info("Dashboard StreamableHTTP session manager started")
-                
-                await stack.enter_async_context(docs_session_mgr.run())
-                logger.info("Docs StreamableHTTP session manager started")
-                
-                logger.info("All StreamableHTTP session managers started successfully")
-                yield
+                async with docs_session_mgr.run():
+                    logger.info("Docs StreamableHTTP session manager started")
+                    logger.info("All StreamableHTTP session managers started successfully")
+                    yield
             logger.info("StreamableHTTP session managers stopped")
 
     else:
@@ -271,8 +272,7 @@ def main(host: str, port: int, mode: str):
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for single MCP app."""
-            async with contextlib.AsyncExitStack() as stack:
-                await stack.enter_async_context(default_session_mgr.run())
+            async with default_session_mgr.run():
                 logger.info("StreamableHTTP session manager started successfully")
                 yield
             logger.info("StreamableHTTP session manager stopped")
