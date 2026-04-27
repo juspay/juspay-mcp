@@ -84,7 +84,7 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
 
 @click.command()
 @click.option("--host", default="0.0.0.0", help="Host to bind the server to.")
-@click.option("--port", default=3000, type=int, help="Port to listen on for SSE.")
+@click.option("--port", default=8080, type=int, help="Port to listen on for SSE.")
 @click.option("--mode", default="http", type=click.Choice(['http', 'stdio']), 
               help="Server mode: 'http' for HTTP/SSE server or 'stdio' for stdio server.")
 def main(host: str, port: int, mode: str):
