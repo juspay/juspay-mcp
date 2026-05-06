@@ -310,17 +310,8 @@ def main(host: str, port: int, mode: str):
                 if docs_v2_session_mgr is not None:
                     await stack.enter_async_context(docs_v2_session_mgr.run())
                     logger.info("Docs v2 StreamableHTTP session manager started")
-                if oauth_state_store is not None:
-                    await oauth_state_store.start()
-                    logger.info("OAuth state store sweeper started")
                 logger.info("All StreamableHTTP session managers started successfully")
-                try:
-                    yield
-                finally:
-                    if oauth_state_store is not None:
-                        await oauth_state_store.stop()
-                    if portal_client is not None:
-                        await portal_client.aclose()
+                yield
             logger.info("StreamableHTTP session managers stopped")
 
     else:
