@@ -76,14 +76,21 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
 
     default_headers["x-web-logintoken"] = token
 
-    if payload.get("tenant_id"):
-        default_headers["x-tenant-id"] = payload.pop("tenant_id")
+    # Some Juspay endpoints (e.g. integration monitoring) take a list as the
+    # request body. The header-from-payload extraction below only makes sense
+    # for dict bodies — guard accordingly so list payloads no longer crash
+    # with `'list' object has no attribute 'get'`.
+    if isinstance(payload, dict):
+        if payload.get("tenant_id"):
+            default_headers["x-tenant-id"] = payload.pop("tenant_id")
 
-    if payload.get("cookie"):
-        default_headers["cookie"] = payload.pop("cookie")
+        if payload.get("cookie"):
+            default_headers["cookie"] = payload.pop("cookie")
 
-    if payload.get("x-source-id"):
-        default_headers["x-source-id"] = payload.pop("x-source-id")
+        if payload.get("x-source-id"):
+            default_headers["x-source-id"] = payload.pop("x-source-id")
+        else:
+            default_headers["x-source-id"] = "juspay-mcp"
     else:
         default_headers["x-source-id"] = "juspay-mcp"
 
