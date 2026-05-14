@@ -56,8 +56,8 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
     juspay_creds = get_juspay_credentials()
     if not juspay_creds and meta_info:
         juspay_creds = meta_info.get("juspay_credentials")
-    
-    headers = get_common_headers(payload, meta_info, juspay_creds) 
+
+    headers = get_common_headers(payload, meta_info, juspay_creds)
 
     if additional_headers:
         headers.update(additional_headers)
@@ -76,6 +76,42 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
             raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {e}")
+            raise Exception(f"Failed to call Juspay API: {e}") from e
+
+
+async def put(api_url: str, payload: dict, additional_headers: dict = None, meta_info: dict = None):
+    """PUT a JSON body to a Juspay dashboard endpoint.
+
+    Same auth/header plumbing as `post()`. Tolerant of non-JSON response
+    bodies — some Portal endpoints return a plain `"Success"` string instead
+    of a JSON object; we fall back to the raw text so the tool can return
+    something useful either way.
+    """
+    juspay_creds = get_juspay_credentials()
+    if not juspay_creds and meta_info:
+        juspay_creds = meta_info.get("juspay_credentials")
+
+    headers = get_common_headers(payload, meta_info, juspay_creds)
+    if additional_headers:
+        headers.update(additional_headers)
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            logger.info(f"PUT {api_url} body={payload} headers={headers}")
+            response = await client.put(api_url, headers=headers, json=payload)
+            response.raise_for_status()
+            try:
+                response_data = response.json()
+            except ValueError:
+                response_data = response.text
+            logger.info(f"API Response: {response_data}")
+            return response_data
+        except httpx.HTTPStatusError as e:
+            error_content = e.response.text if e.response else "Unknown error"
+            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
+            raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
+        except Exception as e:
+            logger.error(f"Error during Juspay PUT call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
         
 
@@ -101,6 +137,11 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     
     token_response = (meta_info or {}).get("token_response") or {}
     auth_type = token_response.get("auth_type")
+    # Fall back to the request-scoped creds dict — OAuth bearer middleware
+    # tags it with auth_type="oauth" so tools don't have to receive meta_info
+    # explicitly to choose the OAuth validation endpoint.
+    if not auth_type and juspay_creds:
+        auth_type = juspay_creds.get("auth_type")
 
     try:
         if auth_type == "oauth":
@@ -172,6 +213,11 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
 
     token_response = (meta_info or {}).get("token_response") or {}
     auth_type = token_response.get("auth_type")
+    # Fall back to the request-scoped creds dict — OAuth bearer middleware
+    # tags it with auth_type="oauth" so tools don't have to receive meta_info
+    # explicitly to choose the OAuth validation endpoint.
+    if not auth_type and juspay_creds:
+        auth_type = juspay_creds.get("auth_type")
 
     try:
         if auth_type == "oauth":

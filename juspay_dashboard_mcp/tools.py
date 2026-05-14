@@ -33,6 +33,18 @@ def get_juspay_request_credentials():
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
+        name="juspay_get_merchant_details",
+        description="""Return merchant and user session details for the authenticated caller.
+
+Key features:
+- Returns merchantId, userId, email, username, tenantAccountId, validHost, and the caller's context (MERCHANT / TENANT / RESELLER / JUSPAY).
+- Takes no input — all information is derived from the active session.
+
+Use this when the user asks who they are, which merchant or tenant they're logged in as, what their merchant ID / user ID / tenant ID is, or to confirm session context before performing privileged actions.""",
+        model=api_schema.account.JuspayGetMerchantDetailsPayload,
+        handler=account.get_merchant_details_juspay,
+    ),
+    util.make_api_config(
         name="juspay_list_configured_gateway",
         description="""Use this tool when asked about the list of payment gateways . Retrieves a list of all payment gateways (PGs) configured for a merchant, including high-level details such as gateway reference ID, creation/modification dates, configured payment methods (PMs) and configured payment flows. Note: Payment Method Types (PMTs), configured EMI plans, configured mandate/subscriptions payment methods (PMs) and configured TPV PMs are not included in the response.
 
@@ -274,6 +286,50 @@ Use this tool to verify webhook configurations and troubleshoot notification del
         model=api_schema.settings.JuspayWebhookSettingsPayload,
         handler=settings.get_webhook_settings_juspay,
         response_schema=response_schema.get_webhook_settings_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_update_webhook_settings",
+        description="""Update the merchant's webhook URL and event subscriptions.
+
+Key features:
+- Sets the URL Juspay will POST event notifications to.
+- Selects which events the merchant subscribes to (e.g. ORDER_SUCCEEDED, ORDER_FAILED, TXN_CHARGED, MANDATE_CREATED).
+- Optionally configures HTTP basic-auth credentials Juspay should use when calling the webhook URL.
+
+Important caveats — warn the user before calling this:
+- `webhookEvents` REPLACES the current subscription map. Events the caller doesn't include get unsubscribed. To preserve existing events, fetch them first with `juspay_get_webhook_settings` and merge.
+- Advanced webhook config fields (custom webhook URL routes, JWT key references, full-gateway-response toggle, SSL-cert-based webhooks) are reset to defaults by this tool. Don't use it on merchants that depend on those — modify those via the dashboard instead.
+
+Use this when the user asks to configure webhooks, set their webhook URL, or change which Juspay events they receive.""",
+        model=api_schema.settings.JuspayUpdateWebhookSettingsPayload,
+        handler=settings.update_webhook_settings_juspay,
+    ),
+    util.make_api_config(
+        name="juspay_create_api_key",
+        description="""Generate a new API key for the authenticated merchant.
+
+Key features:
+- Creates a new ACTIVE API key bound to the caller's merchant account.
+- The plaintext `apiKey` is returned ONCE in the response — store it immediately; the dashboard only retains its masked form afterwards.
+- Accepts a `description` for identification in the API Keys listing.
+- Returns: id, status (ACTIVE), apiKey, maskedApiKey, scope, dateCreated, lastUpdated, merchantAccountId, version, metadata.
+
+Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Warn the user that the plaintext key cannot be retrieved later — it must be saved at creation time.""",
+        model=api_schema.api_keys.JuspayCreateApiKeyPayload,
+        handler=api_keys.create_api_key_juspay,
+    ),
+    util.make_api_config(
+        name="juspay_update_general_settings",
+        description="""Update the merchant's general settings.
+
+Key features:
+- Currently updates the payment redirect URL (`returnUrl`) — the URL the customer is sent back to after the Juspay-hosted payment flow completes.
+- Pass an empty string to clear/unset the redirect URL.
+- No client-side validation on the value.
+
+Use this when the user asks to set, change, or clear the payment redirect URL / return URL for their merchant account.""",
+        model=api_schema.settings.JuspayUpdateGeneralSettingsPayload,
+        handler=settings.update_general_settings_juspay,
     ),
     util.make_api_config(
         name="juspay_alert_details",

@@ -12,6 +12,10 @@ import asyncio
 import logging
 import contextlib
 
+# Load .env BEFORE any os.getenv() so JUSPAY_MCP_TYPE / OAUTH_ENABLED etc.
+# from the env file participate in the import-time branching below.
+dotenv.load_dotenv()
+
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.responses import JSONResponse, Response
@@ -21,6 +25,12 @@ from starlette.requests import Request
 
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+
+from juspay_mcp.auth import config as auth_config
+from juspay_mcp.auth.middleware import BearerAuthMiddleware
+from juspay_mcp.auth.portal_client import PortalClient
+from juspay_mcp.auth.routes import build_routes as build_oauth_routes
+from juspay_mcp.auth.state_store import MemoryStateStore
 
 # Determine which MCP app to use based on JUSPAY_MCP_TYPE
 JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
@@ -46,9 +56,6 @@ else:
     MCP_APPS["default"] = default_app
 
 from juspay_mcp.stdio import run_stdio
-
-# Load environment variables.
-dotenv.load_dotenv()
 
 # Configure logging.
 logging.basicConfig(
@@ -121,9 +128,22 @@ def main(host: str, port: int, mode: str):
         sse_endpoint_path = "/juspay"
         streamable_endpoint_path = "/juspay-stream"
     
-    logger.info("Running with header-based authentication")
-    logger.info("Expected headers: JUSPAY_API_KEY, JUSPAY_MERCHANT_ID, JUSPAY_WEB_LOGIN_TOKEN")
-    
+    oauth_cfg = auth_config.load()
+    portal_client = None
+    oauth_state_store = None
+    oauth_routes_list: list = []
+    oauth_validation_cache: dict = {}
+    if oauth_cfg.enabled:
+        portal_client = PortalClient(oauth_cfg)
+        oauth_state_store = MemoryStateStore(ttl_seconds=oauth_cfg.state_ttl_seconds)
+        oauth_routes_list = build_oauth_routes(
+            oauth_cfg, portal_client, oauth_state_store, validation_cache=oauth_validation_cache
+        )
+        logger.info("Running with OAuth bearer authentication")
+    else:
+        logger.info("Running with header-based authentication")
+        logger.info("Expected headers: JUSPAY_API_KEY, JUSPAY_MERCHANT_ID, JUSPAY_WEB_LOGIN_TOKEN")
+
     sse_transport_handler = SseServerTransport(message_endpoint_path)
 
     async def health_check(request: Request):
@@ -228,6 +248,11 @@ def main(host: str, port: int, mode: str):
         Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
     ]
 
+    # Prepend OAuth discovery + /oauth/* routes before the MCP transport
+    # routes so they win the longest-prefix match.
+    if oauth_routes_list:
+        routes = oauth_routes_list + routes
+
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
         dashboard_sse_handler = make_sse_handler("dashboard")
@@ -285,8 +310,17 @@ def main(host: str, port: int, mode: str):
                 if docs_v2_session_mgr is not None:
                     await stack.enter_async_context(docs_v2_session_mgr.run())
                     logger.info("Docs v2 StreamableHTTP session manager started")
+                if oauth_state_store is not None:
+                    await oauth_state_store.start()
+                    logger.info("OAuth state store sweeper started")
                 logger.info("All StreamableHTTP session managers started successfully")
-                yield
+                try:
+                    yield
+                finally:
+                    if oauth_state_store is not None:
+                        await oauth_state_store.stop()
+                    if portal_client is not None:
+                        await portal_client.aclose()
             logger.info("StreamableHTTP session managers stopped")
 
     else:
@@ -309,13 +343,32 @@ def main(host: str, port: int, mode: str):
             """Application lifespan context manager for single MCP app."""
             async with default_session_mgr.run():
                 logger.info("StreamableHTTP session manager started successfully")
-                yield
+                if oauth_state_store is not None:
+                    await oauth_state_store.start()
+                    logger.info("OAuth state store sweeper started")
+                try:
+                    yield
+                finally:
+                    if oauth_state_store is not None:
+                        await oauth_state_store.stop()
+                    if portal_client is not None:
+                        await portal_client.aclose()
             logger.info("StreamableHTTP session manager stopped")
 
-    # Add header authentication middleware
-    middleware = [
-        Middleware(JuspayHeaderAuthMiddleware),
-    ]
+    # Authentication middleware — OAuth bearer when enabled, else legacy header path.
+    if oauth_cfg.enabled and portal_client is not None:
+        middleware = [
+            Middleware(
+                BearerAuthMiddleware,
+                cfg=oauth_cfg,
+                portal=portal_client,
+                validation_cache=oauth_validation_cache,
+            ),
+        ]
+    else:
+        middleware = [
+            Middleware(JuspayHeaderAuthMiddleware),
+        ]
 
     starlette_app = Starlette(
         debug=False,
@@ -338,6 +391,16 @@ def main(host: str, port: int, mode: str):
         logger.info("Starting MCP server on:")
         logger.info(f"  SSE endpoint:                  http://{host}:{port}{sse_endpoint_path}")
         logger.info(f"  StreamableHTTP endpoint:       http://{host}:{port}{streamable_endpoint_path}")
+
+    if oauth_cfg.enabled:
+        logger.info("OAuth discovery + endpoints:")
+        logger.info(f"  Issuer (MCP_SERVER_URL):       {oauth_cfg.mcp_server_url}")
+        logger.info(f"  Protected-resource metadata:   {oauth_cfg.mcp_server_url}/.well-known/oauth-protected-resource")
+        logger.info(f"  Authorization-server metadata: {oauth_cfg.mcp_server_url}/.well-known/oauth-authorization-server")
+        logger.info(f"  Dynamic client registration:   {oauth_cfg.mcp_server_url}/oauth/register")
+        logger.info(f"  Authorize:                     {oauth_cfg.mcp_server_url}/oauth/authorize")
+        logger.info(f"  Token:                         {oauth_cfg.mcp_server_url}/oauth/token")
+        logger.info(f"  Portal IdP:                    {oauth_cfg.portal_base_url}")
 
     uvicorn.run(starlette_app, host=host, port=port, lifespan="on")
 
