@@ -157,10 +157,11 @@ async def create_api_key_juspay(payload: dict, meta_info: dict = None) -> dict:
     write_info = _write_env_var(env_file_path, env_var_name, api_key)
     warning = _gitignore_warning(env_file_path)
 
-    # Log only non-secret identifiers — never the plaintext key.
+    # Log only the numeric key id + destination — never the key itself, and
+    # not even the masked form (CodeQL taints anything *ApiKey from the
+    # response dict, and it adds nothing useful to the log anyway).
     logger.info(
-        "API key created (masked=%s, id=%s) and written to %s as %s",
-        data.get("maskedApiKey"),
+        "API key created (id=%s) and written to %s as %s",
         data.get("id"),
         env_file_path,
         env_var_name,
