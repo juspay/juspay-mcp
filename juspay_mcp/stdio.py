@@ -20,7 +20,7 @@ JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
 if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
 elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
-    from juspay_docs_mcp.tools import app
+    from juspay_docs_mcp.server import app
 else:
     from juspay_mcp.tools import app
 
