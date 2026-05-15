@@ -29,7 +29,7 @@ MCP_APPS = {}
 
 if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app as dashboard_app
-    from juspay_docs_mcp.tools import app as docs_app
+    from juspay_docs_mcp.server import app as docs_app
 
     MCP_APPS["dashboard"] = dashboard_app
     MCP_APPS["docs"] = docs_app
@@ -194,7 +194,7 @@ def main(host: str, port: int, mode: str):
                 if active_app_key == "dashboard":
                     from juspay_dashboard_mcp.tools import set_juspay_request_credentials
                 elif active_app_key == "docs":
-                    from juspay_docs_mcp.tools import set_juspay_request_credentials
+                    from juspay_docs_mcp.server import set_juspay_request_credentials
                 else:
                     from juspay_mcp.tools import set_juspay_request_credentials
             else:
@@ -238,6 +238,10 @@ def main(host: str, port: int, mode: str):
                 Route(
                     streamable_docs_endpoint_path,
                     endpoint=docs_http_handler,
+                    methods=["GET", "POST", "DELETE"],
+                ),
+            ]
+        )
                     methods=["GET", "POST", "DELETE"],
                 ),
             ]
