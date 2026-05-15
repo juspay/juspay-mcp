@@ -34,21 +34,15 @@ from juspay_mcp.auth.state_store import MemoryStateStore
 
 # Determine which MCP app to use based on JUSPAY_MCP_TYPE
 JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
-DOCS_MCP_V2_ENABLED = os.getenv("DOCS_MCP_V2_ENABLED", "").lower() == "true"
 
 MCP_APPS = {}
 
 if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app as dashboard_app
-    from juspay_docs_mcp.tools import app as docs_app
+    from juspay_docs_mcp.server import app as docs_app
 
     MCP_APPS["dashboard"] = dashboard_app
     MCP_APPS["docs"] = docs_app
-
-    if DOCS_MCP_V2_ENABLED:
-        from juspay_docs_mcp.dynamic import build_app as build_docs_v2_app
-
-        MCP_APPS["docs-v2"] = build_docs_v2_app()
 else:
     # Single default FastMCP app
     from juspay_mcp.tools import app as default_app
@@ -119,11 +113,6 @@ def main(host: str, port: int, mode: str):
         # Docs MCP
         sse_docs_endpoint_path = "/juspay-docs"
         streamable_docs_endpoint_path = "/juspay-docs-stream"
-
-        # Docs MCP v2 (dynamic loader, env-gated)
-        if "docs-v2" in MCP_APPS:
-            sse_docs_v2_endpoint_path = "/juspay-docs-v2"
-            streamable_docs_v2_endpoint_path = "/juspay-docs-v2-stream"
     else:
         sse_endpoint_path = "/juspay"
         streamable_endpoint_path = "/juspay-stream"
@@ -166,9 +155,7 @@ def main(host: str, port: int, mode: str):
                 if active_app_key == "dashboard":
                     from juspay_dashboard_mcp.tools import set_juspay_request_credentials
                 elif active_app_key == "docs":
-                    from juspay_docs_mcp.tools import set_juspay_request_credentials
-                elif active_app_key == "docs-v2":
-                    from juspay_docs_mcp.dynamic import set_juspay_request_credentials
+                    from juspay_docs_mcp.server import set_juspay_request_credentials
                 else:
                     # Fallback (should not happen in DASHBOARD mode)
                     from juspay_mcp.tools import set_juspay_request_credentials
@@ -227,7 +214,7 @@ def main(host: str, port: int, mode: str):
                 if active_app_key == "dashboard":
                     from juspay_dashboard_mcp.tools import set_juspay_request_credentials
                 elif active_app_key == "docs":
-                    from juspay_docs_mcp.tools import set_juspay_request_credentials
+                    from juspay_docs_mcp.server import set_juspay_request_credentials
                 else:
                     from juspay_mcp.tools import set_juspay_request_credentials
             else:
@@ -262,12 +249,6 @@ def main(host: str, port: int, mode: str):
         docs_sse_handler = make_sse_handler("docs")
         docs_http_handler, docs_session_mgr = make_streamable_http_handler("docs")
 
-        # Docs MCP v2 (dynamic loader, env-gated)
-        docs_v2_session_mgr = None
-        if "docs-v2" in MCP_APPS:
-            docs_v2_sse_handler = make_sse_handler("docs-v2")
-            docs_v2_http_handler, docs_v2_session_mgr = make_streamable_http_handler("docs-v2")
-
         routes.extend(
             [
                 # Dashboard MCP endpoints
@@ -287,18 +268,6 @@ def main(host: str, port: int, mode: str):
             ]
         )
 
-        if "docs-v2" in MCP_APPS:
-            routes.extend(
-                [
-                    Route(sse_docs_v2_endpoint_path, endpoint=docs_v2_sse_handler),
-                    Route(
-                        streamable_docs_v2_endpoint_path,
-                        endpoint=docs_v2_http_handler,
-                        methods=["GET", "POST", "DELETE"],
-                    ),
-                ]
-            )
-
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for multiple MCP apps."""
@@ -307,9 +276,6 @@ def main(host: str, port: int, mode: str):
                 logger.info("Dashboard StreamableHTTP session manager started")
                 await stack.enter_async_context(docs_session_mgr.run())
                 logger.info("Docs StreamableHTTP session manager started")
-                if docs_v2_session_mgr is not None:
-                    await stack.enter_async_context(docs_v2_session_mgr.run())
-                    logger.info("Docs v2 StreamableHTTP session manager started")
                 logger.info("All StreamableHTTP session managers started successfully")
                 yield
             logger.info("StreamableHTTP session managers stopped")
@@ -375,9 +341,6 @@ def main(host: str, port: int, mode: str):
         logger.info(f"  Dashboard Streamable endpoint: http://{host}:{port}{streamable_dashboard_endpoint_path}")
         logger.info(f"  Docs SSE endpoint:             http://{host}:{port}{sse_docs_endpoint_path}")
         logger.info(f"  Docs Streamable endpoint:      http://{host}:{port}{streamable_docs_endpoint_path}")
-        if "docs-v2" in MCP_APPS:
-            logger.info(f"  Docs v2 SSE endpoint:          http://{host}:{port}{sse_docs_v2_endpoint_path}")
-            logger.info(f"  Docs v2 Streamable endpoint:   http://{host}:{port}{streamable_docs_v2_endpoint_path}")
     else:
         logger.info("Starting MCP server on:")
         logger.info(f"  SSE endpoint:                  http://{host}:{port}{sse_endpoint_path}")

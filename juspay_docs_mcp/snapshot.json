@@ -1,369 +1,421 @@
 {
-  "fetched_at": "2026-05-01T19:11:08.347897Z",
+  "fetched_at": "2026-05-15T10:02:42.687046Z",
   "sources": [
     {
       "name": "Name: Juspay Billing\n\nEnd to end Mandate lifecycle. By using Billing, you treat Mandates as a configuration, not a codebase",
       "llms_txt": "https://juspay.io/in/docs/juspay-billing/llms.txt",
       "description": "End to end Mandate lifecycle. By using Billing, you treat Mandates as a configuration, not a codebase",
       "category": "BILLING",
-      "title": "Juspay Billing"
+      "title": "Juspay Billing",
+      "id": "juspay-billing"
     },
     {
       "name": "Name: HyperCheckout\n\nEffortlessly Collect Payments on your App or Website with our Pre-Built, Customizable Payment Page UI",
       "llms_txt": "https://juspay.io/in/docs/hyper-checkout/llms.txt",
       "description": "Effortlessly Collect Payments on your App or Website with our Pre-Built, Customizable Payment Page UI",
       "category": "CHECKOUT",
-      "title": "HyperCheckout"
+      "title": "HyperCheckout",
+      "id": "hyper-checkout"
     },
     {
       "name": "Name: Express Checkout SDK\n\nCollect Payments on your App with our robust SDK. Ideal if you want to build your own custom UI",
       "llms_txt": "https://juspay.io/in/docs/ec-headless/llms.txt",
       "description": "Collect Payments on your App with our robust SDK. Ideal if you want to build your own custom UI",
       "category": "CHECKOUT",
-      "title": "Express Checkout SDK"
+      "title": "Express Checkout SDK",
+      "id": "ec-headless"
     },
     {
       "name": "Name: Express Checkout API\n\nCollect Payments on your App & Website using our REST APIs",
       "llms_txt": "https://juspay.io/in/docs/ec-api/llms.txt",
       "description": "Collect Payments on your App & Website using our REST APIs",
       "category": "CHECKOUT",
-      "title": "Express Checkout API"
+      "title": "Express Checkout API",
+      "id": "ec-api"
     },
     {
       "name": "Name: HyperCredit\n\nLender orchestration system to finance your customer's purchase, tailored to simplify end to end loan operations",
       "llms_txt": "https://juspay.io/in/docs/hyper-credit/llms.txt",
       "description": "Lender orchestration system to finance your customer's purchase, tailored to simplify end to end loan operations",
       "category": "CHECKOUT",
-      "title": "HyperCredit"
+      "title": "HyperCredit",
+      "id": "hyper-credit"
     },
     {
       "name": "Name: NACH Mandates (LotusPay)\n\nCollect recurring payments with 99% success rate using our REST APIs or Dashboard",
       "llms_txt": "https://juspay.io/in/docs/lotuspay/llms.txt",
       "description": "Collect recurring payments with 99% success rate using our REST APIs or Dashboard",
       "category": "CHECKOUT",
-      "title": "NACH Mandates (LotusPay)"
+      "title": "NACH Mandates (LotusPay)",
+      "id": "lotuspay"
     },
     {
       "name": "Name: Juspay Payout\n\nTransfer funds to your customers or vendors' bank accounts, Cards, UPI IDs and Wallets",
       "llms_txt": "https://juspay.io/in/docs/payout/llms.txt",
       "description": "Transfer funds to your customers or vendors' bank accounts, Cards, UPI IDs and Wallets",
       "category": "PAYOUTS",
-      "title": "Juspay Payout"
+      "title": "Juspay Payout",
+      "id": "payout"
     },
     {
       "name": "Name: JusBiz - Virtual Cards Solution\n\nMake supplier payments by using virtual cards quickly, efficiently and securely",
       "llms_txt": "https://juspay.io/in/docs/jusbiz/llms.txt",
       "description": "Make supplier payments by using virtual cards quickly, efficiently and securely",
       "category": "PAYOUTS",
-      "title": "JusBiz - Virtual Cards Solution"
+      "title": "JusBiz - Virtual Cards Solution",
+      "id": "jusbiz"
     },
     {
       "name": "Name: UPI TPAP SDK\n\nTurn your App into a TPAP like Gpay, PayTM and start processing P2P/P2M payments",
       "llms_txt": "https://juspay.io/in/docs/upi-tpap-sdk/llms.txt",
       "description": "Turn your App into a TPAP like Gpay, PayTM and start processing P2P/P2M payments",
       "category": "UPI  SOLUTIONS",
-      "title": "UPI TPAP SDK"
+      "title": "UPI TPAP SDK",
+      "id": "upi-tpap-sdk"
     },
     {
       "name": "Name: HyperUPI\n\nEnable 1-Click In-App UPI payments on your checkout page with our pre built, customizable UI",
       "llms_txt": "https://juspay.io/in/docs/upi-plugin-sdk/llms.txt",
       "description": "Enable 1-Click In-App UPI payments on your checkout page with our pre built, customizable UI",
       "category": "UPI  SOLUTIONS",
-      "title": "HyperUPI"
+      "title": "HyperUPI",
+      "id": "upi-plugin-sdk"
     },
     {
       "name": "Name: Payment Links\n\nAlign payment process with your brand & manage off-sync payments",
       "llms_txt": "https://juspay.io/in/docs/payment-links/llms.txt",
       "description": "Align payment process with your brand & manage off-sync payments",
       "category": "EXPAND YOUR PAYMENT LANDSCAPE",
-      "title": "Payment Links"
+      "title": "Payment Links",
+      "id": "payment-links"
     },
     {
       "name": "Name: Split Settlements\n\nSplit amounts into multiple accounts in real-time seamlessly!",
       "llms_txt": "https://juspay.io/in/docs/split-settlements/llms.txt",
       "description": "Split amounts into multiple accounts in real-time seamlessly!",
       "category": "EXPAND YOUR PAYMENT LANDSCAPE",
-      "title": "Split Settlements"
+      "title": "Split Settlements",
+      "id": "split-settlements"
     },
     {
       "name": "Name: Merchant's in-house Wallet\n\nSeamlessly integrate in-house wallet with Juspay's infrastructure",
       "llms_txt": "https://juspay.io/in/docs/merchant-container/llms.txt",
       "description": "Seamlessly integrate in-house wallet with Juspay's infrastructure",
       "category": "EXPAND YOUR PAYMENT LANDSCAPE",
-      "title": "Merchant's in-house Wallet"
+      "title": "Merchant's in-house Wallet",
+      "id": "merchant-container"
     },
     {
       "name": "Name: Part Payment\n\nBreak your orders into multiple parts as per your convenience",
       "llms_txt": "https://juspay.io/in/docs/part-payments/llms.txt",
       "description": "Break your orders into multiple parts as per your convenience",
       "category": "EXPAND YOUR PAYMENT LANDSCAPE",
-      "title": "Part Payment"
+      "title": "Part Payment",
+      "id": "part-payments"
     },
     {
       "name": "Name: Offers Engine\n\nCreate tailored campaigns, track performance & enhanced payments",
       "llms_txt": "https://juspay.io/in/docs/offer-engine/llms.txt",
       "description": "Create tailored campaigns, track performance & enhanced payments",
       "category": "IMPROVE AFFORDABILITY",
-      "title": "Offers Engine"
+      "title": "Offers Engine",
+      "id": "offer-engine"
     },
     {
       "name": "Name: Standard EMI Suite\n\nLet your users pay later with easy monthly instalments!",
       "llms_txt": "https://juspay.io/in/docs/emi/llms.txt",
       "description": "Let your users pay later with easy monthly instalments!",
       "category": "IMPROVE AFFORDABILITY",
-      "title": "Standard EMI Suite"
+      "title": "Standard EMI Suite",
+      "id": "emi"
     },
     {
       "name": "Name: Advance EMI Suite\n\nLet your users explore offers & discounts available on EMI options!",
       "llms_txt": "https://juspay.io/in/docs/advance-emi/llms.txt",
       "description": "Let your users explore offers & discounts available on EMI options!",
       "category": "IMPROVE AFFORDABILITY",
-      "title": "Advance EMI Suite"
+      "title": "Advance EMI Suite",
+      "id": "advance-emi"
     },
     {
       "name": "Name: Juspay Native OTP\n\nFrictionless OTP flow, powered natively by Juspay",
       "llms_txt": "https://juspay.io/in/docs/dotp-v2/llms.txt",
       "description": "Frictionless OTP flow, powered natively by Juspay",
       "category": "NEXT GEN CARDS EXPERIENCE",
-      "title": "Juspay Native OTP"
+      "title": "Juspay Native OTP",
+      "id": "dotp-v2"
     },
     {
       "name": "Name: CVV Less Payments\n\nEnable safe, secure 1-click payments for your customers",
       "llms_txt": "https://juspay.io/in/docs/cvv-less/llms.txt",
       "description": "Enable safe, secure 1-click payments for your customers",
       "category": "NEXT GEN CARDS EXPERIENCE",
-      "title": "CVV Less Payments"
+      "title": "CVV Less Payments",
+      "id": "cvv-less"
     },
     {
       "name": "Name: Tap & Pay\n\nContactless card payments using NFC, offering fast and secure transactions",
       "llms_txt": "https://juspay.io/in/docs/nfc/llms.txt",
       "description": "Contactless card payments using NFC, offering fast and secure transactions",
       "category": "NEXT GEN CARDS EXPERIENCE",
-      "title": "Tap & Pay"
+      "title": "Tap & Pay",
+      "id": "nfc"
     },
     {
       "name": "Name: C2P with Passkeys\n\nA passkey secured card authentication payment solution for online checkout experience",
       "llms_txt": "https://juspay.io/in/docs/clicktopay/llms.txt",
       "description": "A passkey secured card authentication payment solution for online checkout experience",
       "category": "NEXT GEN CARDS EXPERIENCE",
-      "title": "C2P with Passkeys"
+      "title": "C2P with Passkeys",
+      "id": "clicktopay"
     },
     {
       "name": "Name: Product Summary\n\nConcise & informative overview of the order during payments",
       "llms_txt": "https://juspay.io/in/docs/product-summary/llms.txt",
       "description": "Concise & informative overview of the order during payments",
       "category": "PAYMENT SUITE V2",
-      "title": "Product Summary"
+      "title": "Product Summary",
+      "id": "product-summary"
     },
     {
       "name": "Name: Payment Locking\n\nBlock or allow certain methods based on custom conditions",
       "llms_txt": "https://juspay.io/in/docs/payment-locking/llms.txt",
       "description": "Block or allow certain methods based on custom conditions",
       "category": "PAYMENT SUITE V2",
-      "title": "Payment Locking"
+      "title": "Payment Locking",
+      "id": "payment-locking"
     },
     {
       "name": "Name: Quick Pay\n\n3X faster checkout: Now collect payments from Cart Page!",
       "llms_txt": "https://juspay.io/in/docs/quickpay-integration/llms.txt",
       "description": "3X faster checkout: Now collect payments from Cart Page!",
       "category": "PAYMENT SUITE V2",
-      "title": "Quick Pay"
+      "title": "Quick Pay",
+      "id": "quickpay-integration"
     },
     {
       "name": "Name: Outages\n\nUninterrupted  payments with real-time system health updates",
       "llms_txt": "https://juspay.io/in/docs/outages/llms.txt",
       "description": "Uninterrupted  payments with real-time system health updates",
       "category": "PAYMENT SUITE V2",
-      "title": "Outages"
+      "title": "Outages",
+      "id": "outages"
     },
     {
       "name": "Name: CRED Pay\n\nPayment experience, cashback & offers- powered by CRED!",
       "llms_txt": "https://juspay.io/in/docs/cred-pay/llms.txt",
       "description": "Payment experience, cashback & offers- powered by CRED!",
       "category": "PAYMENT SUITE V2",
-      "title": "CRED Pay"
+      "title": "CRED Pay",
+      "id": "cred-pay"
     },
     {
       "name": "Name: Surcharge\n\nManage collection of additional fee effortlessly!",
       "llms_txt": "https://juspay.io/in/docs/surcharge/llms.txt",
       "description": "Manage collection of additional fee effortlessly!",
       "category": "PAYMENT SUITE V2",
-      "title": "Surcharge"
+      "title": "Surcharge",
+      "id": "surcharge"
     },
     {
       "name": "Name: UPI Intent on mWeb\n\nUPI payment using apps, now available on mobile web!",
       "llms_txt": "https://juspay.io/in/docs/mweb-intent/llms.txt",
       "description": "UPI payment using apps, now available on mobile web!",
       "category": "PAYMENT SUITE V2",
-      "title": "UPI Intent on mWeb"
+      "title": "UPI Intent on mWeb",
+      "id": "mweb-intent"
     },
     {
       "name": "Name: UPI Autopay\n\nMost convenient option for your customers' repeat payments",
       "llms_txt": "https://juspay.io/in/docs/upi-autopay/llms.txt",
       "description": "Most convenient option for your customers' repeat payments",
       "category": "PAYMENT SUITE V2",
-      "title": "UPI Autopay"
+      "title": "UPI Autopay",
+      "id": "upi-autopay"
     },
     {
       "name": "Name: Scan & Pay\n\nSimplified payments with UPI QR Code for easy and fast transactions",
       "llms_txt": "https://juspay.io/in/docs/upi-qr-code/llms.txt",
       "description": "Simplified payments with UPI QR Code for easy and fast transactions",
       "category": "PAYMENT SUITE V2",
-      "title": "Scan & Pay"
+      "title": "Scan & Pay",
+      "id": "upi-qr-code"
     },
     {
       "name": "Name: Card Mandates\n\nRecurring payments with standing instruction on cards",
       "llms_txt": "https://juspay.io/in/docs/card-mandates/llms.txt",
       "description": "Recurring payments with standing instruction on cards",
       "category": "PAYMENT SUITE V2",
-      "title": "Card Mandates"
+      "title": "Card Mandates",
+      "id": "card-mandates"
     },
     {
       "name": "Name: eNACH\n\nThe smarter way to manage high ticket recurring payments at scale!",
       "llms_txt": "https://juspay.io/in/docs/enach/llms.txt",
       "description": "The smarter way to manage high ticket recurring payments at scale!",
       "category": "PAYMENT SUITE V2",
-      "title": "eNACH"
+      "title": "eNACH",
+      "id": "enach"
     },
     {
       "name": "Name: Retry\n\nFight churn-retain enthusiastic customers with high purchase intent!",
       "llms_txt": "https://juspay.io/in/docs/retry/llms.txt",
       "description": "Fight churn-retain enthusiastic customers with high purchase intent!",
       "category": "PAYMENT SUITE V2",
-      "title": "Retry"
+      "title": "Retry",
+      "id": "retry"
     },
     {
       "name": "Name: TPV\n\nValidate the payment from the authorized user effortlessly!",
       "llms_txt": "https://juspay.io/in/docs/tpv/llms.txt",
       "description": "Validate the payment from the authorized user effortlessly!",
       "category": "PAYMENT SUITE V2",
-      "title": "TPV"
+      "title": "TPV",
+      "id": "tpv"
     },
     {
       "name": "Name: Amazon Pay Balance\n\nBoost your sales with Amazon Pay's smooth checkout experience!",
       "llms_txt": "https://juspay.io/in/docs/amazonpay/llms.txt",
       "description": "Boost your sales with Amazon Pay's smooth checkout experience!",
       "category": "PAYMENT SUITE V2",
-      "title": "Amazon Pay Balance"
+      "title": "Amazon Pay Balance",
+      "id": "amazonpay"
     },
     {
       "name": "Name: Smart Convert\n\nIntelligently retarget failed transactions to unlock higher conversions!",
       "llms_txt": "https://juspay.io/in/docs/smart-converter/llms.txt",
       "description": "Intelligently retarget failed transactions to unlock higher conversions!",
       "category": "PAYMENT SUITE V2",
-      "title": "Smart Convert"
+      "title": "Smart Convert",
+      "id": "smart-converter"
     },
     {
       "name": "Name: One Time Mandate\n\nSimplify Payments with Smart Fund Holding block, relax, debit!",
       "llms_txt": "https://juspay.io/in/docs/one-time-mandate/llms.txt",
       "description": "Simplify Payments with Smart Fund Holding block, relax, debit!",
       "category": "PAYMENT SUITE V2",
-      "title": "One Time Mandate"
+      "title": "One Time Mandate",
+      "id": "one-time-mandate"
     },
     {
       "name": "Name: Amazon Pay Later\n\nEmpower your customers to pay later with seamless credit by Amazon Pay!",
       "llms_txt": "https://juspay.io/in/docs/amazon-pay-later/llms.txt",
       "description": "Empower your customers to pay later with seamless credit by Amazon Pay!",
       "category": "PAYMENT SUITE V2",
-      "title": "Amazon Pay Later"
+      "title": "Amazon Pay Later",
+      "id": "amazon-pay-later"
     },
     {
       "name": "Name: Error Codes\n\nGain insights into the error codes associated with our SDK, empowering you to troubleshoot and resolve issues effectively.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "Gain insights into the error codes associated with our SDK, empowering you to troubleshoot and resolve issues effectively.",
       "category": "DASHBOARD",
-      "title": "Error Codes"
+      "title": "Error Codes",
+      "id": "resources"
     },
     {
       "name": "Name: Dashboard\n\nSimplify payment ops with our intuitive dashboard. Manage transactions, access analytics, and optimize your checkout process with ease.",
       "llms_txt": "https://juspay.io/in/docs/dashboard/llms.txt",
       "description": "Simplify payment ops with our intuitive dashboard. Manage transactions, access analytics, and optimize your checkout process with ease.",
       "category": "DASHBOARD",
-      "title": "Dashboard"
+      "title": "Dashboard",
+      "id": "dashboard"
     },
     {
       "name": "Name: Gateway Onboarding Guide\n\nLaunch new gateways and aggregators with easy step-by-step guides for setup, testing, and go-live.",
       "llms_txt": "https://juspay.io/in/docs/payment-gateway-integrations/llms.txt",
       "description": "Launch new gateways and aggregators with easy step-by-step guides for setup, testing, and go-live.",
       "category": "DASHBOARD",
-      "title": "Gateway Onboarding Guide"
+      "title": "Gateway Onboarding Guide",
+      "id": "payment-gateway-integrations"
     },
     {
       "name": "Name: Dynamic Routing\n\nOptimize gateway selection with Juspay's dynamic routing. Boost success rates and conversions by considering gateway performance, health and costs.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "Optimize gateway selection with Juspay's dynamic routing. Boost success rates and conversions by considering gateway performance, health and costs.",
       "category": "DASHBOARD",
-      "title": "Dynamic Routing"
+      "title": "Dynamic Routing",
+      "id": "resources"
     },
     {
       "name": "Name: Release Notes\n\nStay up to date with our product enhancements, new features, bug fixes, and improvements through our comprehensive release notes.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "Stay up to date with our product enhancements, new features, bug fixes, and improvements through our comprehensive release notes.",
       "category": "MISCELLANEOUS",
-      "title": "Release Notes"
+      "title": "Release Notes",
+      "id": "resources"
     },
     {
       "name": "Name: Test Resources\n\nAccess a range of resources and tools specifically designed for testing and validating your integrations, ensuring a robust and reliable system.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "Access a range of resources and tools specifically designed for testing and validating your integrations, ensuring a robust and reliable system.",
       "category": "MISCELLANEOUS",
-      "title": "Test Resources"
+      "title": "Test Resources",
+      "id": "resources"
     },
     {
       "name": "Name: Payment Forms\n\nStreamline your payment process, enhance the customer experience, and boost your business's success.",
       "llms_txt": "https://juspay.io/in/docs/add-ons/llms.txt",
       "description": "Streamline your payment process, enhance the customer experience, and boost your business's success.",
       "category": "PAYMENTS",
-      "title": "Payment Forms"
+      "title": "Payment Forms",
+      "id": "add-ons"
     },
     {
       "name": "Name: Payment Method Integrations\n\nWiden your payment selections for added customer flexibility. Explore New Payment Method Integrations",
       "llms_txt": "https://juspay.io/in/docs/payment-method-integrations/llms.txt",
       "description": "Widen your payment selections for added customer flexibility. Explore New Payment Method Integrations",
       "category": "PAYMENTS",
-      "title": "Payment Method Integrations"
+      "title": "Payment Method Integrations",
+      "id": "payment-method-integrations"
     },
     {
       "name": "Name: Card Network Tokenization\n\nTokenization shields your card details with tokens, ensuring secure and worry-free digital payments.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "Tokenization shields your card details with tokens, ensuring secure and worry-free digital payments.",
       "category": "PAYMENTS",
-      "title": "Card Network Tokenization"
+      "title": "Card Network Tokenization",
+      "id": "resources"
     },
     {
       "name": "Name: 3DS 2.0 Protocol for Card Payments\n\nOverview of 3DS 2.0 Protocol Readiness for card transactions across Juspay's Partner Ecosystem.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "Overview of 3DS 2.0 Protocol Readiness for card transactions across Juspay's Partner Ecosystem.",
       "category": "PAYMENTS",
-      "title": "3DS 2.0 Protocol for Card Payments"
+      "title": "3DS 2.0 Protocol for Card Payments",
+      "id": "resources"
     },
     {
       "name": "Name: Pay-V3\n\nPower your card checkout experience with Pay-V3, a secure and customizable JavaScript integration designed for non-PCI DSS compliant merchants.",
       "llms_txt": "https://juspay.io/in/docs/payv3/llms.txt",
       "description": "Power your card checkout experience with Pay-V3, a secure and customizable JavaScript integration designed for non-PCI DSS compliant merchants.",
       "category": "PAYMENTS",
-      "title": "Pay-V3"
+      "title": "Pay-V3",
+      "id": "payv3"
     },
     {
       "name": "Name: Refunds\n\nA comprehensive guide on processing refunds, equipping merchants with the knowledge and best practices to efficiently handle refund requests.",
       "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
       "description": "A comprehensive guide on processing refunds, equipping merchants with the knowledge and best practices to efficiently handle refund requests.",
       "category": "PAYMENTS",
-      "title": "Refunds"
+      "title": "Refunds",
+      "id": "resources"
     },
     {
       "name": "Name: Dashboard Guide\n\nN/A",
       "llms_txt": "https://juspay.io/in/docs/dashboard/llms.txt",
       "description": "N/A",
       "category": "OTHERS",
-      "title": "Dashboard Guide"
+      "title": "Dashboard Guide",
+      "id": "dashboard"
     },
     {
       "name": "Name: API Reference\n\nN/A",
       "llms_txt": "https://juspay.io/in/docs/api-reference/llms.txt",
       "description": "N/A",
       "category": "OTHERS",
-      "title": "API Reference"
+      "title": "API Reference",
+      "id": "api-reference"
     }
   ]
 }
