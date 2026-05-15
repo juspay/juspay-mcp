@@ -4,7 +4,9 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id
+import json
+
+from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id
 
 async def get_conflict_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -323,5 +325,60 @@ async def get_webhook_settings_juspay(payload: dict, meta_info: dict = None) -> 
         api_url = f"{host}/ec/v1/admin/webhook"
     else:
         api_url = f"{host}/api/ec/v1/webhook"
-    
+
     return await post(api_url, request_data, None, meta_info)
+
+
+async def update_general_settings_juspay(payload: dict, meta_info: dict = None):
+    """Update the merchant's general settings.
+
+    Currently exposes only `returnUrl` (the payment redirect URL). Pass an
+    empty string to clear it. No client-side validation on the value.
+    """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    request_payload = {"returnUrl": payload.get("returnUrl", "")}
+    api_url = f"{host}/api/ec/v1/general"
+    return await put(api_url, request_payload, None, meta_info)
+
+
+async def update_webhook_settings_juspay(payload: dict, meta_info: dict = None):
+    """Update the merchant's webhook URL and event subscriptions.
+
+    Builds the `webhookConfigs` JSON string from a fixed template plus the
+    caller-supplied `webhookEvents` map, then PUTs it to the webhook settings
+    endpoint alongside the URL and optional basic-auth credentials.
+
+    Replaces the existing webhook configuration — events the caller doesn't
+    include are unsubscribed.
+    """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+
+    # The API expects {event_name: true} for each subscribed event. The tool
+    # surfaces a plain list of event names; we build the dict here so the
+    # caller doesn't have to think about the wire format.
+    events_map = {event: True for event in payload.get("webhookEvents") or []}
+    webhook_config = {
+        "addFullGatewayResponse": False,
+        "shouldSendSSLCertBasedWebhoooks": False,
+        "trimWebhookResponse": False,
+        "webhookEvents": events_map,
+        "multiWebhookUrlConfigs": [],
+    }
+
+    body = {
+        "webHookurl": payload["webHookurl"],
+        "webhookConfigs": json.dumps(webhook_config),
+        # Always send empty — the dashboard's "save webhook" call does the
+        # same. Not exposed as a tool argument; if we ever need to vary it
+        # we can add it back to the schema.
+        "webHookapiversion": "",
+    }
+    # Only include creds when the caller actually provided them — sending
+    # empty strings would overwrite an existing username/password with blanks.
+    if payload.get("webHookUsername"):
+        body["webHookUsername"] = payload["webHookUsername"]
+    if payload.get("webHookPassword"):
+        body["webHookPassword"] = payload["webHookPassword"]
+
+    api_url = f"{host}/api/ec/v1/webhook"
+    return await put(api_url, body, None, meta_info)

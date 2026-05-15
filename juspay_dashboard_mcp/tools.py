@@ -33,6 +33,18 @@ def get_juspay_request_credentials():
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
+        name="juspay_get_merchant_details",
+        description="""Return merchant and user session details for the authenticated caller.
+
+Key features:
+- Returns merchantId, userId, email, username, tenantAccountId, validHost, and the caller's context (MERCHANT / TENANT / RESELLER / JUSPAY).
+- Takes no input — all information is derived from the active session.
+
+Use this when the user asks who they are, which merchant or tenant they're logged in as, what their merchant ID / user ID / tenant ID is, or to confirm session context before performing privileged actions.""",
+        model=api_schema.account.JuspayGetMerchantDetailsPayload,
+        handler=account.get_merchant_details_juspay,
+    ),
+    util.make_api_config(
         name="juspay_list_configured_gateway",
         description="""Use this tool when asked about the list of payment gateways . Retrieves a list of all payment gateways (PGs) configured for a merchant, including high-level details such as gateway reference ID, creation/modification dates, configured payment methods (PMs) and configured payment flows. Note: Payment Method Types (PMTs), configured EMI plans, configured mandate/subscriptions payment methods (PMs) and configured TPV PMs are not included in the response.
 
@@ -276,6 +288,50 @@ Use this tool to verify webhook configurations and troubleshoot notification del
         response_schema=response_schema.get_webhook_settings_response_schema,
     ),
     util.make_api_config(
+        name="juspay_update_webhook_settings",
+        description="""Update the merchant's webhook URL and event subscriptions.
+
+Key features:
+- Sets the URL Juspay will POST event notifications to.
+- Selects which events the merchant subscribes to (e.g. ORDER_SUCCEEDED, ORDER_FAILED, TXN_CHARGED, MANDATE_CREATED).
+- Optionally configures HTTP basic-auth credentials Juspay should use when calling the webhook URL.
+
+Important caveats — warn the user before calling this:
+- `webhookEvents` REPLACES the current subscription map. Events the caller doesn't include get unsubscribed. To preserve existing events, fetch them first with `juspay_get_webhook_settings` and merge.
+- Advanced webhook config fields (custom webhook URL routes, JWT key references, full-gateway-response toggle, SSL-cert-based webhooks) are reset to defaults by this tool. Don't use it on merchants that depend on those — modify those via the dashboard instead.
+
+Use this when the user asks to configure webhooks, set their webhook URL, or change which Juspay events they receive.""",
+        model=api_schema.settings.JuspayUpdateWebhookSettingsPayload,
+        handler=settings.update_webhook_settings_juspay,
+    ),
+    util.make_api_config(
+        name="juspay_create_api_key",
+        description="""Generate a new API key for the authenticated merchant.
+
+Key features:
+- Creates a new ACTIVE API key bound to the caller's merchant account.
+- The plaintext `apiKey` is returned ONCE in the response — store it immediately; the dashboard only retains its masked form afterwards.
+- Accepts a `description` for identification in the API Keys listing.
+- Returns: id, status (ACTIVE), apiKey, maskedApiKey, scope, dateCreated, lastUpdated, merchantAccountId, version, metadata.
+
+Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Warn the user that the plaintext key cannot be retrieved later — it must be saved at creation time.""",
+        model=api_schema.api_keys.JuspayCreateApiKeyPayload,
+        handler=api_keys.create_api_key_juspay,
+    ),
+    util.make_api_config(
+        name="juspay_update_general_settings",
+        description="""Update the merchant's general settings.
+
+Key features:
+- Currently updates the payment redirect URL (`returnUrl`) — the URL the customer is sent back to after the Juspay-hosted payment flow completes.
+- Pass an empty string to clear/unset the redirect URL.
+- No client-side validation on the value.
+
+Use this when the user asks to set, change, or clear the payment redirect URL / return URL for their merchant account.""",
+        model=api_schema.settings.JuspayUpdateGeneralSettingsPayload,
+        handler=settings.update_general_settings_juspay,
+    ),
+    util.make_api_config(
         name="juspay_alert_details",
         description="""Provides detailed information for a specific alert ID, including source, monitored metrics, and applied filters.
 
@@ -444,6 +500,141 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
     model=api_schema.rag_tool.JuspayRagQueryPayload,
     handler=rag_tool.query_rag_tool,
     response_schema=response_schema.rag_query_response_schema,
+    ),
+    # ----- Integration Checklist tools (ported from PR #67) -------------------
+    util.make_api_config(
+        name="juspay_integration_monitoring_status",
+        description="""Track integration progress across platforms and products for a particular merchant. Use this tool when you need to view passed/failed stages and action items for merchant integrations.
+
+**When to call this tool:**
+- When asked about integration status, progress, or completion for a specific merchant
+- To check which integration stages/items have passed or failed
+- To identify action items and next steps for integration completion
+- When troubleshooting integration issues or blockers
+- To view detailed stage-wise breakdown of integration checklist
+- When user asks about integration status and doesn't mention platform or product_integrated, first call `juspay_integration_platform_metrics` to get the default platform, then `juspay_integration_product_count_metrics` to get the default product_integrated for that platform, then call this tool with both.
+
+**Tool capabilities:**
+- Platform-aware monitoring (Backend uses agnostic API, Web/Android/iOS use nonagnostic API)
+- Stage-wise integration progress tracking with pass/fail status
+- Critical vs non-critical stage identification for prioritization
+- Feature-wise analysis (base payments, mandate, payout, etc.)
+- Visibility conditions and actionable results for each stage
+- Integration checklist completion tracking
+
+**Required inputs:**
+- platform: Must be one of "Backend", "Web", "Android", "iOS"
+- product_integrated: Must be one of "Payment Page Signature", "Payment Page Session", "EC + SDK", "EC Only"
+- merchant_id: Merchant ID
+- start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
+- Date range limit: only last 45 days of data is available — refuse older windows.
+- Default range: last 30 days when the user doesn't specify one.
+
+**Response provides:**
+- Overall integration completion status with critical stage counts
+- Feature-wise progress breakdown (base, mandate, payout, etc.)
+- Section-wise analysis (e.g., "Payments Flow Checklist")
+- Individual stage details with pass/fail status, criticality level, and action items
+- Module metadata including platform dependencies and minimum requirements
+
+Use this tool to monitor integration progress, identify failed stages that need attention, and provide actionable guidance for completing merchant integrations.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationStatusPayload,
+        handler=integrationChecklist.get_integration_monitoring_status_juspay,
+        response_schema=response_schema.integration_monitoring_status_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_x_mid_monitoring",
+        description="""Retrieves X-Mid validation monitoring data for merchant transactions.
+
+This tool provides X-Mid validation results for API transactions within a specified time range, helping merchants monitor the validation status of their X-Mid headers across different API endpoints.
+
+Key features:
+- Time-range based X-Mid validation monitoring
+- API shortcode-wise validation results
+- PASSED/FAILED validation status tracking
+- Merchant-specific validation data
+
+Required inputs:
+- merchant_id: Merchant ID for which to retrieve X-Mid validation data
+- start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
+- Date range limit: only last 45 days of data is available — refuse older windows.
+- Default range: last 30 days when the user doesn't specify one.
+
+Response includes:
+- Query metadata and execution status
+- Array of validation results with API shortcodes
+- Validation status (PASSED/FAILED) for each API endpoint/shortcode
+
+Use this tool to monitor X-Mid header validation compliance, track validation failures across different API endpoints, and ensure proper X-Mid implementation for merchant transactions.""",
+        model=api_schema.integrationChecklist.JuspayXMidMonitoringPayload,
+        handler=integrationChecklist.get_x_mid_monitoring_juspay,
+        response_schema=response_schema.x_mid_monitoring_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_integration_platform_metrics",
+        description="""Retrieve available platforms for a particular merchant. Returns the list of platforms (Android, iOS, Web) configured for the merchant.
+
+**When to call this tool:**
+- When you need to get the list of available platforms for a merchant
+- To determine which platforms are configured for a merchant
+- When you need to get the default platform for subsequent API calls
+- When asked about integration progress across different platforms
+- To compare integration completion between Android, iOS, Web, and Backend platforms
+
+**Tool capabilities:**
+- Groups integration data by platform (Android, iOS, Web — Backend must be added separately by the caller)
+- First platform in response becomes the default platform
+
+**Required inputs:**
+- merchant_id: Merchant ID for platform metrics analysis
+- start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
+- Date range limit: only last 45 days of data is available — refuse older windows.
+- Default range: last 30 days when the user doesn't specify one.
+
+**Response provides:**
+- Platform-grouped data (typically Android, iOS, Web)
+- Platform list for the merchant
+
+**Important note:** API typically returns Android, iOS, and Web platforms only. Add Backend separately for full coverage.
+
+Use this tool to get the list of available platforms for a merchant, not for integration status tracking.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationPlatformMetricsPayload,
+        handler=integrationChecklist.get_integration_platform_metrics_juspay,
+        response_schema=response_schema.integration_platform_metrics_response_schema,
+    ),
+    util.make_api_config(
+        name="juspay_integration_product_count_metrics",
+        description="""Analyze integration usage patterns by product type for a particular merchant. Use this tool when you need to understand which integration products are most actively used and their adoption patterns.
+
+**When to call this tool:**
+- When asked about product integration usage patterns or adoption rates
+- To identify the most popular integration types for a merchant
+- When analyzing integration health across different product types
+- For product selection: if user didn't provide platform, call `juspay_integration_platform_metrics` first to get the default platform, then call this tool with that platform.
+
+**Tool capabilities:**
+- Groups integration data by product_integrated type (Payment Page Signature, Payment Page Session, EC + SDK, EC Only)
+- Product usage count metrics and analytics
+- Platform-specific filtering for accurate product analysis
+- Time-range based product adoption tracking
+- Integration health calculation by product type
+- Product with highest `product_count` becomes default
+
+**Required inputs:**
+- merchant_id: Merchant ID for product count metrics analysis
+- platform: Platform filter (e.g., 'Android', 'iOS', 'Web') — mandatory for accurate filtering
+- start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
+- Date range limit: only last 45 days of data is available — refuse older windows.
+- Default range: last 30 days when the user doesn't specify one.
+
+**Response provides:**
+- Product-grouped data with count metrics for each integration type
+- Platform-specific product integration data
+
+Use this tool to analyze product integration patterns, identify the most actively used integration types, and understand product adoption trends for merchant integrations.""",
+        model=api_schema.integrationChecklist.JuspayIntegrationProductCountMetricsPayload,
+        handler=integrationChecklist.get_integration_product_count_metrics_juspay,
+        response_schema=response_schema.integration_product_count_metrics_response_schema,
     ),
 ]
 
