@@ -306,24 +306,15 @@ Use this when the user asks to configure webhooks, set their webhook URL, or cha
     ),
     util.make_api_config(
         name="juspay_create_api_key",
-        description="""Generate a new API key for the authenticated merchant and store it securely in an env file.
+        description="""Generate a new API key for the authenticated merchant.
 
 Key features:
 - Creates a new ACTIVE API key bound to the caller's merchant account.
-- Writes the generated key directly into the project's `.env` file under an environment variable. The plaintext key is NEVER returned to you and never appears in the chat — only a masked form and the env var name are returned.
-- Creates the env file if it does not already exist; updates the variable in place if it is already present.
-- Returns: env_file, env_var, maskedApiKey, id, key_status, scope, merchantAccountId, dateCreated.
+- The plaintext `apiKey` is returned ONCE in the response — store it immediately; the dashboard only retains its masked form afterwards.
+- Accepts a `description` for identification in the API Keys listing.
+- Returns: id, status (ACTIVE), apiKey, maskedApiKey, scope, dateCreated, lastUpdated, merchantAccountId, version, metadata.
 
-Required inputs:
-- description: a short label for the key (shown in the merchant's API Keys listing).
-- env_file_path: the ABSOLUTE path to the project's .env file. If you do not know it, ask the user or resolve it from the project root. A relative path will be rejected.
-- env_var_name (optional): defaults to JUSPAY_API_KEY.
-
-How to use the result:
-- After this tool runs, reference the key ONLY through the returned environment variable name (e.g. `process.env.JUSPAY_API_KEY` / `os.environ["JUSPAY_API_KEY"]`) when writing or editing code. Do not ask for or attempt to read the plaintext key — it is intentionally withheld.
-- Juspay shows the key only once, so it cannot be retrieved again via this tool. If the result includes a `warning` about gitignore, surface it to the user.
-
-Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access.""",
+Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Warn the user that the plaintext key cannot be retrieved later — it must be saved at creation time.""",
         model=api_schema.api_keys.JuspayCreateApiKeyPayload,
         handler=api_keys.create_api_key_juspay,
     ),
