@@ -1,0 +1,64 @@
+name: Import Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  import-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install package (non-editable, no deps skipped)
+        run: pip install .
+
+      - name: Verify all subpackages are importable
+        run: |
+          python -c "
+          import sys
+          tests = [
+              'juspay_mcp.main',
+              'juspay_mcp.tools',
+              'juspay_mcp.config',
+              'juspay_mcp.api.order',
+              'juspay_mcp.api_schema.order',
+              'juspay_mcp.auth',
+              'juspay_mcp.auth.config',
+              'juspay_mcp.auth.context',
+              'juspay_mcp.auth.metadata',
+              'juspay_mcp.auth.middleware',
+              'juspay_mcp.auth.pkce',
+              'juspay_mcp.auth.portal_client',
+              'juspay_mcp.auth.routes',
+              'juspay_mcp.auth.state_store',
+              'juspay_dashboard_mcp.tools',
+              'juspay_dashboard_mcp.config',
+              'juspay_dashboard_mcp.api.orders',
+              'juspay_dashboard_mcp.api.gateway',
+              'juspay_dashboard_mcp.api.api_keys',
+              'juspay_dashboard_mcp.api_schema.orders',
+              'juspay_docs_mcp',
+              'juspay_docs_mcp.server',
+              'juspay_docs_mcp.instructions',
+              'juspay_docs_mcp.discovery',
+          ]
+          failed = []
+          for mod in tests:
+              try:
+                  __import__(mod)
+                  print(f'  OK   {mod}')
+              except Exception as e:
+                  print(f'  FAIL {mod}: {e}')
+                  failed.append(mod)
+          if failed:
+              print(f'\nFAILED: {failed}')
+              sys.exit(1)
+          print(f'\nAll {len(tests)} imports passed')
+          "
