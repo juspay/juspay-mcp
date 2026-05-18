@@ -54,5 +54,13 @@ def authorization_server_metadata(cfg: OAuthConfig) -> dict:
             "client_secret_basic",
             "none",
         ],
+        # OpenID Connect Discovery REQUIRED fields. We are an OAuth 2.0
+        # authorization server, not a full OIDC provider, but this same
+        # document is also served at /.well-known/openid-configuration —
+        # and MCP clients validate that endpoint strictly against the
+        # OpenID Provider Metadata schema, which mandates these two arrays.
+        # Omitting them makes strict clients reject the connection.
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["RS256"],
         "service_documentation": "https://docs.juspay.in",
     }
