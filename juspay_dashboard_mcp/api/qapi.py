@@ -7,7 +7,7 @@
 import asyncio
 import json
 from pydantic import Field
-import requests
+import httpx
 import logging
 import os
 from datetime import datetime, timedelta
@@ -25,6 +25,7 @@ from juspay_dashboard_mcp.api_schema.qapi import (
 )
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
 from juspay_dashboard_mcp.api.utils import get_juspay_credentials
+from juspay_dashboard_mcp.api.qapi_info import validate_schema_signature
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +122,10 @@ def convert_utc_to_ist_in_qapi_response(
         return response_json
 
 
-def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
+async def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
     """
     Utility function to call the query API with the provided payload.
+    Uses httpx.AsyncClient for async HTTP requests.
     Resolves credentials via context var first, then meta_info, then env var fallback.
     """
     serialized_payload = {}
@@ -163,13 +165,14 @@ def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
         headers["Content-Type"] = "application/json"
 
         api_url = f"{JUSPAY_BASE_URL}/api/q/query"
-        logging.debug(f"QAPI Call: url={api_url} payload={serialized_payload}")
+        logging.info(f"QAPI Call: url={api_url} payload={serialized_payload}")
 
-        response = requests.post(
-            api_url,
-            data=json_dumps_with_datetime(serialized_payload),
-            headers=headers,
-        )
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                api_url,
+                content=json_dumps_with_datetime(serialized_payload),
+                headers=headers,
+            )
         logging.info(f"QAPI Response Raw (IST expected): {response.text}")
         response.raise_for_status()
 
@@ -188,10 +191,12 @@ def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
 async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
     """
     Tool for querying data from the analytics API.
+    Requires schema_signature from qapi_info.
 
     Args:
-       payload dict whcih contains all the below fields in it:
-        wrapper: Context wrapper containing auth token
+       payload dict which contains all the below fields in it:
+        schema_signature: Signature from qapi_info (REQUIRED)
+        domain: Analytics domain
         interval: Time interval for the query (Expected IST)
         metric: Metric to query
         dimensions: Dimensions to include
@@ -202,11 +207,23 @@ async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
         QApiResponse with the query results (Timestamps should be IST)
     """
     domain = payload.get("domain", "kvorders")
+    schema_signature = payload.get("schema_signature")
     metric = payload.get("metric")
     interval = payload.get("interval")
     dimensions = payload.get("dimensions")
     filters = payload.get("filters")
     sortedOn = payload.get("sortedOn")
+
+    # Validate schema_signature FIRST - this ensures qapi_info was called
+    is_valid, error_msg = validate_schema_signature(schema_signature, domain)
+    if not is_valid:
+        return {
+            "error": error_msg,
+            "retry": True,
+            "action_required": f"Call qapi_info(domain='{domain}') first, then pass the returned schema_signature to this tool.",
+            "suggested_tool": "qapi_info",
+            "suggested_params": {"domain": domain}
+        }
 
     logging.info(
         f"QAPI Tool Input: Domain={domain}, Interval={interval}, Metric={metric}, Dimensions={dimensions}, Filters={filters}, SortedOn={sortedOn}"
@@ -224,4 +241,4 @@ async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
     # Log the payload for debugging
     logging.debug(f"QAPI Tool: Creating payload: {json.dumps(q_api_payload.model_dump())}")
 
-    return await asyncio.to_thread(call_query_api, q_api_payload, meta_info)
+    return await call_query_api(q_api_payload, meta_info)

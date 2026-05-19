@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+import hashlib
 import logging
 from difflib import SequenceMatcher
 
@@ -106,15 +107,59 @@ def _get_headers(meta_info: dict = None) -> dict:
     return get_common_headers({}, meta_info, juspay_creds)
 
 
+def generate_schema_signature(domain: str, dimensions: list, metrics: list) -> str:
+    """
+    Generate a schema signature for a domain based on its dimensions and metrics.
+    This signature is used to verify that qapi_info was called before q_api or field_value_discovery.
+    Format: sig_<domain>_<hash>
+    """
+    content = f"{domain}:{','.join(sorted(dimensions))}:{','.join(sorted(metrics))}"
+    hash_value = hashlib.sha256(content.encode()).hexdigest()[:12]
+    return f"sig_{domain}_{hash_value}"
+
+
+def validate_schema_signature(schema_signature: str, expected_domain: str) -> tuple[bool, str]:
+    """
+    Validate a schema signature.
+    Returns (is_valid, error_message).
+    """
+    if not schema_signature:
+        return False, (
+            f"PREREQUISITE_MISSING: schema_signature is required. "
+            f"Call qapi_info(domain='{expected_domain}') first to obtain the schema_signature, "
+            f"then include it in this request. This is mandatory for all analytics queries."
+        )
+    
+    # Check format: must start with "sig_"
+    if not schema_signature.startswith("sig_"):
+        return False, (
+            f"INVALID_SIGNATURE: schema_signature must start with 'sig_'. "
+            f"Received: '{schema_signature}'. "
+            f"Call qapi_info(domain='{expected_domain}') to get a valid signature."
+        )
+    
+    # Check if signature contains the expected domain
+    expected_prefix = f"sig_{expected_domain}_"
+    if not schema_signature.startswith(expected_prefix):
+        return False, (
+            f"DOMAIN_MISMATCH: Expected signature for domain '{expected_domain}' "
+            f"(starting with '{expected_prefix}'), but received '{schema_signature}'. "
+            f"Call qapi_info(domain='{expected_domain}') to get the correct signature."
+        )
+    
+    return True, ""
+
+
 async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns available dimensions, filters, and metrics for a given analytics domain.
     The Q-API info endpoint uses singular keys ("dimension", "filter") in its response;
     this handler normalises them to plural in the output.
+    Also returns a schema_signature that must be passed to q_api and qapi_field_value_discovery.
     """
     domain = payload.get("domain", "kvorders")
     headers = _get_headers(meta_info)
-    url = f"{JUSPAY_BASE_URL}/api/q/query?api=info&domain={domain}"
+    url = f"{JUSPAY_BASE_URL}/api/q/{domain}/info"
 
     dimensions: list = []
     filters: list = []
@@ -128,11 +173,15 @@ async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
     except Exception as e:
         logger.error(f"qapi_info: API call failed for domain={domain}: {e}")
 
+    metrics = DOMAIN_METRICS.get(domain, [])
+    schema_signature = generate_schema_signature(domain, dimensions, metrics)
+
     return {
         "domain": domain,
+        "schema_signature": schema_signature,
         "dimensions": dimensions,
         "filters": filters,
-        "metrics": DOMAIN_METRICS.get(domain, []),
+        "metrics": metrics,
     }
 
 
@@ -145,10 +194,23 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
     Fuzzy field-value lookup for dimensions in a given analytics domain.
     For each requested dimension, fetches candidate values from Q-API and ranks them
     against the provided queries using SequenceMatcher similarity.
+    Requires schema_signature from qapi_info.
     """
     domain = payload.get("domain", "kvorders")
+    schema_signature = payload.get("schema_signature")
     requests_list = payload.get("requests", [])
     default_limit = payload.get("default_limit", 10)
+
+    # Validate schema_signature
+    is_valid, error_msg = validate_schema_signature(schema_signature, domain)
+    if not is_valid:
+        return {
+            "error": error_msg,
+            "retry": True,
+            "action_required": f"Call qapi_info(domain='{domain}') first, then pass the returned schema_signature to this tool.",
+            "suggested_tool": "qapi_info",
+            "suggested_params": {"domain": domain}
+        }
 
     if default_limit > 50:
         return {"error": "default_limit cannot be greater than 50.", "results": []}
@@ -156,7 +218,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
     headers = _get_headers(meta_info)
 
     # Fetch domain info to validate dimensions
-    info_url = f"{JUSPAY_BASE_URL}/api/q/query?api=info&domain={domain}"
+    info_url = f"{JUSPAY_BASE_URL}/api/q/{domain}/info"
     info_fields: set[str] = set()
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -223,7 +285,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
         # Fetch candidate values from Q-API
         candidates: list = []
         try:
-            fv_url = f"{JUSPAY_BASE_URL}/api/q/query?api=filters&domain={domain}&field={dimension}"
+            fv_url = f"{JUSPAY_BASE_URL}/api/q/{domain}/filters?field={dimension}"
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.get(fv_url, headers=headers)
                 resp.raise_for_status()

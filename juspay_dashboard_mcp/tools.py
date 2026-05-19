@@ -441,7 +441,7 @@ Use this tool to review and audit all configured surcharge rules. Essential for 
         description=api_schema.qapi.api_description,
         model=api_schema.qapi.ToolQApiPayload,
         handler=qapi.q_api,
-        response_schema=None,
+        response_schema=response_schema.q_api_response_schema,
     ),
     util.make_api_config(
         name="list_outages_juspay",
@@ -496,51 +496,50 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
     ),
     util.make_api_config(
         name="qapi_info",
-        description="""Returns the available dimensions, filters, and metrics for a given analytics domain.
+        description="""Step 1 of 3: Discover valid dimensions and metrics for analytics queries.
 
-MANDATORY CALL ORDERING: Always call tools in this sequence for analytics queries:
-  1. qapi_info       — discover dimensions, filters, and metrics for the domain
-  2. qapi_field_value_discovery — look up valid filter values for specific dimensions (if needed)
-  3. q_api           — execute the actual analytics query
+This tool must be called before q_api to obtain the authoritative list of supported fields for a domain.
+The field names returned by this tool should be used when constructing q_api queries.
 
-Call this tool (step 1) before calling qapi_field_value_discovery or q_api for the same domain.
+Required Sequence:
+  1. qapi_info(domain)           - Returns valid dimensions, filters, and metrics (this tool)
+  2. qapi_field_value_discovery  - Look up valid filter values for specific dimensions (if needed)
+  3. q_api                       - Execute the analytics query
 
 Key features:
-- Lists all queryable dimensions and filters for the domain.
-- Lists all available metrics (hardcoded per domain).
+- Lists all queryable dimensions and filters for the domain
+- Lists all available metrics for the domain
 
 Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
 
-IMPORTANT: Never summarise the output — the exact field names are required for constructing downstream q_api queries.""",
+IMPORTANT: Do not summarize the output. The exact field names are required for q_api queries.""",
         model=api_schema.qapi_info.QApiInfoPayload,
         handler=qapi_info.qapi_info,
-        response_schema=None,
+        response_schema=response_schema.qapi_info_response_schema,
     ),
     util.make_api_config(
         name="qapi_field_value_discovery",
-        description="""Fuzzy field-value lookup for dimensions in a given analytics domain.
+        description="""Step 2 of 3: Look up valid filter values for specific dimensions.
 
-MANDATORY CALL ORDERING: Always call tools in this sequence for analytics queries:
-  1. qapi_info       — discover dimensions, filters, and metrics for the domain
-  2. qapi_field_value_discovery — look up valid filter values for specific dimensions (this tool, step 2)
-  3. q_api           — execute the actual analytics query
+This tool should be called after qapi_info and before q_api when you need to discover 
+valid values for filter fields.
 
-This tool must only be called after qapi_info has been called for the same domain.
-Use it to discover valid filter values before building a q_api query.
-For each requested dimension it fetches candidate values from Q-API and ranks them against your
-search queries using fuzzy string matching.
+Required Sequence:
+  1. qapi_info(domain)           - Returns valid dimensions, filters, and metrics
+  2. qapi_field_value_discovery  - Look up valid filter values (this tool)
+  3. q_api                       - Execute the analytics query
 
 Key features:
-- Batch lookup: supply multiple dimension requests in a single call.
-- Fuzzy matching: ranks candidates by similarity to each query string.
-- Returns an unsupported_message for metrics, timestamp columns, or high-cardinality dimensions.
+- Batch lookup: supply multiple dimension requests in a single call
+- Fuzzy matching: ranks candidates by similarity to each query string
+- Returns an unsupported_message for metrics, timestamp columns, or high-cardinality dimensions
 
 Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
 
-IMPORTANT: Never summarise the output — exact values are required for q_api filters.""",
+IMPORTANT: Do not summarize the output. Exact values are required for q_api filters.""",
         model=api_schema.qapi_info.QApiFieldValueDiscoveryPayload,
         handler=qapi_info.qapi_field_value_discovery,
-        response_schema=None,
+        response_schema=response_schema.qapi_field_value_discovery_response_schema,
     ),
     util.make_api_config(
     name="rag_tool_juspay",

@@ -45,6 +45,14 @@ class QApiDimensionLookupRequest(BaseModel):
 
 
 class QApiFieldValueDiscoveryPayload(BaseModel):
+    schema_signature: Optional[str] = Field(
+        default=None,
+        description=(
+            "Schema signature from qapi_info. REQUIRED. "
+            "Call qapi_info(domain) first to obtain this value. "
+            "Format: sig_<domain>_<hash>, e.g., 'sig_kvtxns_a3f8b2c1'."
+        ),
+    )
     domain: DomainEnum = Field(
         ...,
         description="Analytics domain to query field values for.",

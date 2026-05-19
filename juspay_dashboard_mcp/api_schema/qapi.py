@@ -583,6 +583,14 @@ class QApiPayload(BaseModel):
 class ToolQApiPayload(BaseModel):
     """Pydantic model for the Tool Interface Q API payload"""
 
+    schema_signature: Optional[str] = Field(
+        default=None,
+        description=(
+            "Schema signature from qapi_info. REQUIRED. "
+            "Call qapi_info(domain) first to obtain this value. "
+            "Format: sig_<domain>_<hash>, e.g., 'sig_kvtxns_a3f8b2c1'."
+        ),
+    )
     domain: QApiDomain = Field(
         default="kvorders",
         description=(
@@ -712,14 +720,17 @@ class FieldLookupBatchResponse(RootModel[List[DimensionLookupResult]]):
 
 
 api_description = """
-    Calls an internal /q analytics API with the provided analytics payload.
-
-    MANDATORY CALL ORDERING: Always call tools in this sequence for analytics queries:
-      1. qapi_info                  — discover dimensions, filters, and metrics for the domain
-      2. qapi_field_value_discovery — look up valid filter values for specific dimensions (if needed)
-      3. q_api                      — execute the actual analytics query (this tool, step 3)
-
-    Never call q_api without first calling qapi_info for the same domain.
+    PREREQUISITE: Call qapi_info(domain) first to discover valid dimensions and metrics.
+    
+    This tool executes analytics queries against the Q API. It is Step 3 of a required sequence:
+    
+    Required Sequence:
+      1. qapi_info(domain)           - Returns valid dimensions, filters, and metrics for the domain
+      2. qapi_field_value_discovery  - Look up valid filter values for specific dimensions (if needed)  
+      3. q_api                       - Execute the analytics query (this tool)
+    
+    Calling q_api without first calling qapi_info may result in query failures due to invalid 
+    field names. The qapi_info tool returns the authoritative list of supported fields for each domain.
 
     REMEMBER! try to apply all required the filters, dimensions, etc. in least amount of function tool calls.
     CAN do more calls if all the filters, dimensions, etc. in the query's context are not possible in a single call.
