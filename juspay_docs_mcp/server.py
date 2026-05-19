@@ -14,16 +14,11 @@ Tools:
 Discovery runs once at module import; results are persisted to snapshot.json.
 """
 
-import json
 import logging
-import os
-import re
-from contextvars import ContextVar
 from typing import Annotated, Optional
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 import httpx
-from markdownify import markdownify
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
@@ -33,43 +28,25 @@ from juspay_docs_mcp.instructions import INSTRUCTIONS
 logger = logging.getLogger(__name__)
 
 
-# ----------------------------------------------------------------------------
-# Per-request credentials (ContextVar populated by middleware in juspay_mcp.main)
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Static domain allowlist
+# ---------------------------------------------------------------------------
 
-juspay_request_credentials: ContextVar[Optional[dict]] = ContextVar(
-    "juspay_request_credentials", default=None
-)
-
-
-def set_juspay_request_credentials(credentials):
-    """Set Juspay credentials for the current request context."""
-    juspay_request_credentials.set(credentials)
+_ALLOWED_SUFFIXES = (".juspay.io", ".juspay.in")
+_ALLOWED_EXACT = frozenset({"juspay.io", "juspay.in", "dth95m2xtyv8v.cloudfront.net"})
+_ALLOWED_SCHEMES = frozenset({"http", "https"})
+_ALLOWED_DOMAINS_DISPLAY = "*.juspay.io, *.juspay.in, dth95m2xtyv8v.cloudfront.net"
 
 
-def get_juspay_request_credentials():
-    """Get Juspay credentials from current request context."""
-    return juspay_request_credentials.get()
-
-
-# ----------------------------------------------------------------------------
-# Transcripts (curated commentary appended to specific URLs in doc_fetch_tool)
-# ----------------------------------------------------------------------------
-
-def _load_transcripts() -> dict:
-    path = os.path.join(os.path.dirname(__file__), "transcripts.json")
-    try:
-        with open(path, "r") as f:
-            return {str(k): str(v) for k, v in json.load(f).items()}
-    except FileNotFoundError:
-        logger.info("No transcripts.json at %s; running without transcripts", path)
-        return {}
-    except json.JSONDecodeError as e:
-        logger.warning("Failed to parse transcripts.json: %s", e)
-        return {}
-
-
-_TRANSCRIPTS_MAP = _load_transcripts()
+def _url_allowed(url: str) -> bool:
+    parsed = urlparse(url)
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        return False
+    # hostname is lowercased and strips the port.
+    host = parsed.hostname or ""
+    if host in _ALLOWED_EXACT:
+        return True
+    return any(host.endswith(s) for s in _ALLOWED_SUFFIXES)
 
 
 # ----------------------------------------------------------------------------
@@ -112,10 +89,10 @@ _CATEGORIES: list[str] = sorted({
 _CAT_HINT: str = ", ".join(_CATEGORIES) if _CATEGORIES else "(none discovered)"
 
 logger.info(
-    "Docs MCP initialized: %d products across %d categories, %d allowed domains",
+    "Docs MCP initialized: %d products across %d categories (allowed: %s)",
     len(_ENRICHED_SOURCES),
     len(_CATEGORIES),
-    len(_DOMAINS),
+    _ALLOWED_DOMAINS_DISPLAY,
 )
 
 
@@ -134,39 +111,15 @@ _HTTPX = httpx.AsyncClient(
 # Helpers
 # ----------------------------------------------------------------------------
 
-_META_REFRESH_RE = re.compile(
-    r'<meta http-equiv="refresh" content="[^;]+;\s*url=([^"]+)"',
-    re.IGNORECASE,
-)
 
 
-def _url_allowed(url: str) -> bool:
-    return any(url.startswith(d) for d in _DOMAINS)
 
-
-async def _fetch_with_processing(url: str) -> str:
-    """Fetch URL, follow meta-refresh once, inject transcript, markdownify."""
+async def _fetch(url: str) -> str:
+    """Fetch URL and return the raw response text."""
     try:
         response = await _HTTPX.get(url)
         response.raise_for_status()
-        content = response.text
-
-        m = _META_REFRESH_RE.search(content)
-        if m:
-            new_url = urljoin(str(response.url), m.group(1))
-            if not _url_allowed(new_url):
-                return (
-                    f"Error: redirect URL not allowed. "
-                    f"Allowed domains: {', '.join(sorted(_DOMAINS))}"
-                )
-            response = await _HTTPX.get(new_url)
-            response.raise_for_status()
-            content = response.text
-
-        if url in _TRANSCRIPTS_MAP:
-            content = content + "\n\n---\n\n" + _TRANSCRIPTS_MAP[url]
-
-        return markdownify(content)
+        return response.text
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         return f"Encountered an HTTP error: {e}"
 
@@ -255,11 +208,10 @@ async def explore_product(
 ) -> str:
     """Fetch the llms.txt index for a specific Juspay product.
 
-    Looks up the product slug in the discovered catalog and returns its
-    documentation index as markdown. The index contains .md content links
-    that you can read via doc_fetch_tool(url).
+    Looks up the product slug in the catalog and returns the raw llms.txt
+    content. The index contains .md content links readable via doc_fetch_tool(url).
 
-    Returns an error if the slug isn't in the catalog - call list_products()
+    Returns an error if the slug isn't in the catalog — call list_products()
     to see valid slugs.
     """
     entry = _SLUG_INDEX.get(product)
@@ -274,7 +226,7 @@ async def explore_product(
             f"Call list_products() to see all slugs. "
             f"Examples: {sample}{more}."
         )
-    return await _fetch_with_processing(entry["llms_txt"])
+    return await _fetch(entry["llms_txt"])
 
 
 @mcp.tool()
@@ -283,25 +235,24 @@ async def doc_fetch_tool(
         str,
         Field(
             description=(
-                "URL to fetch. Must be on an allowed domain (auto-derived "
-                "from the discovered product catalog, typically juspay.io)."
+                f"URL to fetch. Must be on an allowed domain: {_ALLOWED_DOMAINS_DISPLAY}."
             ),
         ),
     ],
 ) -> str:
-    """Fetch any allowed Juspay docs URL as markdown.
+    """Fetch any allowed Juspay docs URL and return its raw text content.
 
     Use this after explore_product() to read specific pages by URL.
-    Follows meta-refresh redirects once. Returns markdown-converted
-    content. Returns an error if the URL is on a disallowed domain.
+    Returns markdown mirror of the URL.
+    Returns an error if the URL is on a disallowed domain.
     """
     url = url.strip()
     if not _url_allowed(url):
         return (
-            f"Error: URL not allowed. Must start with one of: "
-            f"{', '.join(sorted(_DOMAINS))}"
+            f"Error: URL not on an allowed domain. "
+            f"Allowed: {_ALLOWED_DOMAINS_DISPLAY}"
         )
-    return await _fetch_with_processing(url)
+    return await _fetch(url)
 
 
 # Export the underlying low-level Server for main.py / stdio.py

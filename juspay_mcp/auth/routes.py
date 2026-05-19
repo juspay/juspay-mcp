@@ -348,16 +348,18 @@ def build_routes(
         return JSONResponse({"revoked": revoked})
 
     # ---------- assemble ------------------------------------------------------
+    _WELL_KNOWN_METHODS = ["GET", "OPTIONS"]
+
     routes: list[Route] = [
-        Route("/.well-known/oauth-protected-resource", endpoint=prm_root, methods=["GET"]),
+        Route("/.well-known/oauth-protected-resource", endpoint=prm_root, methods=_WELL_KNOWN_METHODS),
         Route(
             "/{mount:str}/.well-known/oauth-protected-resource",
             endpoint=prm_for_mount,
-            methods=["GET"],
+            methods=_WELL_KNOWN_METHODS,
         ),
-        Route("/.well-known/oauth-authorization-server", endpoint=asm, methods=["GET"]),
-        Route("/.well-known/openid-configuration", endpoint=asm, methods=["GET"]),
-        Route("/.well-known/jwks.json", endpoint=jwks, methods=["GET"]),
+        Route("/.well-known/oauth-authorization-server", endpoint=asm, methods=_WELL_KNOWN_METHODS),
+        Route("/.well-known/openid-configuration", endpoint=asm, methods=_WELL_KNOWN_METHODS),
+        Route("/.well-known/jwks.json", endpoint=jwks, methods=_WELL_KNOWN_METHODS),
         Route("/oauth/register", endpoint=register, methods=["POST"]),
         Route("/oauth/authorize", endpoint=authorize, methods=["GET"]),
         Route("/oauth/callback", endpoint=callback, methods=["GET"]),

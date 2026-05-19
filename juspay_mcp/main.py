@@ -104,18 +104,20 @@ def main(host: str, port: int, mode: str):
         return
     
     # Run in HTTP/SSE mode (default)
-    message_endpoint_path = "/messages/"
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
         sse_dashboard_endpoint_path = "/juspay-dashboard"
         streamable_dashboard_endpoint_path = "/juspay-dashboard-stream"
+        dashboard_message_path = "/messages/"
 
-        # Docs MCP
+        # Docs MCP — own message path so it can be excluded from auth
         sse_docs_endpoint_path = "/juspay-docs"
         streamable_docs_endpoint_path = "/juspay-docs-stream"
+        docs_message_path = "/docs-messages/"
     else:
         sse_endpoint_path = "/juspay"
         streamable_endpoint_path = "/juspay-stream"
+        message_endpoint_path = "/messages/"
     
     oauth_cfg = auth_config.load()
     portal_client = None
@@ -133,16 +135,22 @@ def main(host: str, port: int, mode: str):
         logger.info("Running with header-based authentication")
         logger.info("Expected headers: JUSPAY_API_KEY, JUSPAY_MERCHANT_ID, JUSPAY_WEB_LOGIN_TOKEN")
 
-    sse_transport_handler = SseServerTransport(message_endpoint_path)
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        sse_transport_handler = SseServerTransport(dashboard_message_path)
+        docs_sse_transport_handler = SseServerTransport(docs_message_path)
+    else:
+        sse_transport_handler = SseServerTransport(message_endpoint_path)
+
+    class _AlreadySentResponse(Response):
+        """No-op response — SSE/StreamableHTTP transport already wrote to send."""
+        async def __call__(self, scope, receive, send):
+            pass
 
     async def health_check(request: Request):
         return JSONResponse({"status": "ok"})
 
-    def make_sse_handler(active_app_key: str):
-        """
-        Returns an async endpoint function bound to a specific MCP app
-        (dashboard / docs / default).
-        """
+    def make_sse_handler(active_app_key: str, transport: SseServerTransport):
+        """Returns an async SSE endpoint bound to a specific MCP app and transport."""
         active_app = MCP_APPS[active_app_key]
 
         async def handler(request: Request):
@@ -150,22 +158,17 @@ def main(host: str, port: int, mode: str):
                 f"New SSE connection from: {request.client} - {request.method} {request.url.path}"
             )
 
-            # Choose correct set_juspay_request_credentials based on which app is active
-            if JUSPAY_MCP_TYPE == "DASHBOARD":
-                if active_app_key == "dashboard":
-                    from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-                elif active_app_key == "docs":
-                    from juspay_docs_mcp.server import set_juspay_request_credentials
-                else:
-                    # Fallback (should not happen in DASHBOARD mode)
-                    from juspay_mcp.tools import set_juspay_request_credentials
-            else:
+            if active_app_key == "dashboard":
+                from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "default":
                 from juspay_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            # docs: no credentials needed
 
-            juspay_creds = getattr(request.state, "juspay_credentials", None)
-            set_juspay_request_credentials(juspay_creds)
-
-            async with sse_transport_handler.connect_sse(
+            async with transport.connect_sse(
                 request.scope, request.receive, request._send
             ) as streams:
                 logging.info(f"MCP Session starting for {request.client}")
@@ -181,6 +184,8 @@ def main(host: str, port: int, mode: str):
                     )
                 finally:
                     logging.info(f"MCP Session ended for {request.client}")
+
+            return _AlreadySentResponse()
 
         return handler
 
@@ -198,30 +203,21 @@ def main(host: str, port: int, mode: str):
             stateless=True,
         )
 
-        class _AlreadySentResponse(Response):
-            """No-op response — session_manager already wrote to send."""
-            async def __call__(self, scope, receive, send):
-                pass
-
         async def handle_streamable_http(request: Request):
             """Route-compatible endpoint for StreamableHTTP that handles credential injection."""
             logging.info(
                 f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}"
             )
 
-            # Choose correct set_juspay_request_credentials based on which app is active
-            if JUSPAY_MCP_TYPE == "DASHBOARD":
-                if active_app_key == "dashboard":
-                    from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-                elif active_app_key == "docs":
-                    from juspay_docs_mcp.server import set_juspay_request_credentials
-                else:
-                    from juspay_mcp.tools import set_juspay_request_credentials
-            else:
+            if active_app_key == "dashboard":
+                from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "default":
                 from juspay_mcp.tools import set_juspay_request_credentials
-
-            juspay_creds = getattr(request.state, "juspay_credentials", None)
-            set_juspay_request_credentials(juspay_creds)
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            # docs: no credentials needed
 
             # session_manager writes the full HTTP response directly to send
             await session_manager.handle_request(request.scope, request.receive, request._send)
@@ -229,11 +225,19 @@ def main(host: str, port: int, mode: str):
 
         return handle_streamable_http, session_manager
 
-    routes = [
-        Route("/health", endpoint=health_check, methods=["GET"]),
-        Route("/health/ready", endpoint=health_check, methods=["GET"]),
-        Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
-    ]
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        routes = [
+            Route("/health", endpoint=health_check, methods=["GET"]),
+            Route("/health/ready", endpoint=health_check, methods=["GET"]),
+            Mount(dashboard_message_path, app=sse_transport_handler.handle_post_message),
+            Mount(docs_message_path, app=docs_sse_transport_handler.handle_post_message),
+        ]
+    else:
+        routes = [
+            Route("/health", endpoint=health_check, methods=["GET"]),
+            Route("/health/ready", endpoint=health_check, methods=["GET"]),
+            Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
+        ]
 
     # Prepend OAuth discovery + /oauth/* routes before the MCP transport
     # routes so they win the longest-prefix match.
@@ -242,11 +246,11 @@ def main(host: str, port: int, mode: str):
 
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
-        dashboard_sse_handler = make_sse_handler("dashboard")
+        dashboard_sse_handler = make_sse_handler("dashboard", sse_transport_handler)
         dashboard_http_handler, dashboard_session_mgr = make_streamable_http_handler("dashboard")
 
         # Docs MCP
-        docs_sse_handler = make_sse_handler("docs")
+        docs_sse_handler = make_sse_handler("docs", docs_sse_transport_handler)
         docs_http_handler, docs_session_mgr = make_streamable_http_handler("docs")
 
         routes.extend(
@@ -281,7 +285,7 @@ def main(host: str, port: int, mode: str):
             logger.info("StreamableHTTP session managers stopped")
 
     else:
-        default_sse_handler = make_sse_handler("default")
+        default_sse_handler = make_sse_handler("default", sse_transport_handler)
         default_http_handler, default_session_mgr = make_streamable_http_handler("default")
 
         routes.extend(
@@ -313,6 +317,15 @@ def main(host: str, port: int, mode: str):
             logger.info("StreamableHTTP session manager stopped")
 
     # Authentication middleware — OAuth bearer when enabled, else legacy header path.
+    # In DASHBOARD mode the docs endpoints are public (no auth required).
+    docs_skip_prefixes: tuple[str, ...] = ()
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        docs_skip_prefixes = (
+            sse_docs_endpoint_path,
+            streamable_docs_endpoint_path,
+            docs_message_path,
+        )
+
     if oauth_cfg.enabled and portal_client is not None:
         middleware = [
             Middleware(
@@ -320,6 +333,7 @@ def main(host: str, port: int, mode: str):
                 cfg=oauth_cfg,
                 portal=portal_client,
                 validation_cache=oauth_validation_cache,
+                skip_path_prefixes=docs_skip_prefixes,
             ),
         ]
     else:
