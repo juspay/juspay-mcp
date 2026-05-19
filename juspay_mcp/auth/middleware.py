@@ -56,6 +56,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         cfg: OAuthConfig,
         portal: PortalClient,
         validation_cache: dict[str, tuple[PortalUserInfo, float]] | None = None,
+        skip_path_prefixes: tuple[str, ...] = (),
     ) -> None:
         super().__init__(app)
         self._cfg = cfg
@@ -66,6 +67,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         self._cache: dict[str, tuple[PortalUserInfo, float]] = (
             validation_cache if validation_cache is not None else {}
         )
+        self._skip_path_prefixes = skip_path_prefixes
 
     async def _validate_with_cache(self, token: str) -> PortalUserInfo | None:
         # Dev bypass: useful for curl-driven smoke tests so we don't need a
@@ -131,7 +133,12 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        if _is_public_path(request.url.path):
+        path = request.url.path
+        if _is_public_path(path):
+            return await call_next(request)
+        if self._skip_path_prefixes and any(
+            path == p or path.startswith(p + "/") for p in self._skip_path_prefixes
+        ):
             return await call_next(request)
 
         auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
