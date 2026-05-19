@@ -244,6 +244,33 @@ def main(host: str, port: int, mode: str):
     if oauth_routes_list:
         routes = oauth_routes_list + routes
 
+    # In DASHBOARD mode the docs endpoints are public. Prepend literal
+    # well-known routes for docs mounts AFTER the OAuth list so they sit
+    # first in the final route table and beat the OAuth per-mount template
+    # route (/{mount}/.well-known/oauth-protected-resource).
+    if JUSPAY_MCP_TYPE == "DASHBOARD":
+        _WELL_KNOWN_METHODS = ["GET", "OPTIONS"]
+        docs_public_routes: list = []
+        for _docs_mount_path in (sse_docs_endpoint_path, streamable_docs_endpoint_path):
+            _mount = _docs_mount_path.lstrip("/")
+            _resource_url = (
+                f"{oauth_cfg.mcp_server_url}/{_mount}"
+                if oauth_cfg.enabled
+                else f"http://{host}:{port}/{_mount}"
+            )
+
+            async def _docs_prm(request: Request, _url: str = _resource_url) -> Response:
+                return JSONResponse({"resource": _url})
+
+            docs_public_routes.append(
+                Route(
+                    f"/{_mount}/.well-known/oauth-protected-resource",
+                    endpoint=_docs_prm,
+                    methods=_WELL_KNOWN_METHODS,
+                )
+            )
+        routes = docs_public_routes + routes
+
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
         dashboard_sse_handler = make_sse_handler("dashboard", sse_transport_handler)
