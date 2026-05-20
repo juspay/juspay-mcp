@@ -1823,3 +1823,74 @@ integration_product_count_metrics_response_schema = {
     },
     "required": ["queryData"]
 }
+
+# ============================================================================
+#                          Q API Response Schemas
+# ============================================================================
+
+qapi_info_response_schema = {
+    "type": "object",
+    "description": "Response from qapi_info tool. Returns schema_signature (REQUIRED for q_api and qapi_field_value_discovery), domain, dimensions, filters, and metrics.",
+    "properties": {
+        "schema_signature": {
+            "type": "string",
+            "description": "REQUIRED signature to pass to q_api and qapi_field_value_discovery. Format: sig_<domain>_<hash>"
+        },
+        "domain": {
+            "type": "string",
+            "description": "The analytics domain queried"
+        },
+        "dimensions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of valid dimension names for this domain"
+        },
+        "filters": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of valid filter field names for this domain"
+        },
+        "metrics": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of valid metric names for this domain"
+        }
+    },
+    "required": ["schema_signature", "domain", "dimensions", "filters", "metrics"]
+}
+
+qapi_field_value_discovery_response_schema = {
+    "type": "object",
+    "description": "Response from qapi_field_value_discovery tool. Returns results array with dimension values. Note: If schema_signature is missing, returns error with retry guidance.",
+    "properties": {
+        "results": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "dimension": {"type": "string"},
+                    "values": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "unsupported_message": {
+                        "type": "string",
+                        "description": "Message if dimension is unsupported for value lookup"
+                    }
+                },
+                "required": ["dimension"]
+            }
+        }
+    },
+    "required": ["results"]
+}
+
+q_api_response_schema = {
+    "type": "array",
+    "description": "Response from q_api tool. Returns array of data rows with metric values and dimension breakdowns. Note: If schema_signature is missing, returns error object with retry guidance.",
+    "items": {
+        "type": "object",
+        "additionalProperties": True,
+        "description": "Row containing metric values and dimension breakdowns"
+    }
+}

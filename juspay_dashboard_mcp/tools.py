@@ -441,7 +441,7 @@ Use this tool to review and audit all configured surcharge rules. Essential for 
         description=api_schema.qapi.api_description,
         model=api_schema.qapi.ToolQApiPayload,
         handler=qapi.q_api,
-        response_schema=None,
+        response_schema=response_schema.q_api_response_schema,
     ),
     util.make_api_config(
         name="list_outages_juspay",
@@ -493,6 +493,53 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
         model=api_schema.payments.JuspayCreateAutopayLinkPayload,
         handler=payments.create_autopay_link_juspay,
         response_schema=None,
+    ),
+    util.make_api_config(
+        name="qapi_info",
+        description="""Step 1 of 3: Discover valid dimensions and metrics for analytics queries.
+
+This tool must be called before q_api to obtain the authoritative list of supported fields for a domain.
+The field names returned by this tool should be used when constructing q_api queries.
+
+Required Sequence:
+  1. qapi_info(domain)           - Returns valid dimensions, filters, and metrics (this tool)
+  2. qapi_field_value_discovery  - Look up valid filter values for specific dimensions (if needed)
+  3. q_api                       - Execute the analytics query
+
+Key features:
+- Lists all queryable dimensions and filters for the domain
+- Lists all available metrics for the domain
+
+Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
+
+IMPORTANT: Do not summarize the output. The exact field names are required for q_api queries.""",
+        model=api_schema.qapi_info.QApiInfoPayload,
+        handler=qapi_info.qapi_info,
+        response_schema=response_schema.qapi_info_response_schema,
+    ),
+    util.make_api_config(
+        name="qapi_field_value_discovery",
+        description="""Step 2 of 3: Look up valid filter values for specific dimensions.
+
+This tool should be called after qapi_info and before q_api when you need to discover 
+valid values for filter fields.
+
+Required Sequence:
+  1. qapi_info(domain)           - Returns valid dimensions, filters, and metrics
+  2. qapi_field_value_discovery  - Look up valid filter values (this tool)
+  3. q_api                       - Execute the analytics query
+
+Key features:
+- Batch lookup: supply multiple dimension requests in a single call
+- Fuzzy matching: ranks candidates by similarity to each query string
+- Returns an unsupported_message for metrics, timestamp columns, or high-cardinality dimensions
+
+Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
+
+IMPORTANT: Do not summarize the output. Exact values are required for q_api filters.""",
+        model=api_schema.qapi_info.QApiFieldValueDiscoveryPayload,
+        handler=qapi_info.qapi_field_value_discovery,
+        response_schema=response_schema.qapi_field_value_discovery_response_schema,
     ),
     util.make_api_config(
     name="rag_tool_juspay",
@@ -673,13 +720,13 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         model_cls = tool_entry.get("model")
         if (model_cls):
             try:
-                payload = model_cls(**arguments)  
-                payload_dict = payload.dict(exclude_none=True) 
+                payload = model_cls(**arguments)
+                payload_dict = payload.dict(exclude_none=True)
             except Exception as e:
                 raise ValueError(f"Validation error: {str(e)}")
         else:
-            payload_dict = arguments 
-        
+            payload_dict = arguments
+
         juspay_creds = get_juspay_request_credentials()
         if juspay_creds:
             logger.info("Using header credentials for Juspay Dashboard API calls")
@@ -697,13 +744,13 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
             response = await handler()
 
         elif param_count == 1:
-            if arguments or not meta_info:
-                response = await handler(arguments)
+            if payload_dict or not meta_info:
+                response = await handler(payload_dict)
             else:
                 response = await handler(meta_info)
 
         elif param_count == 2:
-            response = await handler(arguments, meta_info)
+            response = await handler(payload_dict, meta_info)
 
         else:
             raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
