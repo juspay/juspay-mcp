@@ -5,7 +5,10 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import hashlib
+import json
 import logging
+import time
+from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 
 import httpx
@@ -285,15 +288,50 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
         # Fetch candidate values from Q-API
         candidates: list = []
         try:
-            fv_url = f"{JUSPAY_BASE_URL}/api/q/{domain}/filters?field={dimension}"
+            end_time = datetime.utcnow()
+            start_time = end_time - timedelta(days=7)
+            interval = {
+                "start": start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "end": end_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+            fv_payload = {
+                "domain": domain,
+                "interval": interval,
+                "metric": ["total_mandates"] if domain == "kvmandates" else ["success_rate"],
+                "dimensions": [dimension],
+                "sortedOn": {
+                    "sortDimension": "total_mandates" if domain == "kvmandates" else "success_rate",
+                    "ordering": "Desc",
+                },
+            }
+            fv_url = f"{JUSPAY_BASE_URL}/api/q/query?api=filters"
+            logger.info(f"[field_value_discovery] POST {fv_url} for dimension={dimension}")
             async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get(fv_url, headers=headers)
+                resp = await client.post(
+                    fv_url,
+                    headers={**headers, "Content-Type": "application/json"},
+                    content=json.dumps(fv_payload),
+                )
                 resp.raise_for_status()
-                raw_values = resp.json()
-                candidates = [
-                    c for c in (raw_values or [])
-                    if isinstance(c, bool) or (isinstance(c, str) and c.strip())
-                ]
+                seen: set = set()
+                for line in resp.text.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        raw_value = data.get(dimension)
+                        if raw_value is None:
+                            continue
+                        if isinstance(raw_value, bool):
+                            value = raw_value
+                        else:
+                            value = str(raw_value)
+                        if value not in seen and (isinstance(value, bool) or (isinstance(value, str) and value.strip())):
+                            candidates.append(value)
+                            seen.add(value)
+                    except json.JSONDecodeError:
+                        continue
         except Exception as e:
             logger.error(f"qapi_field_value_discovery: failed to fetch values for {dimension}: {e}")
 
