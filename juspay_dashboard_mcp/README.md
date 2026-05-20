@@ -125,8 +125,7 @@ Replace `your_juspay_web_login_token` with your actual dashboard login token.
 
 Watch how to generate your Juspay Dashboard OAuth token:
 
-https://github.com/user-attachments/assets/0170cc0d-96c2-4fef-afb3-60bcfb6fcc3e
-
+https://github.com/user-attachments/assets/c8d38149-f3d1-46dc-984c-68f7b4d0ef88
 ### Environment Variables
 
 Create a `.env` file or set these environment variables:
