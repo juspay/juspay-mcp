@@ -9,7 +9,8 @@ Endpoint inventory (all mounted on the same Starlette app as the MCP transport
 endpoints):
 
   GET  /.well-known/oauth-protected-resource
-  GET  /<mount>/.well-known/oauth-protected-resource     (per-mount alias)
+  GET  /.well-known/oauth-protected-resource/<mount>     (per-mount, reverse)
+  GET  /<mount>/.well-known/oauth-protected-resource     (per-mount, forward)
   GET  /.well-known/oauth-authorization-server
   GET  /.well-known/openid-configuration                 (RFC 8414 alias)
   GET  /.well-known/jwks.json
