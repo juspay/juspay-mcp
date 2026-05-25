@@ -133,9 +133,21 @@ def build_routes(
         return JSONResponse(protected_resource_metadata(cfg))
 
     async def prm_for_mount(request: Request) -> Response:
-        # `mount_path` arrives via path templating, e.g. /juspay-dashboard-stream
+        # Forward-form: /{mount}/.well-known/oauth-protected-resource
+        # mount is a single path segment, e.g. "juspay-dashboard-stream"
         mount = request.path_params["mount"]
         resource_url = f"{cfg.mcp_server_url}/{mount}"
+        return JSONResponse(protected_resource_metadata(cfg, resource_url=resource_url))
+
+    async def prm_reverse_form(request: Request) -> Response:
+        # Reverse-form (RFC 9728 §4): /.well-known/oauth-protected-resource/{full_path}
+        # full_path may span multiple segments, e.g. "dashboard/juspay-dashboard-stream"
+        # The resource URL is reconstructed from the host origin, not cfg.mcp_server_url,
+        # because the reverse-form encodes the full absolute path from the host root.
+        full_path = request.path_params["full_path"]
+        parsed = urlparse(cfg.mcp_server_url)
+        host_origin = f"{parsed.scheme}://{parsed.netloc}"
+        resource_url = f"{host_origin}/{full_path}"
         return JSONResponse(protected_resource_metadata(cfg, resource_url=resource_url))
 
     async def asm(_: Request) -> Response:
@@ -354,8 +366,8 @@ def build_routes(
     routes: list[Route] = [
         Route("/.well-known/oauth-protected-resource", endpoint=prm_root, methods=_WELL_KNOWN_METHODS),
         Route(
-            "/.well-known/oauth-protected-resource/{mount:str}",
-            endpoint=prm_for_mount,
+            "/.well-known/oauth-protected-resource/{full_path:path}",
+            endpoint=prm_reverse_form,
             methods=_WELL_KNOWN_METHODS,
         ),
         Route(

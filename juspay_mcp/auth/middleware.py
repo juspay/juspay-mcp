@@ -106,7 +106,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         # Strip any trailing /messages or /stream suffix so we land on the
         # mount-level well-known doc.
-        base = path.rsplit("/", 1)[0] if path.count("/") > 1 else ""
+        base = path.rsplit("/", 1)[0] if path.count("/") > 1 else path
         prm_url = f"{self._cfg.mcp_server_url}{base}/.well-known/oauth-protected-resource"
         parts = [f'Bearer resource_metadata="{prm_url}"']
         if self._cfg.scopes_supported:
