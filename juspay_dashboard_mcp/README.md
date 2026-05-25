@@ -228,13 +228,11 @@ The Q API provides powerful analytics capabilities. Use these tools in sequence:
 | Tool Name | Description |
 |-----------|-------------|
 | `juspay_get_general_settings` | Retrieves general configuration settings for the merchant including basic setup and feature enablement. |
-| `juspay_update_general_settings` | Updates merchant general settings. Currently supports updating the payment redirect URL (returnUrl). |
 | `juspay_get_conflict_settings` | Retrieves conflict settings configuration for payment processing. |
 | `juspay_get_mandate_settings` | Retrieves mandate-related settings for recurring payments and subscriptions. |
 | `juspay_get_priority_logic_settings` | Fetches all configured priority logic rules for gateway routing with status and complete logic definitions. |
 | `juspay_get_routing_settings` | Provides success rate-based routing thresholds and downtime-based switching configurations. |
 | `juspay_get_webhook_settings` | Retrieves webhook configuration settings for event notifications. |
-| `juspay_update_webhook_settings` | Updates webhook URL and event subscriptions. **Warning**: Replaces existing event subscriptions - merge with existing events to preserve them. |
 
 ### API Key Management
 
