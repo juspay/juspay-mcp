@@ -178,7 +178,8 @@ def build_routes(
                 "response_types": ["code"],
                 "token_endpoint_auth_method": "client_secret_post",
                 "client_name": body.get("client_name", "MCP Client"),
-            }
+            },
+            status_code=201,
         )
 
     # ---------- /oauth/authorize ---------------------------------------------
