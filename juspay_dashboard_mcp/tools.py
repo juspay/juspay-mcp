@@ -441,6 +441,27 @@ Use this tool to search for payment links, check their status, or generate repor
         response_schema=None,
     ),
     util.make_api_config(
+        name="juspay_list_zoho_books_invoices",
+        description="""Fetches Zoho Books invoices for the merchant.
+
+Use this tool for questions about invoices, bills, monthly statements, invoice download links, invoice status, unpaid invoices, paid invoices, overdue invoices, pending dues, or a specific billing period.
+
+Behavior:
+- If customer_name is omitted and only one Zoho Books customer account is configured, it is used automatically.
+- If customer_name is omitted and multiple accounts are configured, returns customer_selection_required with customer_names. Ask the user which account to use, then call again with customer_name.
+- If no date filters are supplied, defaults to the current month using the request current_timestamp when available.
+- All date parameters must be in YYYY-MM-DD format. Do not include time.
+
+Rendering instructions:
+- Always state the customer_name and date_range_used at the top of the response.
+- Render the invoices list as a table with EXACTLY 4 columns: Invoice Number, Status, Amount, Download. Do NOT add any other columns — not from invoice_details, not from anywhere. The table must have exactly these 4 columns even if more data is available.
+- invoice_details exists only for follow-up questions. Do not use it when rendering the initial table. Only reference invoice_details if the user explicitly asks for a specific field by name.
+- Render invoice_url as a short clickable [Download](url) link. Do not paste the full URL.""",
+        model=api_schema.zoho_books.JuspayListZohoBooksInvoicesPayload,
+        handler=zoho_books.list_zoho_books_invoices_juspay,
+        response_schema=None,
+    ),
+    util.make_api_config(
         name="juspay_list_surcharge_rules",
         description="""No input required. Returns a list of all configured surcharge rules, including their current status and rule definitions.
 

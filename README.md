@@ -318,6 +318,7 @@ The MCP server translates AI assistant requests into properly formatted API call
 | `juspay_get_routing_settings`        | Provides details of success rate-based routing thresholds.        |
 | `juspay_get_webhook_settings`        | Retrieves webhook configuration settings for the merchant.        |
 | `juspay_list_surcharge_rules`        | Returns a list of all configured surcharge rules.                 |
+| `juspay_list_zoho_books_invoices`    | Fetches Zoho Books invoices for the merchant. Supports filtering by status, created date, and due date. Returns invoice details with download links. |
 
 #### Advanced Querying
 
