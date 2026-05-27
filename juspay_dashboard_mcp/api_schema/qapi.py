@@ -454,8 +454,8 @@ class FieldFilter(BaseModel):
 #  4. Combined / And / Or filters (unchanged from your original code)
 # ────────────────────────────────────────────────────────────────────────────────
 class CombinedFilter(BaseModel):
-    left: "Filter"  # forward ref
-    right: "Filter"  # forward ref
+    left: Optional["Filter"] = None  # Optional breaks required ref-loop for Gemini schema validation
+    right: Optional["Filter"] = None
 
 
 class AndFilter(BaseModel):
