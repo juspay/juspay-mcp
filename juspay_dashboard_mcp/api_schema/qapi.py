@@ -451,11 +451,29 @@ class FieldFilter(BaseModel):
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-#  4. Combined / And / Or filters (unchanged from your original code)
+#  4. Combined / And / Or filters
+#  left/right are typed as Any to avoid a recursive $ref in the generated JSON
+#  schema, which Gemini's tool-calling API rejects. The description guides the LLM.
 # ────────────────────────────────────────────────────────────────────────────────
 class CombinedFilter(BaseModel):
-    left: Optional["Filter"] = None  # Optional breaks required ref-loop for Gemini schema validation
-    right: Optional["Filter"] = None
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    left: Any = Field(
+        ...,
+        description=(
+            "A filter expression. Can be a simple field filter "
+            '(e.g. {"field": "payment_gateway", "condition": "In", "val": ["HDFC"]}) '
+            'or a nested {"and": ...} / {"or": ...} combinator.'
+        ),
+    )
+    right: Any = Field(
+        ...,
+        description=(
+            "A filter expression. Can be a simple field filter "
+            '(e.g. {"field": "payment_gateway", "condition": "NotIn", "val": [null]}) '
+            'or a nested {"and": ...} / {"or": ...} combinator.'
+        ),
+    )
 
 
 class AndFilter(BaseModel):
@@ -490,13 +508,6 @@ Filter = Union[
     AndFilter,
     OrFilter,
 ]
-
-# ────────────────────────────────────────────────────────────────────────────────
-#  6. Resolve forward references so Pydantic is happy
-# ────────────────────────────────────────────────────────────────────────────────
-CombinedFilter.model_rebuild()
-AndFilter.model_rebuild()
-OrFilter.model_rebuild()
 
 #################################
 #            sortedOn           #
