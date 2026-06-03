@@ -94,9 +94,7 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ### Other Clients
 
-MCP is an open protocol supported by many clients. Refer to your client's documentation for how to connect. See [How to Generate OAuth Token](#how-to-generate-oauth-token) to get your token first.
-
-Use the Docker image via STDIO:
+For clients that don't support remote HTTP transport, use the Docker image via STDIO. See [How to Generate OAuth Token](#how-to-generate-oauth-token) to get your token first.
 
 ```json
 {
