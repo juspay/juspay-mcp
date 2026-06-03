@@ -13,7 +13,18 @@ A Model Context Protocol (MCP) server for Juspay's Merchant Dashboard APIs. This
 https://mcp.juspay.in/dashboard/juspay-dashboard-stream
 ```
 
-### Claude Code (OAuth Flow)
+### Web & Desktop Apps (Claude, ChatGPT, Codex, Cursor)
+
+1. Open **Settings → Connectors / MCP Servers / Tools & MCP**
+2. Click **Create** / **Add** / **New MCP Server**
+3. Paste the server URL: `https://mcp.juspay.in/dashboard/juspay-dashboard-stream`
+4. Authenticate via OAuth when prompted
+
+> ChatGPT requires Developer Mode enabled (Settings → Developer Mode) and a Plus/Pro/Team/Enterprise plan.
+
+### CLI
+
+#### Claude Code
 
 ```bash
 # Step 1: Add the MCP server
@@ -29,7 +40,7 @@ Inside Claude Code:
 3. Click to authenticate — your browser will open to Juspay Portal
 4. Sign in with your Juspay credentials
 
-### OpenAI Codex CLI (OAuth Flow)
+#### Codex CLI
 
 ```bash
 # Step 1: Add the MCP server
@@ -41,9 +52,9 @@ codex mcp add juspay-dashboard --url https://mcp.juspay.in/dashboard/juspay-dash
 codex
 ```
 
-### Cursor (OAuth Flow)
+#### Cursor
 
-Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
+Step 1: Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 
 ```json
 {
@@ -55,15 +66,19 @@ Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 }
 ```
 
+Step 2: Enable, authenticate, and start:
+
 ```bash
 agent mcp enable juspay-dashboard
 agent mcp login juspay-dashboard
 agent
 ```
 
-### VS Code (OAuth Flow)
+### IDEs (VS Code, Windsurf)
 
-Add to `.vscode/mcp.json` (project) or your user-level `mcp.json`:
+#### VS Code
+
+Add to `.vscode/mcp.json` (project) or your user-level `mcp.json`, then open Agent mode in your AI extension and authenticate:
 
 ```json
 {
@@ -76,11 +91,9 @@ Add to `.vscode/mcp.json` (project) or your user-level `mcp.json`:
 }
 ```
 
-Open Copilot Chat, switch to **Agent** mode, and authenticate when prompted.
+#### Windsurf
 
-### Windsurf (OAuth Flow)
-
-Add to `~/.codeium/windsurf/mcp_config.json`:
+Open the MCP Marketplace in the Cascade panel and add the server URL, or add to `~/.codeium/windsurf/mcp_config.json` directly:
 
 ```json
 {
@@ -106,8 +119,10 @@ For clients that don't support remote HTTP transport, use the Docker image via S
         "--pull=always",
         "--rm",
         "-i",
-        "-e", "JUSPAY_WEB_LOGIN_TOKEN",
-        "-e", "JUSPAY_ENV",
+        "-e",
+        "JUSPAY_WEB_LOGIN_TOKEN",
+        "-e",
+        "JUSPAY_ENV",
         "juspaydotin/juspay-dashboard-mcp:latest"
       ],
       "env": {
