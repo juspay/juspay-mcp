@@ -6,6 +6,8 @@ A Model Context Protocol (MCP) server for Juspay's Merchant Dashboard APIs. This
 
 ## Quick Start
 
+> Connect to the Juspay-hosted remote MCP server — no local setup required.
+
 **Remote MCP Server URL:**
 ```
 https://mcp.juspay.in/dashboard/juspay-dashboard-stream
@@ -125,7 +127,7 @@ Use the Docker image via STDIO:
 
 - [Introduction](#introduction)
 - [Key Features](#key-features)
-- [Getting Started](#getting-started)
+- [Getting Started (Local Setup)](#getting-started-local-setup)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Configuration](#configuration)
@@ -166,7 +168,9 @@ The Juspay Dashboard MCP (Model Context Protocol) server provides a standardized
 - **Integration Monitoring**: Track integration progress and compliance
 - **MCP Standard Compliance**: Seamless integration with LLMs and AI agents
 
-## Getting Started
+## Getting Started (Local Setup)
+
+> Only needed if you want to self-host the MCP server. For most users, the [Quick Start](#quick-start) above is all you need.
 
 ### Prerequisites
 
