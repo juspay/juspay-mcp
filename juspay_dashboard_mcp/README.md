@@ -4,42 +4,155 @@
 
 A Model Context Protocol (MCP) server for Juspay's Merchant Dashboard APIs. This module enables AI agents and applications to access merchant dashboard features including gateway management, analytics, reporting, user management, settings, and payment link creation.
 
+## Quick Start
+
+> Connect to the Juspay-hosted remote MCP server — no local setup required.
+
+**Remote MCP Server URL:**
+```
+https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
+
+### Claude Code (OAuth Flow)
+
+```bash
+# Step 1: Add the MCP server
+claude mcp add --transport http juspay-dashboard https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+
+# Step 2: Start Claude Code
+claude
+```
+
+Inside Claude Code:
+1. Type `/mcp` to see MCP server status
+2. Select `juspay-dashboard` from the list
+3. Click to authenticate — your browser will open to Juspay Portal
+4. Sign in with your Juspay credentials
+
+### OpenAI Codex CLI (OAuth Flow)
+
+```bash
+# Step 1: Add the MCP server
+codex mcp add juspay-dashboard --url https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+
+# Step 2: Authenticate in browser when prompted
+
+# Step 3: Start Codex
+codex
+```
+
+### Cursor (OAuth Flow)
+
+Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
+
+```json
+{
+  "mcpServers": {
+    "juspay-dashboard": {
+      "url": "https://mcp.juspay.in/dashboard/juspay-dashboard-stream"
+    }
+  }
+}
+```
+
+```bash
+agent mcp enable juspay-dashboard
+agent mcp login juspay-dashboard
+agent
+```
+
+### VS Code (OAuth Flow)
+
+Add to `.vscode/mcp.json` (project) or your user-level `mcp.json`:
+
+```json
+{
+  "servers": {
+    "juspay-dashboard": {
+      "type": "http",
+      "url": "https://mcp.juspay.in/dashboard/juspay-dashboard-stream"
+    }
+  }
+}
+```
+
+Open Copilot Chat, switch to **Agent** mode, and authenticate when prompted.
+
+### Windsurf (OAuth Flow)
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "juspay-dashboard": {
+      "serverUrl": "https://mcp.juspay.in/dashboard/juspay-dashboard-stream"
+    }
+  }
+}
+```
+
+### Other Clients
+
+MCP is an open protocol supported by many clients. Refer to your client's documentation for how to connect. See [How to Generate OAuth Token](#how-to-generate-oauth-token) to get your token first.
+
+Use the Docker image via STDIO:
+
+```json
+{
+  "mcpServers": {
+    "juspay-dashboard-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--pull=always",
+        "--rm",
+        "-i",
+        "-e", "JUSPAY_WEB_LOGIN_TOKEN",
+        "-e", "JUSPAY_ENV",
+        "juspaydotin/juspay-dashboard-mcp:latest"
+      ],
+      "env": {
+        "JUSPAY_WEB_LOGIN_TOKEN": "your_juspay_oauth_token",
+        "JUSPAY_ENV": "sandbox"
+      }
+    }
+  }
+}
+```
+
+---
+
 ## Table of Contents
 
-- [Juspay Dashboard MCP](#juspay-dashboard-mcp)
-  - [Table of Contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Key Features](#key-features)
-  - [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-    - [Quick Start](#quick-start)
-  - [Usage with Claude Code (OAuth Flow)](#usage-with-claude-code-oauth-flow)
-  - [Usage with OpenAI Codex CLI (OAuth Flow)](#usage-with-openai-codex-cli-oauth-flow)
-  - [Usage with Cursor CLI (OAuth Flow)](#usage-with-cursor-cli-oauth-flow)
-  - [Configuration](#configuration)
-    - [How to Generate OAuth Token](#how-to-generate-oauth-token)
-    - [Environment Variables](#environment-variables)
-  - [Available Tools](#available-tools)
-    - [Account \& Session](#account--session)
-    - [Gateway Management](#gateway-management)
-    - [Order \& Transaction Lookup](#order--transaction-lookup)
-    - [Payment Links](#payment-links)
-    - [Analytics \& Querying (Q API)](#analytics--querying-q-api)
-    - [Reporting](#reporting)
-    - [Alerts \& Monitoring](#alerts--monitoring)
-    - [Offer Management](#offer-management)
-    - [User Management](#user-management)
-    - [Settings Management](#settings-management)
-    - [API Key Management](#api-key-management)
-    - [Surcharge Rules](#surcharge-rules)
-    - [Outages](#outages)
-    - [Integration Checklist](#integration-checklist)
-    - [Documentation (RAG)](#documentation-rag)
-  - [Troubleshooting](#troubleshooting)
-    - [Common Issues](#common-issues)
-    - [Debugging Tips](#debugging-tips)
-  - [License](#license)
+- [Introduction](#introduction)
+- [Key Features](#key-features)
+- [Getting Started (Local Setup)](#getting-started-local-setup)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Configuration](#configuration)
+  - [Environment Variables](#environment-variables)
+  - [How to Generate OAuth Token](#how-to-generate-oauth-token)
+- [Available Tools](#available-tools)
+  - [Account \& Session](#account--session)
+  - [Gateway Management](#gateway-management)
+  - [Order \& Transaction Lookup](#order--transaction-lookup)
+  - [Payment Links](#payment-links)
+  - [Analytics \& Querying (Q API)](#analytics--querying-q-api)
+  - [Reporting](#reporting)
+  - [Alerts \& Monitoring](#alerts--monitoring)
+  - [Offer Management](#offer-management)
+  - [User Management](#user-management)
+  - [Settings Management](#settings-management)
+  - [API Key Management](#api-key-management)
+  - [Surcharge Rules](#surcharge-rules)
+  - [Outages](#outages)
+  - [Integration Checklist](#integration-checklist)
+  - [Documentation (RAG)](#documentation-rag)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Tips](#debugging-tips)
+- [License](#license)
 
 ## Introduction
 
@@ -55,7 +168,9 @@ The Juspay Dashboard MCP (Model Context Protocol) server provides a standardized
 - **Integration Monitoring**: Track integration progress and compliance
 - **MCP Standard Compliance**: Seamless integration with LLMs and AI agents
 
-## Getting Started
+## Getting Started (Local Setup)
+
+> Only needed if you want to self-host the MCP server. For most users, the [Quick Start](#quick-start) above is all you need.
 
 ### Prerequisites
 
@@ -77,129 +192,15 @@ nix develop
 pip install -e .
 ```
 
-### Quick Start
-
-1. Set up your environment variables (see [Configuration](#configuration))
-2. Start the server:
-
-```bash
-# Set to Dashboard mode
-export JUSPAY_MCP_TYPE=DASHBOARD
-
-# Using Nix
-nix run
-
-# Standard Python
-python ./juspay_mcp/main.py
-
-# Or run Docker
-docker run -it juspay-dashboard-mcp:latest
-```
-
-**Remote MCP Server URL:**
-```
-https://mcp.juspay.in/dashboard/juspay-dashboard-stream
-```
-
-## Usage with Claude Code (OAuth Flow)
-
-### Step 1: Add the MCP Server
-
-```bash
-claude mcp add --transport http juspay-dashboard https://mcp.juspay.in/dashboard/juspay-dashboard-stream
-```
-
-### Step 2: Start Claude Code
-
-```bash
-claude
-```
-
-### Step 3: Authenticate
-
-Inside Claude Code:
-1. Type `/mcp` to see MCP server status
-2. Select `juspay-dashboard` from the list
-3. Click to authenticate - your browser will open to Juspay Portal
-4. Sign in with your Juspay credentials
-
----
-
-## Usage with OpenAI Codex CLI (OAuth Flow)
-
-You can also use Juspay Dashboard MCP with **OpenAI Codex CLI** using the same OAuth authentication flow.
-
-### Step 1: Add the MCP Server
-
-```bash
-codex mcp add juspay-dashboard --url https://mcp.juspay.in/dashboard/juspay-dashboard-stream
-```
-
-### Step 2: Authenticate
-
-Complete the authentication by signing in to Juspay Dashboard when prompted in your browser.
-
-### Step 3: Start Codex Agent
-
-```bash
-codex
-```
-
----
-
-## Usage with Cursor CLI (OAuth Flow)
-
-For **Cursor CLI**, add the server configuration to your `mcp.json` file:
-
-**Config Location:**
-- Global: `~/.cursor/mcp.json`
-- Project: `.cursor/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "juspay-dashboard": {
-      "url": "https://mcp.juspay.in/dashboard/juspay-dashboard-stream"
-    }
-  }
-}
-```
-
-**Commands to connect:**
-
-```bash
-# Enable the MCP server
-agent mcp enable juspay-dashboard
-
-# Login and authenticate
-agent mcp login juspay-dashboard
-
-# List available servers
-agent mcp list
-
-# List available tools
-agent mcp list-tools juspay-dashboard
-
-# Start the agent
-agent
-```
-
----
-
 ## Configuration
 
-### How to Generate OAuth Token
-
-Watch how to generate your Juspay Dashboard OAuth token:
-
-https://github.com/user-attachments/assets/c8d38149-f3d1-46dc-984c-68f7b4d0ef88
 ### Environment Variables
 
 Create a `.env` file or set these environment variables:
 
 ```dotenv
 # Required Credentials
-JUSPAY_WEB_LOGIN_TOKEN="your_juspay_web_login_token"
+JUSPAY_WEB_LOGIN_TOKEN="your_juspay_oauth_token"
 
 # Server Mode (use "DASHBOARD" for dashboard APIs)
 JUSPAY_MCP_TYPE="DASHBOARD"
@@ -210,6 +211,12 @@ JUSPAY_ENV="sandbox"
 # Optional: Include response schemas in tool descriptions
 INCLUDE_RESPONSE_SCHEMA="false"
 ```
+
+### How to Generate OAuth Token
+
+Watch how to generate your Juspay Dashboard OAuth token:
+
+https://github.com/user-attachments/assets/c8d38149-f3d1-46dc-984c-68f7b4d0ef88
 
 ## Available Tools
 
