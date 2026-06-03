@@ -183,32 +183,91 @@ Default values for `JUSPAY_ENV` is `sandbox`.
 
 ### Juspay Dashboard MCP
 
+**Remote MCP Server URL:**
+```
+https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
+
+#### Claude Code (OAuth Flow)
+
+##### Step 1: Add the MCP Server
+
+```bash
+claude mcp add --transport http juspay-dashboard https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
+
+##### Step 2: Start Claude Code
+
+```bash
+claude
+```
+
+##### Step 3: Authenticate
+
+Inside Claude Code:
+1. Type `/mcp` to see MCP server status
+2. Select `juspay-dashboard` from the list
+3. Click to authenticate - your browser will open to Juspay Portal
+4. Sign in with your Juspay credentials
+
+---
+
+#### OpenAI Codex CLI (OAuth Flow)
+
+##### Step 1: Add the MCP Server
+
+```bash
+codex mcp add juspay-dashboard --url https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
+
+##### Step 2: Authenticate
+
+Complete the authentication by signing in to Juspay Dashboard when prompted in your browser.
+
+##### Step 3: Start Codex Agent
+
+```bash
+codex
+```
+
+---
+
+#### Cursor CLI (OAuth Flow)
+
+For **Cursor CLI**, add the server configuration to your `mcp.json` file:
+
+**Config Location:**
+- Global: `~/.cursor/mcp.json`
+- Project: `.cursor/mcp.json`
+
 ```json
 {
   "mcpServers": {
-    "juspay-dashboard-mcp": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--pull=always",
-        "--rm",
-        "-i",
-        "-e",
-        "JUSPAY_WEB_LOGIN_TOKEN",
-        "-e",
-        "JUSPAY_ENV",
-        "juspaydotin/juspay-dashboard-mcp:latest"
-      ],
-      "env": {
-        "JUSPAY_WEB_LOGIN_TOKEN": "your_juspay_web_login_token",
-        "JUSPAY_ENV": "sandbox | production"
-      }
+    "juspay-dashboard": {
+      "url": "https://mcp.juspay.in/dashboard/juspay-dashboard-stream"
     }
   }
 }
 ```
 
-Please replace the `your_juspay_web_login_token` with your dashboard login token.
+**Commands to connect:**
+
+```bash
+# Enable the MCP server
+agent mcp enable juspay-dashboard
+
+# Login and authenticate
+agent mcp login juspay-dashboard
+
+# List available servers
+agent mcp list
+
+# List available tools
+agent mcp list-tools juspay-dashboard
+
+# Start the agent
+agent
+```
 
 ## Configuration
 

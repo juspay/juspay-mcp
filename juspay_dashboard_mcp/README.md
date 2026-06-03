@@ -14,7 +14,9 @@ A Model Context Protocol (MCP) server for Juspay's Merchant Dashboard APIs. This
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
     - [Quick Start](#quick-start)
-  - [Usage with Claude and AI Assistants](#usage-with-claude-and-ai-assistants)
+  - [Usage with Claude Code (OAuth Flow)](#usage-with-claude-code-oauth-flow)
+  - [Usage with OpenAI Codex CLI (OAuth Flow)](#usage-with-openai-codex-cli-oauth-flow)
+  - [Usage with Cursor CLI (OAuth Flow)](#usage-with-cursor-cli-oauth-flow)
   - [Configuration](#configuration)
     - [How to Generate OAuth Token](#how-to-generate-oauth-token)
     - [Environment Variables](#environment-variables)
@@ -94,36 +96,95 @@ python ./juspay_mcp/main.py
 docker run -it juspay-dashboard-mcp:latest
 ```
 
-## Usage with Claude and AI Assistants
+**Remote MCP Server URL:**
+```
+https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
 
-Add the following to your `claude_desktop_config.json`:
+## Usage with Claude Code (OAuth Flow)
+
+### Step 1: Add the MCP Server
+
+```bash
+claude mcp add --transport http juspay-dashboard https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
+
+### Step 2: Start Claude Code
+
+```bash
+claude
+```
+
+### Step 3: Authenticate
+
+Inside Claude Code:
+1. Type `/mcp` to see MCP server status
+2. Select `juspay-dashboard` from the list
+3. Click to authenticate - your browser will open to Juspay Portal
+4. Sign in with your Juspay credentials
+
+---
+
+## Usage with OpenAI Codex CLI (OAuth Flow)
+
+You can also use Juspay Dashboard MCP with **OpenAI Codex CLI** using the same OAuth authentication flow.
+
+### Step 1: Add the MCP Server
+
+```bash
+codex mcp add juspay-dashboard --url https://mcp.juspay.in/dashboard/juspay-dashboard-stream
+```
+
+### Step 2: Authenticate
+
+Complete the authentication by signing in to Juspay Dashboard when prompted in your browser.
+
+### Step 3: Start Codex Agent
+
+```bash
+codex
+```
+
+---
+
+## Usage with Cursor CLI (OAuth Flow)
+
+For **Cursor CLI**, add the server configuration to your `mcp.json` file:
+
+**Config Location:**
+- Global: `~/.cursor/mcp.json`
+- Project: `.cursor/mcp.json`
 
 ```json
 {
   "mcpServers": {
-    "juspay-dashboard-mcp": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--pull=always",
-        "--rm",
-        "-i",
-        "-e",
-        "JUSPAY_WEB_LOGIN_TOKEN",
-        "-e",
-        "JUSPAY_ENV",
-        "juspaydotin/juspay-dashboard-mcp:latest"
-      ],
-      "env": {
-        "JUSPAY_WEB_LOGIN_TOKEN": "your_juspay_web_login_token",
-        "JUSPAY_ENV": "sandbox"
-      }
+    "juspay-dashboard": {
+      "url": "https://mcp.juspay.in/dashboard/juspay-dashboard-stream"
     }
   }
 }
 ```
 
-Replace `your_juspay_web_login_token` with your actual dashboard login token.
+**Commands to connect:**
+
+```bash
+# Enable the MCP server
+agent mcp enable juspay-dashboard
+
+# Login and authenticate
+agent mcp login juspay-dashboard
+
+# List available servers
+agent mcp list
+
+# List available tools
+agent mcp list-tools juspay-dashboard
+
+# Start the agent
+agent
+```
+
+---
 
 ## Configuration
 
