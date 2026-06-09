@@ -872,7 +872,19 @@ Essential for operations teams to monitor payout system health and understand se
         handler=payout_settings.get_payout_outages_juspay,
         response_schema=None,
     ),
-  
+    util.make_api_config(
+        name="juspay_get_mandate_details",
+        description="""Retrieves details for a specific mandate by mandate ID.
+
+Key features:
+- Fetches mandate details including status, gateway, frequency, max amount, currency, payment method, mandate type, customer ID, start/end dates, and revoke information.
+- Returns only the fields shown on the Mandate Details screen: mandateId, status, gateway, frequency, maxAmount, currency, paymentMethod, paymentMethodType, mandateType, merchantCustomerId, startDate, endDate, dateCreated, lastModified, orderId (Mandate Register Order Id), mandateRevokeSource.
+
+Use this tool when asked to look up details of a mandate by its mandate ID.""",
+        model=api_schema.mandate.JuspayGetMandateDetailsPayload,
+        handler=mandate.get_mandate_details_juspay,
+        response_schema=response_schema.get_mandate_details_response_schema,
+    ),
 ]
 
 @app.list_tools()

@@ -1409,3 +1409,96 @@ list_outages_response_schema = {
         ]
     }
 }
+
+get_mandate_details_response_schema = {
+    "type": "object",
+    "description": "Filtered mandate details containing only the fields shown on the Mandate Details screen.",
+    "properties": {
+        "mandateId": {
+            "type": "string",
+            "description": "Unique mandate identifier."
+        },
+        "status": {
+            "type": "string",
+            "description": "Current mandate status (e.g., REVOKED, ACTIVE, PAUSED)."
+        },
+        "gateway": {
+            "type": "string",
+            "description": "Payment gateway used for the mandate (e.g., YES_BIZ)."
+        },
+        "frequency": {
+            "type": "string",
+            "description": "Debit frequency of the mandate (e.g., ASPRESENTED, MONTHLY)."
+        },
+        "maxAmount": {
+            "type": "number",
+            "description": "Maximum amount allowed per debit."
+        },
+        "currency": {
+            "type": "string",
+            "description": "Currency of the mandate (e.g., INR)."
+        },
+        "paymentMethod": {
+            "type": "string",
+            "description": "Payment method used (e.g., PAY)."
+        },
+        "paymentMethodType": {
+            "type": "string",
+            "description": "Payment method type (e.g., UPI, CARD)."
+        },
+        "mandateType": {
+            "type": "string",
+            "description": "Type of mandate (e.g., EMANDATE, NACH)."
+        },
+        "merchantCustomerId": {
+            "type": "string",
+            "description": "Customer identifier associated with the mandate."
+        },
+        "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Mandate validity start date in UTC ISO-8601 format."
+        },
+        "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Mandate validity end date in UTC ISO-8601 format."
+        },
+        "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the mandate was created."
+        },
+        "lastModified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the mandate was last modified."
+        },
+        "orderId": {
+            "type": "string",
+            "description": "Mandate register order ID."
+        },
+        "mandateRevokeSource": {
+            "type": "string",
+            "description": "Source that triggered mandate revocation (e.g., MERCHANT_MANDATE_REVOKE)."
+        }
+    },
+    "required": [
+        "mandateId",
+        "status",
+        "gateway",
+        "frequency",
+        "maxAmount",
+        "currency",
+        "paymentMethod",
+        "paymentMethodType",
+        "mandateType",
+        "merchantCustomerId",
+        "startDate",
+        "endDate",
+        "dateCreated",
+        "lastModified",
+        "orderId",
+        "mandateRevokeSource"
+    ]
+}
