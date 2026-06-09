@@ -53,10 +53,11 @@ def utc_to_ist(utc_time_string: str) -> str:
 
         ist_offset = timedelta(hours=5, minutes=30)
         ist_time = utc_time + ist_offset
-        return ist_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        ist_time_string = ist_time.strftime("%Y-%m-%dT%H:%M:%S")
+        return ist_time_string
     except Exception as e:
         logging.error(f"Error converting utc to ist: {str(e)}")
-        return utc_time_string
+        return utc_time_string.rstrip("Z")
     
     
 async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
