@@ -1502,3 +1502,90 @@ get_mandate_details_response_schema = {
         "mandateRevokeSource"
     ]
 }
+
+get_client_config_response_schema = {
+    "type": "array",
+    "description": "List of client configurations for the merchant, one entry per clientId.",
+    "items": {
+        "type": "object",
+        "description": "Client configuration fields shown on the Client Config screen.",
+        "properties": {
+            "clientId": {
+                "type": "string",
+                "description": "Client identifier (e.g., 'meesho', 'meeshoec')."
+            },
+            "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp when the client config was last updated."
+            },
+            "android_creditSubscription": {
+                "type": "boolean",
+                "description": "Whether Android credit subscription is enabled."
+            },
+            "android_paymentSubscription": {
+                "type": "string",
+                "description": "Android payment subscription type (e.g., PP, EC)."
+            },
+            "android_paymentFeatures": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Android payment features enabled (e.g., UPI_INTENT, INAPPUPI, MANDATES, DOTP, OFFERS)."
+            },
+            "android_status": {
+                "type": "string",
+                "description": "Android integration status (e.g., INTEGRATING, LIVE)."
+            },
+            "ios_creditSubscription": {
+                "type": "boolean",
+                "description": "Whether iOS credit subscription is enabled."
+            },
+            "ios_paymentSubscription": {
+                "type": "string",
+                "description": "iOS payment subscription type (e.g., PP, EC)."
+            },
+            "ios_paymentFeatures": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "iOS payment features enabled (e.g., UPI_INTENT, INAPPUPI, OFFERS, DOTP, MANDATES)."
+            },
+            "ios_status": {
+                "type": "string",
+                "description": "iOS integration status (e.g., INTEGRATING, LIVE)."
+            },
+            "web_creditSubscription": {
+                "type": "boolean",
+                "description": "Whether Web credit subscription is enabled."
+            },
+            "web_paymentSubscription": {
+                "type": "string",
+                "description": "Web payment subscription type (e.g., PP, EC)."
+            },
+            "web_paymentFeatures": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Web payment features enabled (e.g., UPI_INTENT, MANDATES, DOTP, OFFERS)."
+            },
+            "web_status": {
+                "type": "string",
+                "description": "Web integration status (e.g., INTEGRATING, LIVE)."
+            }
+        },
+        "required": [
+            "clientId",
+            "updatedAt",
+            "android_creditSubscription",
+            "android_paymentSubscription",
+            "android_paymentFeatures",
+            "android_status",
+            "ios_creditSubscription",
+            "ios_paymentSubscription",
+            "ios_paymentFeatures",
+            "ios_status",
+            "web_creditSubscription",
+            "web_paymentSubscription",
+            "web_paymentFeatures",
+            "web_status"
+        ]
+    }
+}
