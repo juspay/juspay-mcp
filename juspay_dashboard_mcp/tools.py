@@ -885,6 +885,23 @@ Use this tool when asked to look up details of a mandate by its mandate ID.""",
         handler=mandate.get_mandate_details_juspay,
         response_schema=response_schema.get_mandate_details_response_schema,
     ),
+    util.make_api_config(
+        name="juspay_get_client_config",
+        description="""Retrieves client configuration for a merchant, showing platform-level integration settings across Android, iOS, and Web.
+
+Key features:
+- Returns the client ID and per-platform settings (Android, iOS, Web).
+- Shows payment features enabled per platform (e.g., UPI_INTENT, INAPPUPI, MANDATES, DOTP, OFFERS).
+- Shows payment subscription type per platform (e.g., PP).
+- Shows integration status per platform (e.g., INTEGRATING, LIVE).
+- Shows credit subscription flag per platform.
+- Returns the timestamp when the configuration was last updated (updatedAt).
+
+Use this tool when asked about clients, client configuration, client config, platform integration status, enabled payment features, or payment subscription settings for a merchant.""",
+        model=api_schema.clientConfigs.JuspayGetClientConfigPayload,
+        handler=clientConfigs.get_client_config_juspay,
+        response_schema=response_schema.get_client_config_response_schema,
+    ),
 ]
 
 @app.list_tools()
