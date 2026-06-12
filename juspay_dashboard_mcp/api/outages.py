@@ -7,13 +7,14 @@
 from juspay_dashboard_mcp.api.utils import post, get_admin_host, sanitize_merchant_id
 import logging
 import os
+import json
 from datetime import datetime, timedelta
 
 def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
     """Convert IST time to UTC time.
 
     Args:
-        ist_time_string: Can be either a string in format "%Y-%m-%dT%H:%M:%SZ" or a datetime object
+        ist_time_string: Can be either a string in format "%Y-%m-%dT%H:%M:%SZ" or "%Y-%m-%dT%H:%M:%S" or a datetime object
         format: Output format for the returned timestamp
 
     Returns:
@@ -24,7 +25,12 @@ def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
         if isinstance(ist_time_string, datetime):
             ist_time = ist_time_string
         else:
-            ist_time = datetime.strptime(ist_time_string, "%Y-%m-%dT%H:%M:%SZ")
+            # Try parsing with Z suffix first
+            try:
+                ist_time = datetime.strptime(ist_time_string, "%Y-%m-%dT%H:%M:%SZ")
+            except ValueError:
+                # Try parsing without Z suffix
+                ist_time = datetime.strptime(ist_time_string, "%Y-%m-%dT%H:%M:%S")
 
         ist_offset = timedelta(hours=5, minutes=30)
         utc_time = ist_time - ist_offset
@@ -44,12 +50,16 @@ def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
 
 def utc_to_ist(utc_time_string: str) -> str:
     try:
-        # Try parsing with T separator first
+        # Try parsing with T separator and Z suffix first
         try:
             utc_time = datetime.strptime(utc_time_string, "%Y-%m-%dT%H:%M:%SZ")
         except ValueError:
-            # If that fails, try parsing with space separator
-            utc_time = datetime.strptime(utc_time_string, "%Y-%m-%d %H:%M:%S")
+            # Try T separator without Z suffix
+            try:
+                utc_time = datetime.strptime(utc_time_string, "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                # Try space separator
+                utc_time = datetime.strptime(utc_time_string, "%Y-%m-%d %H:%M:%S")
 
         ist_offset = timedelta(hours=5, minutes=30)
         ist_time = utc_time + ist_offset
@@ -124,6 +134,9 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
         api_url = f"{host}/api/ec/v1/admin/outage/list"
     else:
         api_url = f"{host}/api/ec/v1/outage/list"
+    
+    logging.info(f"[list_outages_juspay] Original (IST): startTime={start_time}, endTime={end_time}")
+    logging.info(f"[list_outages_juspay] Payload (UTC): {json.dumps(request_data)}")
     
     response =await post(api_url,request_data, None, meta_info)
     
