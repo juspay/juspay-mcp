@@ -14,12 +14,12 @@ class JuspayListOutagesPayload(WithHeaders):
     
     startTime: str = Field(
         ...,
-        description="Start time in ISO format (e.g., '2025-05-22T18:30:00Z')"
+        description="Start time in ISO format in UTC (e.g., '2025-05-22T18:30:00Z')"
     )
-    
+
     endTime: str = Field(
         ...,
-        description="End time in ISO format (e.g., '2025-05-23T10:30:12Z')"
+        description="End time in ISO format in UTC (e.g., '2025-05-23T10:30:12Z')"
     )
     
     merchantId: Optional[str] = Field(

@@ -38,11 +38,11 @@ class JuspayListOffersPayload(WithHeaders):
     )
     start_time: str = Field(
         ...,
-        description="Start time for filtering offers (ISO format)."
+        description="Start time for filtering offers in ISO format in UTC (e.g., 'YYYY-MM-DDTHH:MM:SSZ')."
     )
     end_time: str = Field(
         ...,
-        description="End time for filtering offers (ISO format)."
+        description="End time for filtering offers in ISO format in UTC (e.g., 'YYYY-MM-DDTHH:MM:SSZ')."
     )
     limit: Optional[int] = Field(
         default=None,
@@ -50,5 +50,5 @@ class JuspayListOffersPayload(WithHeaders):
     )
     sort_offers: SortOffersOptions = Field(
         ...,
-        description="Sorting options for offers. Example: {'field': 'CREATED_AT', 'order': 'DESCENDING'}"
+        description="Sorting options for offers (required). Use field='CREATED_AT' and order='ASCENDING' or 'DESCENDING'. Default to {'field': 'CREATED_AT', 'order': 'DESCENDING'} unless user specifies otherwise."
     )

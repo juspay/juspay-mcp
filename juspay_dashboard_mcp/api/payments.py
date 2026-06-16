@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, ist_to_utc , sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id
 
 import random
 import string
@@ -118,9 +118,6 @@ async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) ->
 
     if not date_from_str or not date_to_str:
         raise ValueError("Both 'date_from' and 'date_to' are required in the payload")
-
-    date_from_str = ist_to_utc(date_from_str)
-    date_to_str = ist_to_utc(date_to_str)
 
     request_payload["filters"] = {
         "dateCreated": {"gte": date_from_str, "lte": date_to_str}
