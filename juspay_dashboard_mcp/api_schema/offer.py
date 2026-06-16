@@ -50,5 +50,5 @@ class JuspayListOffersPayload(WithHeaders):
     )
     sort_offers: SortOffersOptions = Field(
         ...,
-        description="Sorting options for offers. Example: {'field': 'CREATED_AT', 'order': 'DESCENDING'}"
+        description="Sorting options for offers (required). Use field='CREATED_AT' and order='ASCENDING' or 'DESCENDING'. Default to {'field': 'CREATED_AT', 'order': 'DESCENDING'} unless user specifies otherwise."
     )

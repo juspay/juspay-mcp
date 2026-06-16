@@ -627,6 +627,15 @@ class ToolQApiPayload(BaseModel):
                         values[field] = parsed
                 except (ValueError, TypeError):
                     pass
+
+        # Normalize dimensions returned by qapi_info: [{"name": "offer_id", ...}] → ["offer_id"]
+        dims = values.get('dimensions')
+        if isinstance(dims, list):
+            values['dimensions'] = [
+                d['name'] if isinstance(d, dict) and 'name' in d else d
+                for d in dims
+            ]
+
         return values
 
 

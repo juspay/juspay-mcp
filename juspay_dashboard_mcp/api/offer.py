@@ -143,6 +143,7 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
         "start_time": start_time,
         "end_time": end_time,
         "created_at": created_at,
+        "sort_offers": payload.get("sort_offers") or {"field": "CREATED_AT", "order": "DESCENDING"},
     }
 
     # Both admin and non-admin use the /api/ prefix
