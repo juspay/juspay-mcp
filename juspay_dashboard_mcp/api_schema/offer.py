@@ -38,11 +38,11 @@ class JuspayListOffersPayload(WithHeaders):
     )
     start_time: str = Field(
         ...,
-        description="Start time for filtering offers (ISO format)."
+        description="Start time for filtering offers in ISO format in UTC (e.g., 'YYYY-MM-DDTHH:MM:SSZ')."
     )
     end_time: str = Field(
         ...,
-        description="End time for filtering offers (ISO format)."
+        description="End time for filtering offers in ISO format in UTC (e.g., 'YYYY-MM-DDTHH:MM:SSZ')."
     )
     limit: Optional[int] = Field(
         default=None,

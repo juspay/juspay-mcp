@@ -947,9 +947,9 @@ api_description = """
                         -> To view specific card types (Credit Card/Debit Card) for transactions, use `"payment_instrument_group"` as a dimension.
                         -> To get payment volume, use `"order_with_transactions"` instead of `total_volume`.
                         -> UPI apps are stored in the `"bank"` dimension.
-        interval: A dict with 'start' and 'end' keys (ISO format: YYYY-MM-DDTHH:MM:SSZ).
+        interval: A dict with 'start' and 'end' keys (ISO format in UTC: YYYY-MM-DDTHH:MM:SSZ). Time must be in UTC.
                  IMPORTANT NOTES:
-                   - If user doesn't explicitly mention the interval, assume interval to be 12am of the same day to current time. INTERVAL IS MANDATORY.
+                   - If user doesn't explicitly mention the interval, assume interval to be 12am of the same day to current time in UTC. INTERVAL IS MANDATORY.
         sortedOn: (Optional) A dict specifying how to sort the results, if needed.
                  IMPORTANT NOTES:
                    - **For any query that will return more than one row** (i.e. whenever `dimensions` is non-empty and you’re not explicitly limiting to a single result), you **must** include a top-level `sortedOn` object _outside_ of `filters`:

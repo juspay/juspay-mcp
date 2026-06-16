@@ -21,11 +21,11 @@ class JuspayListPaymentLinksV1Payload(WithHeaders):
     )
     date_from: str = Field(
         ...,
-        description="Start date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
+        description="Start date/time in ISO 8601 format in UTC (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
     )
     date_to: str = Field(
         ...,
-        description="End date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
+        description="End date/time in ISO 8601 format in UTC (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
     )
     offset: Optional[int] = Field(0, description="Pagination offset (default: 0)")
     

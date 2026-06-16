@@ -8,7 +8,6 @@ from juspay_dashboard_mcp.api.utils import (
     post,
     call,
     get_admin_host,
-    ist_to_utc,
     sanitize_merchant_id
 )
 
@@ -136,16 +135,13 @@ async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
     start_time = payload.get("start_time")
     end_time = payload.get("end_time")
 
-    start_time_utc = ist_to_utc(start_time)
-    end_time_utc = ist_to_utc(end_time)
-
-    created_at = {"gte": start_time_utc, "lte": end_time_utc}
+    created_at = {"gte": start_time, "lte": end_time}
 
     payload_updated = {
         **payload,
         "merchant_id": merchant_id,
-        "start_time": start_time_utc,
-        "end_time": end_time_utc,
+        "start_time": start_time,
+        "end_time": end_time,
         "created_at": created_at,
     }
 
