@@ -32,6 +32,9 @@ Tools (call them in this order):
   - doc_fetch_tool(url)       Fetch any allowed Juspay docs URL. Returns
                               markdown. Use this after explore_product to
                               read specific pages.
+  - juspay_genius_docs(query) Ask "Genius", the AI assistant behind the Juspay
+                              docs, a natural-language question; returns a
+                              synthesized answer plus the source doc URLs used.
 
 Credentials:
   - client_id / merchant_id come from the Juspay dashboard. They cannot

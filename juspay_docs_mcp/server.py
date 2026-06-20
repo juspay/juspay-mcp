@@ -23,6 +23,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from juspay_docs_mcp.discovery import load_dynamic_doc_sources
+from juspay_docs_mcp.genius import ask_genius
 from juspay_docs_mcp.instructions import INSTRUCTIONS
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,45 @@ async def _fetch(url: str) -> str:
 # ----------------------------------------------------------------------------
 
 mcp = FastMCP(name="juspay-docs", instructions=INSTRUCTIONS)
+
+
+@mcp.tool()
+async def juspay_genius_docs(
+    query: Annotated[
+        str,
+        Field(
+            description=(
+                "A natural-language question about Juspay (any "
+                "product or platform). E.g. 'How do I handle the user pressing "
+                "back during a HyperCheckout payment on React Native?'"
+            ),
+        ),
+    ],
+) -> str:
+    """Ask Juspay Genius - the AI assistant behind the Juspay docs - a
+    natural-language question and get a synthesized answer drawn from the
+    official documentation.
+
+    Returns the answer plus the source doc URLs it used; any of those can be
+    read in full with doc_fetch_tool(url). Genius is the public docs assistant
+    (distinct from the dashboard's rag_tool_juspay).
+    """
+    try:
+        result = await ask_genius(query)
+    except (httpx.HTTPError, httpx.TimeoutException) as e:
+        logger.warning("Genius docs call failed: %s", e)
+        return (
+            "The Genius docs assistant is unavailable right now. "
+            "Use list_products / explore_product / doc_fetch_tool to navigate "
+            "the docs directly, or retry shortly."
+        )
+
+    answer = result["answer"] or "(no answer returned)"
+    sources = result["sources"]
+    if sources:
+        listed = "\n".join(f"- {s['title']}: {s['url']}" for s in sources)
+        return f"{answer}\n\nSources:\n{listed}"
+    return answer
 
 
 @mcp.tool()
