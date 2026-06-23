@@ -56,22 +56,6 @@ _HEADERS = {
     "User-Agent": "juspay-docs-mcp",
 }
 
-# ---------------------------------------------------------------------------
-# TODO (phase 2 - discussed, tracked, NOT yet implemented):
-#   * Resilience / retries: the endpoint is intermittently flaky (occasional
-#     401s and empty 200s on identical input). Add retry-with-backoff around
-#     the request, treating 401/429/5xx, transport/timeout errors, and empty
-#     200 answers as transient; degrade gracefully after N attempts.
-#   * 401 root cause: confirm with the docs/Xyne owners whether unauthenticated
-#     /api/xyne/chat is expected to 401 intermittently. If a browser session is
-#     required, warm a cookie jar (GET juspay.io/in/docs/ first, then reuse it).
-#   * Rate limiting: add a client-side throttle once usage limits are known.
-#   * `path` scopes: expose `path` for other doc sets (non-India / API
-#     reference) instead of the single hardcoded India docs scope.
-#   * Richer citations: optionally surface citationMap / numbered markers if
-#     that proves useful to coding agents.
-# ---------------------------------------------------------------------------
-
 
 def _public_url(title: str) -> str | None:
     """Rebuild a public docs URL from a context-chunk `title`.
