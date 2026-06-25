@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers
 
-async def list_configured__payout_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_configured__payout_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all payout gateway credentials configured for a merchant's 
     payout operations. This API returns gateway configuration details including 
@@ -32,7 +32,7 @@ async def list_configured__payout_gateways_juspay(payload: dict, meta_info: dict
     api_url = f"{host}/api/payout/batch/dashboard/v1/gatewaycredential"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_payout_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all available payout gateway types.
     This API provides information about gateway types that can be configured
@@ -59,7 +59,7 @@ async def get_payout_gateways_juspay(payload: dict, meta_info: dict = None) -> d
 
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_gateway_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_payout_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves detailed configuration information for a specific payout gateway
     credential identified by gateway type and rail. This API provides comprehensive
@@ -99,7 +99,7 @@ async def get_payout_gateway_details_juspay(payload: dict, meta_info: dict = Non
 
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_active_payout_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_active_payout_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of active payout methods available for the merchant based on
     priority logic configuration. This API returns currently enabled payout methods
@@ -125,7 +125,7 @@ async def get_active_payout_gateways_juspay(payload: dict, meta_info: dict = Non
     api_url = f"{host}/api/payout/batch/dashboard/v1/prioritylogic/activemethods"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_priority_logics_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_payout_priority_logics(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the priority logic configuration for payout routing and gateway
     selection. This API returns the configured rules and priorities that determine
@@ -151,7 +151,7 @@ async def get_payout_priority_logics_juspay(payload: dict, meta_info: dict = Non
     api_url = f"{host}/api/payout/batch/dashboard/v1/prioritylogic"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_weblabs_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_payout_weblabs(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the WebLab configuration settings for payout operations. This API
     returns A/B testing configurations, feature flags, and experimental settings
@@ -177,7 +177,7 @@ async def get_payout_weblabs_juspay(payload: dict, meta_info: dict = None) -> di
     api_url = f"{host}/api/payout/batch/dashboard/v1/weblabConfig"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_payout_balance_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_payout_balance(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves the current balance information from all configured payout gateways.
     This API returns real-time or cached balance data for each gateway, providing

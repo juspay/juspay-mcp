@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayListSurchargeRulesPayload(WithHeaders):
+class ListSurchargeRulesPayload(WithHeaders):
     """Returns a list of all configured surcharge rules, including their current status and rule definitions."""
     merchantId: Optional[str] = Field(
         None,

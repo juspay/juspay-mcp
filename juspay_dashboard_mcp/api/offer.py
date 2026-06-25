@@ -13,7 +13,7 @@ from juspay_dashboard_mcp.api.utils import (
 )
 
 
-async def get_offer_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_offer_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves detailed information for a specific offer.
 
@@ -73,7 +73,7 @@ async def get_offer_details_juspay(payload: dict, meta_info: dict = None) -> dic
     
     return await post(api_url, payload, None, meta_info)
 
-async def list_offers_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_offers(payload: dict, meta_info: dict = None) -> dict:
     """
     Lists all offers configured by the merchant, along with key details such as 
     status, PMT, offer code, start/end times, and benefit types.

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
-class JuspayGetOfferDetailsPayload(WithHeaders):
+class GetOfferDetailsPayload(WithHeaders):
     offer_ids: List[str] = Field(
         ...,
         description="List of unique identifiers of the offers to retrieve details for."
@@ -27,7 +27,7 @@ class SortOffersOptions(BaseModel):
     field: str = Field(..., description="Field to sort by, e.g., 'CREATED_AT'.")
     order: Literal["ASCENDING", "DESCENDING"] = Field(..., description="Sort order.")
 
-class JuspayListOffersPayload(WithHeaders):
+class ListOffersPayload(WithHeaders):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier for which to list offers."

@@ -9,7 +9,7 @@ from pydantic import Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayGetMandateDetailsPayload(WithHeaders):
+class GetMandateDetailsPayload(WithHeaders):
     mandate_id: str = Field(
         ...,
         description="The mandate ID to fetch details for (e.g., '9VTmNzY7SeT5TndRfXzEeg')."

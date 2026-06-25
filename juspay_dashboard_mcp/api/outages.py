@@ -70,7 +70,7 @@ def utc_to_ist(utc_time_string: str) -> str:
         return utc_time_string.rstrip("Z")
     
     
-async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_outages(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns a list of outages within a specified time range, optionally filtered by merchant ID.
 
@@ -135,8 +135,8 @@ async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/outage/list"
     
-    logging.info(f"[list_outages_juspay] Original (IST): startTime={start_time}, endTime={end_time}")
-    logging.info(f"[list_outages_juspay] Payload (UTC): {json.dumps(request_data)}")
+    logging.info(f"[list_outages] Original (IST): startTime={start_time}, endTime={end_time}")
+    logging.info(f"[list_outages] Payload (UTC): {json.dumps(request_data)}")
     
     response =await post(api_url,request_data, None, meta_info)
     

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayGetPayoutGatewayDetailsPayload(WithHeaders):
+class GetPayoutGatewayDetailsPayload(WithHeaders):
     gateway: str = Field(
         ...,
         description="Gateway identifier/type for the payout gateway (e.g., 'RAZORPAY', 'PAYU'). Specifies which gateway's credential details are to be retrieved.",
@@ -20,7 +20,7 @@ class JuspayGetPayoutGatewayDetailsPayload(WithHeaders):
     )
 
 
-class JuspayGetPayoutBalancePayload(WithHeaders):
+class GetPayoutBalancePayload(WithHeaders):
     isForce: Optional[str] = Field(
         "false",
         description="Force refresh balance from gateways. Set to 'true' to fetch real-time balance data directly from gateway providers, 'false' to use cached data. Defaults to 'false'.",

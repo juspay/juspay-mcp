@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayListPayoutOrdersPayload(WithHeaders):
+class ListPayoutOrdersPayload(WithHeaders):
     dateFrom: str = Field(
         ...,
         description="Start date/time in ISO 8601 format (e.g., '2025-03-28T14:16:00Z'). Specifies the beginning of the time range for retrieving payout orders.",
@@ -31,7 +31,7 @@ class JuspayListPayoutOrdersPayload(WithHeaders):
     )
 
 
-class JuspayGetPayoutOrderDetailsPayload(WithHeaders):
+class GetPayoutOrderDetailsPayload(WithHeaders):
     order_id: str = Field(
         ..., 
         description="Unique payout order ID for which details are to be fetched. Can also be a fulfillment ID or transaction ID, which will be automatically processed to extract the base order ID if the initial request fails."

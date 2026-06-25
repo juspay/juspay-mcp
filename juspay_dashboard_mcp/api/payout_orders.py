@@ -17,7 +17,7 @@ import logging
 dotenv.load_dotenv()
 
 
-async def list_payout_orders_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_payout_orders(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Payout API to retrieve a list of payout orders within a specified time range.
 
@@ -98,7 +98,7 @@ def extract_order_id_from_txn_id_or_fulfillment_id(txn_id: str) -> str:
     return input_id
 
 
-async def get_payout_order_details_juspay(payload: dict, meta_info: dict) -> dict:
+async def get_payout_order_details(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific payout order.
     Note: The API returns the amount in major or primary currency unit (e.g., rupees, dollars).

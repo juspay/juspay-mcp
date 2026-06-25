@@ -283,42 +283,42 @@ The MCP server translates AI assistant requests into properly formatted API call
 
 | Tool Name                                 | Description                                                                           |
 | ----------------------------------------- | ------------------------------------------------------------------------------------- |
-| `juspay_list_configured_gateway`          | Gets all configured gateways for the merchant.                                        |
-| `juspay_get_gateway_scheme`               | Provides detailed configuration info for a gateway (fields, payment methods).         |
-| `juspay_get_gateway_details`              | Returns detailed information about a specific configured gateway (`mga_id` required). |
-| `juspay_list_gateway_scheme`              | Returns a list of all available payment gateways that can be configured.              |
-| `juspay_gateway_downtime`                 | Retrieves downtime information for a gateway (`order_id` required).                   |
-| `juspay_get_merchant_gateways_pm_details` | Fetches all gateways and their supported payment methods for the merchant.            |
+| `list_configured_gateway`          | Gets all configured gateways for the merchant.                                        |
+| `get_gateway_scheme`               | Provides detailed configuration info for a gateway (fields, payment methods).         |
+| `get_gateway_details`              | Returns detailed information about a specific configured gateway (`mga_id` required). |
+| `list_gateway_scheme`              | Returns a list of all available payment gateways that can be configured.              |
+| `gateway_downtime`                 | Retrieves downtime information for a gateway (`order_id` required).                   |
+| `get_merchant_gateways_pm_details` | Fetches all gateways and their supported payment methods for the merchant.            |
 
 #### Reporting
 
 | Tool Name                      | Description                                                            |
 | ------------------------------ | ---------------------------------------------------------------------- |
-| `juspay_report_details`        | Returns detailed information for a specific report ID.                 |
-| `juspay_list_report`           | Lists all reports configured by the merchant.                          |
-| `juspay_list_orders_v4`        | Retrieves orders within a time range (dashboard perspective).          |
-| `juspay_get_order_details`     | Returns complete details for a given order ID (dashboard perspective). |
-| `juspay_list_payment_links_v1` | Retrieves payment links created within a time range.                   |
+| `report_details`        | Returns detailed information for a specific report ID.                 |
+| `list_report`           | Lists all reports configured by the merchant.                          |
+| `list_orders_v4`        | Retrieves orders within a time range (dashboard perspective).          |
+| `get_order_details`     | Returns complete details for a given order ID (dashboard perspective). |
+| `list_payment_links_v1` | Retrieves payment links created within a time range.                   |
 
 #### User Management
 
 | Tool Name                 | Description                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------- |
-| `juspay_get_user`         | Fetches details for a specific user by user ID.                                 |
-| `juspay_list_users_v2`    | Retrieves a list of users associated with a merchant, with optional pagination. |
+| `get_user`         | Fetches details for a specific user by user ID.                                 |
+| `list_users_v2`    | Retrieves a list of users associated with a merchant, with optional pagination. |
 
 #### Settings Management
 
 | Tool Name                            | Description                                                       |
 | ------------------------------------ | ----------------------------------------------------------------- |
-| `juspay_get_conflict_settings`       | Retrieves conflict settings configuration for payment processing. |
-| `juspay_get_general_settings`        | Retrieves general configuration settings for the merchant.        |
-| `juspay_get_mandate_settings`        | Retrieves mandate-related settings for recurring payments.        |
-| `juspay_get_priority_logic_settings` | Fetches all configured priority logic rules.                      |
-| `juspay_get_routing_settings`        | Provides details of success rate-based routing thresholds.        |
-| `juspay_get_webhook_settings`        | Retrieves webhook configuration settings for the merchant.        |
-| `juspay_list_surcharge_rules`        | Returns a list of all configured surcharge rules.                 |
-| `juspay_list_zoho_books_invoices`    | Fetches Zoho Books invoices for the merchant. Supports filtering by status, created date, and due date. Returns invoice details with download links. |
+| `get_conflict_settings`       | Retrieves conflict settings configuration for payment processing. |
+| `get_general_settings`        | Retrieves general configuration settings for the merchant.        |
+| `get_mandate_settings`        | Retrieves mandate-related settings for recurring payments.        |
+| `get_priority_logic_settings` | Fetches all configured priority logic rules.                      |
+| `get_routing_settings`        | Provides details of success rate-based routing thresholds.        |
+| `get_webhook_settings`        | Retrieves webhook configuration settings for the merchant.        |
+| `list_surcharge_rules`        | Returns a list of all configured surcharge rules.                 |
+| `list_zoho_books_invoices`    | Fetches Zoho Books invoices for the merchant. Supports filtering by status, created date, and due date. Returns invoice details with download links. |
 
 #### Advanced Querying
 
