@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers
 
-async def list_beneficiaries_per_customerId_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_beneficiaries_per_customerId(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all beneficiaries associated with a specific customer ID.
     This API returns beneficiary details including account information, verification
@@ -43,7 +43,7 @@ async def list_beneficiaries_per_customerId_juspay(payload: dict, meta_info: dic
 
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
-async def get_beneficiary_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_beneficiary_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves detailed information for a specific beneficiary identified by customer ID
     and beneficiary ID. This API returns comprehensive beneficiary details including

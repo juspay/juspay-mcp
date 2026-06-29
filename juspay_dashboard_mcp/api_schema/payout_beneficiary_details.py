@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayListBeneficiariesPerCustomerIdPayload(WithHeaders):
+class ListBeneficiariesPerCustomerIdPayload(WithHeaders):
     customerId: str = Field(
         ...,
         description="Unique identifier for the customer whose beneficiaries are to be retrieved. Used to fetch all beneficiaries associated with this specific customer for payout operations.",
     )
 
 
-class JuspayGetBeneficiaryDetailsPayload(WithHeaders):
+class GetBeneficiaryDetailsPayload(WithHeaders):
     customerId: str = Field(
         ...,
         description="Unique identifier for the customer who owns the beneficiary account.",

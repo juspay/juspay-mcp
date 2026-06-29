@@ -11,7 +11,7 @@ from pydantic import Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayListZohoBooksInvoicesPayload(WithHeaders):
+class ListZohoBooksInvoicesPayload(WithHeaders):
     customer_name: Optional[str] = Field(
         None,
         description=(

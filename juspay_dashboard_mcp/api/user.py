@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id
 
-async def get_user_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_user(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches details for a specific user, identified by user ID.
 
@@ -63,7 +63,7 @@ async def get_user_juspay(payload: dict, meta_info: dict = None) -> dict:
     
     return await call(api_url, None, meta_info)
 
-async def list_users_v2_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_users_v2(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of users associated with a merchant, with optional pagination.
 

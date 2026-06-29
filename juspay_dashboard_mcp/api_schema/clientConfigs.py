@@ -10,7 +10,7 @@ from pydantic import Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayGetClientConfigPayload(WithHeaders):
+class GetClientConfigPayload(WithHeaders):
     merchantId: Optional[str] = Field(
         default=None,
         description="Merchant ID to fetch client configuration for. Auto-detected from session if not provided."

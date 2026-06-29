@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import post, get_admin_host, call , sanitize_merchant_id
 
-async def alert_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def alert_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides detailed information for a specific alert ID, including source, monitored metrics, and applied filters.
 
@@ -52,7 +52,7 @@ async def alert_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     
     return await call(api_url, {}, meta_info)
 
-async def list_alerts_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_alerts(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Monitoring API to retrieve a list of configured alerts.
 

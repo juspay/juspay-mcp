@@ -9,41 +9,41 @@ from pydantic import BaseModel, Field
 
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
-class JuspayConflictSettingsPayload(WithHeaders):
+class ConflictSettingsPayload(WithHeaders):
     """Schema for conflict settings API."""
     merchantId: Optional[str] = Field(
         None, 
         description="Merchant ID for which to retrieve conflict settings (admin only, optional)."
     )
 
-class JuspayGeneralSettingsPayload(WithHeaders):
+class GeneralSettingsPayload(WithHeaders):
     """Schema for general settings API."""
     merchantId: Optional[str] = Field(
         None, 
         description="Merchant ID for which to retrieve general settings (admin only, optional)."
     )
 
-class JuspayMandateSettingsPayload(WithHeaders):
+class MandateSettingsPayload(WithHeaders):
     merchantId: Optional[str] = Field(
         None, 
         description="Optional merchant ID to retrieve mandate settings for."
     )
 
-class JuspayPriorityLogicSettingsPayload(WithHeaders):
+class PriorityLogicSettingsPayload(WithHeaders):
     """Schema for priority logic settings API."""
     merchantId: Optional[str] = Field(
         None, 
         description="Merchant ID for which to retrieve priority logic settings (admin only, optional)."
     )
 
-class JuspayRoutingSettingsPayload(WithHeaders):
+class RoutingSettingsPayload(WithHeaders):
     """Schema for routing settings API."""
     merchantId: Optional[str] = Field(
         None, 
         description="Merchant ID for which to retrieve routing settings (admin only, optional)."
     )
 
-class JuspayWebhookSettingsPayload(WithHeaders):
+class WebhookSettingsPayload(WithHeaders):
     """Schema for webhook settings API."""
     merchantId: Optional[str] = Field(
         None, 

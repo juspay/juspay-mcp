@@ -9,7 +9,7 @@ from typing import Optional
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayListOutagesPayload(WithHeaders):
+class ListOutagesPayload(WithHeaders):
     """Returns a list of outages within a specified time range, optionally filtered by merchant ID."""
     
     startTime: str = Field(

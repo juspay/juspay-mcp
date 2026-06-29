@@ -9,13 +9,13 @@ from pydantic import BaseModel, Field
 
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
-class JuspayListConfiguredGatewaysPayload(WithHeaders):
+class ListConfiguredGatewaysPayload(WithHeaders):
     merchantId: Optional[str] = Field(
         default=None,
         description="Merchant identifier for which to list configured payment gateways."
     )
 
-class JuspayGetGatewaySchemePayload(WithHeaders):
+class GetGatewaySchemePayload(WithHeaders):
     gateway: str = Field(
         ...,
         description="Gateway code (e.g., 'TATA_PA') for which to fetch detailed configuration information."
@@ -25,7 +25,7 @@ class JuspayGetGatewaySchemePayload(WithHeaders):
         description="Merchant identifier (optional, but recommended for context)."
     )
 
-class JuspayGetGatewayDetailsPayload(WithHeaders):
+class GetGatewayDetailsPayload(WithHeaders):
     mga_id: int = Field(
         ...,
         description="The MGA ID of the gateway (from list_configured_gateways)."
@@ -35,7 +35,7 @@ class JuspayGetGatewayDetailsPayload(WithHeaders):
         description="Merchant identifier for which to get gateway details."
     )
 
-class JuspayListGatewaySchemePayload(WithHeaders):
+class ListGatewaySchemePayload(WithHeaders):
     """
     Returns a list of all available payment gateways that can be configured on PGCC.
     """
@@ -45,7 +45,7 @@ class JuspayListGatewaySchemePayload(WithHeaders):
     )
 
 
-class JuspayGetMerchantGatewaysPmDetailsPayload(WithHeaders):
+class GetMerchantGatewaysPmDetailsPayload(WithHeaders):
     """
     Fetches all gateways and their supported payment methods for the merchant.
     """

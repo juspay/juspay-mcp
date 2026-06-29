@@ -131,7 +131,7 @@ def _parse_invoices(raw_invoices: Any) -> list[dict[str, Any]]:
     return invoices
 
 
-async def list_zoho_books_invoices_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_zoho_books_invoices(payload: dict, meta_info: dict = None) -> dict:
     host, isadmin = await get_admin_host(meta_info=meta_info)
 
     token_response = (meta_info or {}).get("token_response") or {}

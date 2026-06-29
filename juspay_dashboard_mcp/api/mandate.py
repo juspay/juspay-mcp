@@ -31,7 +31,7 @@ MANDATE_DETAIL_FIELDS = {
 }
 
 
-async def get_mandate_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_mandate_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves details for a specific mandate by mandate ID.
 

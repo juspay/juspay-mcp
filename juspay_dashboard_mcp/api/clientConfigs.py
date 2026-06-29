@@ -29,7 +29,7 @@ def _filter_client_config(item: dict) -> dict:
     return filtered
 
 
-async def get_client_config_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_client_config(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves client configuration for a specific merchant.
 
