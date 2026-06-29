@@ -9,34 +9,34 @@ from pydantic import BaseModel, Field
 
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
-class JuspayConflictSettingsPayload(WithHeaders):
+class ConflictSettingsPayload(WithHeaders):
     """Schema for conflict settings API."""
     pass  # No specific fields required beyond the common headers
 
-class JuspayGeneralSettingsPayload(WithHeaders):
+class GeneralSettingsPayload(WithHeaders):
     """Schema for general settings API."""
     pass  # No specific fields required beyond the common headers
 
-class JuspayMandateSettingsPayload(WithHeaders):
+class MandateSettingsPayload(WithHeaders):
     merchantId: Optional[str] = Field(
         None, 
         description="Optional merchant ID to retrieve mandate settings for."
     )
 
-class JuspayPriorityLogicSettingsPayload(WithHeaders):
+class PriorityLogicSettingsPayload(WithHeaders):
     """Schema for priority logic settings API."""
     pass  # No specific fields required beyond the common headers
 
-class JuspayRoutingSettingsPayload(WithHeaders):
+class RoutingSettingsPayload(WithHeaders):
     """Schema for routing settings API."""
     pass  # No specific fields required beyond the common headers
 
-class JuspayWebhookSettingsPayload(WithHeaders):
+class WebhookSettingsPayload(WithHeaders):
     """Schema for webhook settings API."""
     pass  # No specific fields required beyond the common headers
 
 
-class JuspayUpdateGeneralSettingsPayload(WithHeaders):
+class UpdateGeneralSettingsPayload(WithHeaders):
     """Update payload for the merchant's general settings.
 
     Currently exposes only `returnUrl` (the payment redirect URL). Pass an
@@ -53,7 +53,7 @@ class JuspayUpdateGeneralSettingsPayload(WithHeaders):
     )
 
 
-class JuspayUpdateWebhookSettingsPayload(WithHeaders):
+class UpdateWebhookSettingsPayload(WithHeaders):
     """Update the webhook URL and event subscriptions for the merchant.
 
     `webhookEvents` REPLACES the merchant's full event subscription map —

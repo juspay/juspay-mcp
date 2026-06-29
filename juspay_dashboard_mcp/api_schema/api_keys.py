@@ -8,7 +8,7 @@ from pydantic import Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayCreateApiKeyPayload(WithHeaders):
+class CreateApiKeyPayload(WithHeaders):
     """Generate a new API key for the merchant.
 
     The returned `apiKey` is shown only once at creation — the dashboard

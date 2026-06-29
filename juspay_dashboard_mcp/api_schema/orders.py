@@ -101,7 +101,7 @@ class FlatFilter(BaseModel):
         return self
 
 
-class JuspayListOrdersV4Payload(WithHeaders):
+class ListOrdersV4Payload(WithHeaders):
     dateFrom: str = Field(
         ...,
         description="Start date/time in ISO 8601 format (e.g., 'YYYY-MM-DDTHH:MM:SSZ').",
@@ -234,7 +234,7 @@ class JuspayListOrdersV4Payload(WithHeaders):
     )
 
 
-class JuspayGetOrderDetailsPayload(WithHeaders):
+class GetOrderDetailsPayload(WithHeaders):
     order_id: str = Field(
         ..., description="Order ID for which details are to be fetched."
     )

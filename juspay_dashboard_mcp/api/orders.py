@@ -59,7 +59,7 @@ def flat_filter_to_tree(flat: FlatFilter) -> Dict[str, Any]:
     return current
 
 
-async def list_orders_v4_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_orders_v4(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Portal API to retrieve a list of orders within a specified time range.
 
@@ -237,7 +237,7 @@ def extract_order_id_from_txn_id(txn_id: str) -> str:
     return without_suffix
 
 
-async def get_order_details_juspay(payload: dict, meta_info: dict) -> dict:
+async def get_order_details(payload: dict, meta_info: dict) -> dict:
     """
     Calls the Juspay Portal API to retrieve detailed information for a specific order.
      Note: The api returns the amount in major or primary currency unit (e.g., rupees, dollars).

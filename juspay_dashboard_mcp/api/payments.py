@@ -58,7 +58,7 @@ OPTIONAL_PAYMENT_FIELDS = [
 ]
 
 
-async def list_payment_links_v1_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_payment_links_v1(payload: dict, meta_info: dict = None) -> dict:
     """
     Calls the Juspay Portal API to retrieve a list of payment links within a specified time range.
 
@@ -152,7 +152,7 @@ def generate_order_id() -> str:
     return order_id
 
 
-async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def create_payment_link(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates a payment link using the Juspay Portal API.
 
@@ -328,7 +328,7 @@ async def create_payment_link_juspay(payload: dict, meta_info: dict = None) -> d
     raise Exception(f"Failed to create payment link after {max_retries} retries")
 
 
-async def create_autopay_link_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def create_autopay_link(payload: dict, meta_info: dict = None) -> dict:
     """
     Creates an autopay payment link using the Juspay Portal API.
 

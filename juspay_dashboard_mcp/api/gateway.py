@@ -9,7 +9,7 @@ from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_a
 
 logger = logging.getLogger(__name__)
 
-async def list_configured_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all payment gateways (PGs) configured for a merchant,
     including high-level details such as gateway reference ID, creation/modification dates,
@@ -64,7 +64,7 @@ async def list_configured_gateways_juspay(payload: dict, meta_info: dict = None)
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides detailed configuration information for a gateway, including:
     1. Required and optional fields (with descriptions and data types).
@@ -125,7 +125,7 @@ async def get_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> di
 
     return await post(api_url, request_data, None, meta_info)
 
-async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns detailed information about a specific gateway configured by the merchant.
 
@@ -191,7 +191,7 @@ async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> d
 
     return await post(api_url, request_data, None, meta_info)
 
-async def list_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides a list of all available payment gateways that can be configured on PGCC.
     Useful for checking support for specific gateways (e.g., "Does Juspay support Gateway X?").
@@ -242,7 +242,7 @@ async def list_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> d
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_merchant_gateways_pm_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_merchant_gateways_pm_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches all gateways and their supported payment methods for the merchant.
 

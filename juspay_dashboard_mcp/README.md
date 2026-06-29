@@ -237,32 +237,32 @@ https://github.com/user-attachments/assets/c8d38149-f3d1-46dc-984c-68f7b4d0ef88
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_get_merchant_details` | Returns merchant and user session details for the authenticated caller. Includes merchantId, userId, email, username, tenantAccountId, and caller context. Takes no input - all info is derived from active session. |
+| `get_merchant_details` | Returns merchant and user session details for the authenticated caller. Includes merchantId, userId, email, username, tenantAccountId, and caller context. Takes no input - all info is derived from active session. |
 
 ### Gateway Management
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_configured_gateway` | Lists all payment gateways configured for the merchant with gateway reference IDs, creation/modification dates, configured payment methods, and enabled payment flows. |
-| `juspay_get_gateway_scheme` | Provides detailed configuration schema for a specific gateway including required/optional fields, supported payment methods, and features (3DS, AFT, etc.). |
-| `juspay_get_gateway_details` | Returns complete details for a specific configured gateway by `mga_id`. Includes payment methods, EMI plans, mandate/subscription PMs, TPV PMs, and payment flows. |
-| `juspay_list_gateway_scheme` | Lists all available payment gateways that can be configured on PGCC. Returns gateway names/identifiers without detailed configuration. |
-| `juspay_get_merchant_gateways_pm_details` | Fetches all gateways with their supported payment methods including Payment Method Type (PMT) for each. This is the only tool that provides PMT information. |
+| `list_configured_gateway` | Lists all payment gateways configured for the merchant with gateway reference IDs, creation/modification dates, configured payment methods, and enabled payment flows. |
+| `get_gateway_scheme` | Provides detailed configuration schema for a specific gateway including required/optional fields, supported payment methods, and features (3DS, AFT, etc.). |
+| `get_gateway_details` | Returns complete details for a specific configured gateway by `mga_id`. Includes payment methods, EMI plans, mandate/subscription PMs, TPV PMs, and payment flows. |
+| `list_gateway_scheme` | Lists all available payment gateways that can be configured on PGCC. Returns gateway names/identifiers without detailed configuration. |
+| `get_merchant_gateways_pm_details` | Fetches all gateways with their supported payment methods including Payment Method Type (PMT) for each. This is the only tool that provides PMT information. |
 
 ### Order & Transaction Lookup
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_orders_v4` | Retrieves orders within a time range with flexible filters. Supports filtering by payment status, order type, and various transaction fields. Requires 'domain' parameter (use 'txnsELS' as default). |
-| `juspay_get_order_details` | Returns complete details for a specific order ID. Includes automatic retry logic to extract order_id from transaction_id if the order is not found directly. |
+| `list_orders_v4` | Retrieves orders within a time range with flexible filters. Supports filtering by payment status, order type, and various transaction fields. Requires 'domain' parameter (use 'txnsELS' as default). |
+| `get_order_details` | Returns complete details for a specific order ID. Includes automatic retry logic to extract order_id from transaction_id if the order is not found directly. |
 
 ### Payment Links
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_payment_links_v1` | Retrieves payment links created within a time range. Supports filtering by payment status and order type. |
-| `create_payment_link_juspay` | Creates a new payment link with specified amount. Supports email/SMS/WhatsApp notifications, EMI options (Standard, Low Cost, No Cost), and various payment method filters. |
-| `create_autopay_link_juspay` | Creates an autopay/recurring/mandate payment link. Requires amount, mandate_max_amount, mandate_start_date, mandate_end_date, and mandate_frequency. Supports all payment link features plus mandate configuration. |
+| `list_payment_links_v1` | Retrieves payment links created within a time range. Supports filtering by payment status and order type. |
+| `create_payment_link` | Creates a new payment link with specified amount. Supports email/SMS/WhatsApp notifications, EMI options (Standard, Low Cost, No Cost), and various payment method filters. |
+| `create_autopay_link` | Creates an autopay/recurring/mandate payment link. Requires amount, mandate_max_amount, mandate_start_date, mandate_end_date, and mandate_frequency. Supports all payment link features plus mandate configuration. |
 
 ### Analytics & Querying (Q API)
 
@@ -286,80 +286,80 @@ The Q API provides powerful analytics capabilities. Use these tools in sequence:
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_report` | Lists all reports configured by the merchant with status, recipients, thresholds, and monitoring intervals. |
-| `juspay_report_details` | Returns detailed information for a specific report ID including data sources, metrics, dimensions, and filters. |
+| `list_report` | Lists all reports configured by the merchant with status, recipients, thresholds, and monitoring intervals. |
+| `report_details` | Returns detailed information for a specific report ID including data sources, metrics, dimensions, and filters. |
 
 ### Alerts & Monitoring
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_alerts` | Retrieves all alerts configured by the merchant with status, recipients, thresholds, and monitoring intervals. |
-| `juspay_alert_details` | Provides detailed information for a specific alert ID including data source, monitored metrics, and trigger filters. |
+| `list_alerts` | Retrieves all alerts configured by the merchant with status, recipients, thresholds, and monitoring intervals. |
+| `alert_details` | Provides detailed information for a specific alert ID including data source, monitored metrics, and trigger filters. |
 
 ### Offer Management
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_offers` | Lists all offers configured by the merchant with status, applicable payment methods, offer codes, and validity periods. Supports sorting. |
-| `juspay_get_offer_details` | Retrieves detailed information for specific offers including eligibility rules, benefit types, and configurations. |
+| `list_offers` | Lists all offers configured by the merchant with status, applicable payment methods, offer codes, and validity periods. Supports sorting. |
+| `get_offer_details` | Retrieves detailed information for specific offers including eligibility rules, benefit types, and configurations. |
 
 ### User Management
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_users_v2` | Retrieves a paginated list of users associated with the merchant account. |
-| `juspay_get_user` | Fetches details for a specific user by user ID including profile information and account details. |
+| `list_users_v2` | Retrieves a paginated list of users associated with the merchant account. |
+| `get_user` | Fetches details for a specific user by user ID including profile information and account details. |
 
 ### Settings Management
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_get_general_settings` | Retrieves general configuration settings for the merchant including basic setup and feature enablement. |
-| `juspay_get_conflict_settings` | Retrieves conflict settings configuration for payment processing. |
-| `juspay_get_mandate_settings` | Retrieves mandate-related settings for recurring payments and subscriptions. |
-| `juspay_get_priority_logic_settings` | Fetches all configured priority logic rules for gateway routing with status and complete logic definitions. |
-| `juspay_get_routing_settings` | Provides success rate-based routing thresholds and downtime-based switching configurations. |
-| `juspay_get_webhook_settings` | Retrieves webhook configuration settings for event notifications. |
+| `get_general_settings` | Retrieves general configuration settings for the merchant including basic setup and feature enablement. |
+| `get_conflict_settings` | Retrieves conflict settings configuration for payment processing. |
+| `get_mandate_settings` | Retrieves mandate-related settings for recurring payments and subscriptions. |
+| `get_priority_logic_settings` | Fetches all configured priority logic rules for gateway routing with status and complete logic definitions. |
+| `get_routing_settings` | Provides success rate-based routing thresholds and downtime-based switching configurations. |
+| `get_webhook_settings` | Retrieves webhook configuration settings for event notifications. |
 
 ### API Key Management
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_create_api_key` | Generates a new API key for the merchant. Returns the plaintext key ONCE - it cannot be retrieved later. Requires immediate secure storage. |
+| `create_api_key` | Generates a new API key for the merchant. Returns the plaintext key ONCE - it cannot be retrieved later. Requires immediate secure storage. |
 
 ### Surcharge Rules
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_list_surcharge_rules` | Returns all configured surcharge rules with status and rule definitions. Use to audit when additional fees are applied to transactions. |
+| `list_surcharge_rules` | Returns all configured surcharge rules with status and rule definitions. Use to audit when additional fees are applied to transactions. |
 
 ### Outages
 
 | Tool Name | Description |
 |-----------|-------------|
-| `list_outages_juspay` | Returns outages within a specified time range with details including start/end times, status, and affected components. Essential for monitoring system health. |
+| `list_outages` | Returns outages within a specified time range with details including start/end times, status, and affected components. Essential for monitoring system health. |
 
 ### Integration Checklist
 
 | Tool Name | Description |
 |-----------|-------------|
-| `juspay_integration_monitoring_status` | Tracks integration progress across platforms (Backend, Web, Android, iOS) and products. Shows passed/failed stages, critical vs non-critical items, and action items. Requires platform, product_integrated, merchant_id, and time range (last 45 days max). |
-| `juspay_integration_platform_metrics` | Retrieves available platforms for a merchant (Android, iOS, Web). Use to determine platform defaults before calling other integration tools. |
-| `juspay_integration_product_count_metrics` | Analyzes integration usage patterns by product type (Payment Page Signature, Payment Page Session, EC + SDK, EC Only). Requires platform filter. |
-| `juspay_x_mid_monitoring` | Retrieves X-Mid header validation monitoring data for merchant transactions. Shows PASSED/FAILED validation status for each API endpoint. |
+| `integration_monitoring_status` | Tracks integration progress across platforms (Backend, Web, Android, iOS) and products. Shows passed/failed stages, critical vs non-critical items, and action items. Requires platform, product_integrated, merchant_id, and time range (last 45 days max). |
+| `integration_platform_metrics` | Retrieves available platforms for a merchant (Android, iOS, Web). Use to determine platform defaults before calling other integration tools. |
+| `integration_product_count_metrics` | Analyzes integration usage patterns by product type (Payment Page Signature, Payment Page Session, EC + SDK, EC Only). Requires platform filter. |
+| `x_mid_monitoring` | Retrieves X-Mid header validation monitoring data for merchant transactions. Shows PASSED/FAILED validation status for each API endpoint. |
 
 ### Documentation (RAG)
 
 | Tool Name | Description |
 |-----------|-------------|
-| `rag_tool_juspay` | Retrieves information from Juspay's product documentation (https://juspay.io/in/docs). Use for questions about Juspay's products, services, APIs, integration guides, or technical documentation. |
+| `rag_tool` | Retrieves information from Juspay's product documentation (https://juspay.io/in/docs). Use for questions about Juspay's products, services, APIs, integration guides, or technical documentation. |
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Authentication Failures**
-   - Verify your `JUSPAY_WEB_LOGIN_TOKEN` is valid and not expired
+   - Verify your `WEB_LOGIN_TOKEN` is valid and not expired
    - Ensure you're using the correct environment (sandbox vs production)
 
 2. **Order Not Found in get_order_details**
@@ -377,7 +377,7 @@ The Q API provides powerful analytics capabilities. Use these tools in sequence:
 
 ### Debugging Tips
 
-- Use `juspay_get_merchant_details` to verify your session context
+- Use `get_merchant_details` to verify your session context
 - For Q API queries, start simple and add filters incrementally
 - Check server logs for detailed error messages
 - Use the RAG tool for documentation questions about Juspay features
