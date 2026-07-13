@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-19T17:19:26.756402Z",
+  "fetched_at": "2026-07-08T07:24:44.370906Z",
   "sources": [
     {
       "name": "Name: Juspay Billing\n\nEnd to end Mandate lifecycle. By using Billing, you treat Mandates as a configuration, not a codebase",
@@ -192,6 +192,14 @@
       "category": "PAYMENT SUITE V2",
       "title": "Quick Pay",
       "id": "quickpay-integration"
+    },
+    {
+      "name": "Name: Blended Quick Pay\n\nTweak your order and tap to pay with zero friction.",
+      "llms_txt": "https://juspay.io/in/docs/blended-quickpay/llms.txt",
+      "description": "Tweak your order and tap to pay with zero friction.",
+      "category": "PAYMENT SUITE V2",
+      "title": "Blended Quick Pay",
+      "id": "blended-quickpay"
     },
     {
       "name": "Name: Outages\n\nUninterrupted  payments with real-time system health updates",
@@ -394,12 +402,12 @@
       "id": "payv3"
     },
     {
-      "name": "Name: Refunds\n\nA comprehensive guide on processing refunds, equipping merchants with the knowledge and best practices to efficiently handle refund requests.",
-      "llms_txt": "https://juspay.io/in/docs/resources/llms.txt",
-      "description": "A comprehensive guide on processing refunds, equipping merchants with the knowledge and best practices to efficiently handle refund requests.",
+      "name": "Name: Juspay FRM\n\nA comprehensive guide to detecting and preventing fraud, managing transaction risks, and protecting your business through effective risk management practice.",
+      "llms_txt": "https://juspay.io/in/docs/juspay-frm/llms.txt",
+      "description": "A comprehensive guide to detecting and preventing fraud, managing transaction risks, and protecting your business through effective risk management practice.",
       "category": "PAYMENTS",
-      "title": "Refunds",
-      "id": "resources"
+      "title": "Juspay FRM",
+      "id": "juspay-frm"
     },
     {
       "name": "Name: Dashboard Guide\n\nN/A",

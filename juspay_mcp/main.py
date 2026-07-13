@@ -34,6 +34,7 @@ from juspay_mcp.auth.state_store import MemoryStateStore
 
 # Determine which MCP app to use based on JUSPAY_MCP_TYPE
 JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
+AI_STUDIO_MCP_TYPES = {"PP_AI_STUDIO", "AI_STUDIO"}
 
 MCP_APPS = {}
 
@@ -42,6 +43,12 @@ if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_docs_mcp.server import app as docs_app
 
     MCP_APPS["dashboard"] = dashboard_app
+    MCP_APPS["docs"] = docs_app
+elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+    from juspay_ai_studio_mcp.tools import app as ai_studio_app
+    from juspay_docs_mcp.server import app as docs_app
+
+    MCP_APPS["ai_studio"] = ai_studio_app
     MCP_APPS["docs"] = docs_app
 else:
     # Single default FastMCP app
@@ -69,6 +76,11 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
         api_key = request.headers.get("JUSPAY_API_KEY")
         merchant_id = request.headers.get("JUSPAY_MERCHANT_ID") 
         dashboard_token = request.headers.get("JUSPAY_WEB_LOGIN_TOKEN")
+        pp_ai_studio_api_key = request.headers.get("PP_AI_STUDIO_API_KEY")
+        pp_ai_studio_token = (
+            request.headers.get("PP_AI_STUDIO_TOKEN")
+            or request.headers.get("JUSPAY_AI_STUDIO_TOKEN")
+        )
         
         juspay_credentials = {}
         if api_key:
@@ -77,6 +89,11 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
             juspay_credentials["merchant_id"] = merchant_id
         if dashboard_token:
             juspay_credentials["dashboard_token"] = dashboard_token
+        if JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+            if pp_ai_studio_api_key:
+                juspay_credentials["pp_ai_studio_api_key"] = pp_ai_studio_api_key
+            if pp_ai_studio_token:
+                juspay_credentials["pp_ai_studio_token"] = pp_ai_studio_token
             
         if juspay_credentials:
             credential_summary = ", ".join(juspay_credentials.keys())
@@ -114,6 +131,17 @@ def main(host: str, port: int, mode: str):
         sse_docs_endpoint_path = "/juspay-docs"
         streamable_docs_endpoint_path = "/juspay-docs-stream"
         docs_message_path = "/docs-messages/"
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+        # AI Studio MCP
+        sse_ai_studio_endpoint_path = "/juspay-ai-studio"
+        streamable_ai_studio_endpoint_path = "/juspay-ai-studio-stream"
+        ai_studio_message_path = "/juspay-ai-studio/messages/"
+
+        # Docs MCP — own message path so it can be excluded from auth
+        sse_docs_endpoint_path = "/juspay-docs"
+        streamable_docs_endpoint_path = "/juspay-docs-stream"
+        docs_message_path = "/docs-messages/"
+
     else:
         sse_endpoint_path = "/juspay"
         streamable_endpoint_path = "/juspay-stream"
@@ -138,6 +166,9 @@ def main(host: str, port: int, mode: str):
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         sse_transport_handler = SseServerTransport(dashboard_message_path)
         docs_sse_transport_handler = SseServerTransport(docs_message_path)
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+        sse_transport_handler = SseServerTransport(ai_studio_message_path)
+        docs_sse_transport_handler = SseServerTransport(docs_message_path)
     else:
         sse_transport_handler = SseServerTransport(message_endpoint_path)
 
@@ -160,6 +191,10 @@ def main(host: str, port: int, mode: str):
 
             if active_app_key == "dashboard":
                 from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "ai_studio":
+                from juspay_ai_studio_mcp.tools import set_juspay_request_credentials
                 juspay_creds = getattr(request.state, "juspay_credentials", None)
                 set_juspay_request_credentials(juspay_creds)
             elif active_app_key == "default":
@@ -213,6 +248,10 @@ def main(host: str, port: int, mode: str):
                 from juspay_dashboard_mcp.tools import set_juspay_request_credentials
                 juspay_creds = getattr(request.state, "juspay_credentials", None)
                 set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "ai_studio":
+                from juspay_ai_studio_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
             elif active_app_key == "default":
                 from juspay_mcp.tools import set_juspay_request_credentials
                 juspay_creds = getattr(request.state, "juspay_credentials", None)
@@ -232,6 +271,13 @@ def main(host: str, port: int, mode: str):
             Mount(dashboard_message_path, app=sse_transport_handler.handle_post_message),
             Mount(docs_message_path, app=docs_sse_transport_handler.handle_post_message),
         ]
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+        routes = [
+            Route("/health", endpoint=health_check, methods=["GET"]),
+            Route("/health/ready", endpoint=health_check, methods=["GET"]),
+            Mount(ai_studio_message_path, app=sse_transport_handler.handle_post_message),
+            Mount(docs_message_path, app=docs_sse_transport_handler.handle_post_message),
+        ]
     else:
         routes = [
             Route("/health", endpoint=health_check, methods=["GET"]),
@@ -249,6 +295,28 @@ def main(host: str, port: int, mode: str):
     # first in the final route table and beat the OAuth per-mount template
     # route (/{mount}/.well-known/oauth-protected-resource).
     if JUSPAY_MCP_TYPE == "DASHBOARD":
+        _WELL_KNOWN_METHODS = ["GET", "OPTIONS"]
+        docs_public_routes: list = []
+        for _docs_mount_path in (sse_docs_endpoint_path, streamable_docs_endpoint_path):
+            _mount = _docs_mount_path.lstrip("/")
+            _resource_url = (
+                f"{oauth_cfg.mcp_server_url}/{_mount}"
+                if oauth_cfg.enabled
+                else f"http://{host}:{port}/{_mount}"
+            )
+
+            async def _docs_prm(request: Request, _url: str = _resource_url) -> Response:
+                return JSONResponse({"resource": _url})
+
+            docs_public_routes.append(
+                Route(
+                    f"/{_mount}/.well-known/oauth-protected-resource",
+                    endpoint=_docs_prm,
+                    methods=_WELL_KNOWN_METHODS,
+                )
+            )
+        routes = docs_public_routes + routes
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
         _WELL_KNOWN_METHODS = ["GET", "OPTIONS"]
         docs_public_routes: list = []
         for _docs_mount_path in (sse_docs_endpoint_path, streamable_docs_endpoint_path):
@@ -310,6 +378,44 @@ def main(host: str, port: int, mode: str):
                 logger.info("All StreamableHTTP session managers started successfully")
                 yield
             logger.info("StreamableHTTP session managers stopped")
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+        ai_studio_sse_handler = make_sse_handler("ai_studio", sse_transport_handler)
+        ai_studio_http_handler, ai_studio_session_mgr = make_streamable_http_handler("ai_studio")
+
+        # Docs MCP
+        docs_sse_handler = make_sse_handler("docs", docs_sse_transport_handler)
+        docs_http_handler, docs_session_mgr = make_streamable_http_handler("docs")
+
+        routes.extend(
+            [
+                # AI Studio MCP endpoints
+                Route(sse_ai_studio_endpoint_path, endpoint=ai_studio_sse_handler),
+                Route(
+                    streamable_ai_studio_endpoint_path,
+                    endpoint=ai_studio_http_handler,
+                    methods=["GET", "POST", "DELETE"],
+                ),
+                # Docs MCP endpoints
+                Route(sse_docs_endpoint_path, endpoint=docs_sse_handler),
+                Route(
+                    streamable_docs_endpoint_path,
+                    endpoint=docs_http_handler,
+                    methods=["GET", "POST", "DELETE"],
+                ),
+            ]
+        )
+
+        @contextlib.asynccontextmanager
+        async def lifespan(app):
+            """Application lifespan context manager for multiple MCP apps."""
+            async with contextlib.AsyncExitStack() as stack:
+                await stack.enter_async_context(ai_studio_session_mgr.run())
+                logger.info("AI Studio StreamableHTTP session manager started")
+                await stack.enter_async_context(docs_session_mgr.run())
+                logger.info("Docs StreamableHTTP session manager started")
+                logger.info("All StreamableHTTP session managers started successfully")
+                yield
+            logger.info("StreamableHTTP session managers stopped")
 
     else:
         default_sse_handler = make_sse_handler("default", sse_transport_handler)
@@ -352,6 +458,12 @@ def main(host: str, port: int, mode: str):
             streamable_docs_endpoint_path,
             docs_message_path,
         )
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+        docs_skip_prefixes = (
+            sse_docs_endpoint_path,
+            streamable_docs_endpoint_path,
+            docs_message_path,
+        )
 
     if oauth_cfg.enabled and portal_client is not None:
         middleware = [
@@ -380,6 +492,12 @@ def main(host: str, port: int, mode: str):
         logger.info("Starting MCP server (DASHBOARD mode) on:")
         logger.info(f"  Dashboard SSE endpoint:        http://{host}:{port}{sse_dashboard_endpoint_path}")
         logger.info(f"  Dashboard Streamable endpoint: http://{host}:{port}{streamable_dashboard_endpoint_path}")
+        logger.info(f"  Docs SSE endpoint:             http://{host}:{port}{sse_docs_endpoint_path}")
+        logger.info(f"  Docs Streamable endpoint:      http://{host}:{port}{streamable_docs_endpoint_path}")
+    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+        logger.info("Starting MCP server (AI_STUDIO mode) on:")
+        logger.info(f"  AI Studio SSE endpoint:        http://{host}:{port}{sse_ai_studio_endpoint_path}")
+        logger.info(f"  AI Studio Streamable endpoint: http://{host}:{port}{streamable_ai_studio_endpoint_path}")
         logger.info(f"  Docs SSE endpoint:             http://{host}:{port}{sse_docs_endpoint_path}")
         logger.info(f"  Docs Streamable endpoint:      http://{host}:{port}{streamable_docs_endpoint_path}")
     else:
