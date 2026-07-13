@@ -39,6 +39,18 @@ def get_juspay_request_credentials():
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
+        name="get_merchant_details_ai_studio",
+        description="""Return merchant and user session details for the authenticated AI Studio caller.
+
+Key features:
+- Returns merchantId, userId, email, username, tenantAccountId, validHost, and the caller's context.
+- Takes no required input; all information is derived from the active AI Studio/Dashboard session token.
+
+Use this before privileged Studio AI actions to confirm which merchant/user context the caller is operating under, or when the user asks who they are logged in as.""",
+        model=api_schema.account.JuspayAIStudioGetMerchantDetailsPayload,
+        handler=account.get_merchant_details_ai_studio,
+    ),
+    util.make_api_config(
         name="create_session",
         description="""Create a new PP Studio AI session for a merchant payment-page request.
 

@@ -10,7 +10,7 @@ from contextvars import ContextVar
 
 import httpx
 
-from juspay_ai_studio_mcp.config import JUSPAY_BASE_URL, get_common_headers
+from juspay_ai_studio_mcp.config import JUSPAY_BASE_URL, PP_AI_STUDIO_BASE_URL, get_common_headers
 
 logger = logging.getLogger(__name__)
 
@@ -30,90 +30,66 @@ def get_ai_studio_credentials() -> dict | None:
     return ai_studio_credentials.get()
 
 
-async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
+def _credentials_from_context(meta_info: dict | None = None) -> dict | None:
     juspay_creds = get_ai_studio_credentials()
     if not juspay_creds and meta_info:
         juspay_creds = meta_info.get("juspay_credentials")
+    return juspay_creds
 
-    headers = get_common_headers({}, meta_info, juspay_creds)
+
+async def request(
+    method: str,
+    path: str,
+    *,
+    body: dict | None = None,
+    query: dict | None = None,
+    header_payload: dict | None = None,
+    meta_info: dict | None = None,
+    additional_headers: dict | None = None,
+    base_url: str = PP_AI_STUDIO_BASE_URL,
+) -> dict:
+    """Make an authenticated PP Studio AI API request."""
+    juspay_creds = _credentials_from_context(meta_info)
+    headers = get_common_headers(dict(header_payload or {}), meta_info, juspay_creds)
     if additional_headers:
         headers.update(additional_headers)
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        try:
-            logger.info(f"GET {api_url}")
-            response = await client.get(api_url, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(
-                f"Juspay AI Studio API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}"
-            ) from e
-        except Exception as e:
-            logger.error(f"Error during Juspay AI Studio API call: {e}")
-            raise Exception(f"Failed to call Juspay AI Studio API: {e}") from e
-
-
-async def post(api_url: str, payload: dict, additional_headers: dict = None, meta_info: dict = None) -> dict:
-    juspay_creds = get_ai_studio_credentials()
-    if not juspay_creds and meta_info:
-        juspay_creds = meta_info.get("juspay_credentials")
-
-    headers = get_common_headers(payload, meta_info, juspay_creds)
-    if additional_headers:
-        headers.update(additional_headers)
+    url = path if path.startswith(("http://", "https://")) else f"{base_url.rstrip('/')}{path}"
+    method = method.upper()
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"POST {api_url}")
-            response = await client.post(api_url, headers=headers, json=payload)
+            logger.info(f"{method} {url}")
+            response = await client.request(
+                method,
+                url,
+                headers=headers,
+                json=body,
+                params=query,
+            )
             response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(
-                f"Juspay AI Studio API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}"
-            ) from e
-        except Exception as e:
-            logger.error(f"Error during Juspay AI Studio POST call: {e}")
-            raise Exception(f"Failed to call Juspay AI Studio API: {e}") from e
-
-
-async def put(api_url: str, payload: dict, additional_headers: dict = None, meta_info: dict = None):
-    juspay_creds = get_ai_studio_credentials()
-    if not juspay_creds and meta_info:
-        juspay_creds = meta_info.get("juspay_credentials")
-
-    headers = get_common_headers(payload, meta_info, juspay_creds)
-    if additional_headers:
-        headers.update(additional_headers)
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        try:
-            logger.info(f"PUT {api_url}")
-            response = await client.put(api_url, headers=headers, json=payload)
-            response.raise_for_status()
+            if not response.content:
+                return {}
             try:
                 return response.json()
             except ValueError:
-                return response.text
+                return {"text": response.text}
         except httpx.HTTPStatusError as e:
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
+            logger.error(
+                f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}"
+            )
             raise Exception(
-                f"Juspay AI Studio API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}"
+                f"PP Studio AI API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}"
             ) from e
         except Exception as e:
-            logger.error(f"Error during Juspay AI Studio PUT call: {e}")
-            raise Exception(f"Failed to call Juspay AI Studio API: {e}") from e
+            logger.error(f"Error during PP Studio AI API call: {e}")
+            raise Exception(f"Failed to call PP Studio AI API: {e}") from e
 
 
 async def get_ai_studio_host(token: str = None, headers: dict = None, meta_info: dict = None) -> str:
     """Return the host that should be used for AI Studio API calls."""
-    juspay_creds = get_ai_studio_credentials()
+    juspay_creds = _credentials_from_context(meta_info)
     token_to_use = token
     if not token_to_use and juspay_creds:
         token_to_use = (
@@ -157,4 +133,3 @@ async def get_ai_studio_host(token: str = None, headers: dict = None, meta_info:
         if not valid_host.startswith("http"):
             valid_host = f"https://{valid_host}"
         return valid_host
-
