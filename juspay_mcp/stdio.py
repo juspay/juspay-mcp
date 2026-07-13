@@ -21,6 +21,8 @@ if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app
 elif JUSPAY_MCP_TYPE == "INTEGRATION_DOCS":
     from juspay_docs_mcp.server import app
+elif JUSPAY_MCP_TYPE in {"PP_AI_STUDIO", "AI_STUDIO"}:
+    from juspay_ai_studio_mcp.server import app
 else:
     from juspay_mcp.tools import app
 
