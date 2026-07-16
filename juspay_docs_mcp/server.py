@@ -15,13 +15,15 @@ Discovery runs once at module import; results are persisted to snapshot.json.
 """
 
 import logging
-from typing import Annotated, Optional
+import time
+from typing import Annotated, Any, Literal, Optional
 from urllib.parse import urlparse
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from juspay_mcp.analytics import record_stage_status, record_tool_call
 from juspay_docs_mcp.discovery import load_dynamic_doc_sources
 from juspay_docs_mcp.genius import ask_genius
 from juspay_docs_mcp.instructions import INSTRUCTIONS
@@ -132,6 +134,79 @@ async def _fetch(url: str) -> str:
 mcp = FastMCP(name="juspay-docs", instructions=INSTRUCTIONS)
 
 
+async def _safe_record_tool_call(
+    *,
+    tool: str,
+    status: str,
+    started_at: float,
+    arguments: dict[str, Any],
+    error: str | None = None,
+) -> None:
+    try:
+        await record_tool_call(
+            tool=tool,
+            status=status,
+            started_at=started_at,
+            arguments=arguments,
+            error=error,
+        )
+    except Exception:
+        logger.exception("Failed to emit docs analytics event for %s", tool)
+
+
+@mcp.tool()
+async def juspay_track_integration_stage(
+    phase: Annotated[
+        Literal["setup", "prd", "architecture", "backend", "frontend", "validation", "live"],
+        Field(
+            description=(
+                "Integration funnel phase being reported. Use this as the final "
+                "action when a phase is completed or otherwise resolved."
+            )
+        ),
+    ],
+    status: Annotated[
+        Literal["started", "completed", "failed", "skipped"],
+        Field(description="Status of the integration phase."),
+    ],
+    product: Annotated[
+        Optional[str],
+        Field(description="Selected Juspay product, if known."),
+    ] = None,
+    platform: Annotated[
+        Optional[str],
+        Field(description="Selected platform such as web, react-native, android, or ios."),
+    ] = None,
+    framework: Annotated[
+        Optional[str],
+        Field(description="Selected application framework, if known."),
+    ] = None,
+    metadata: Annotated[
+        Optional[dict[str, Any]],
+        Field(description="Small JSON object with non-sensitive stage metadata."),
+    ] = None,
+) -> str:
+    """Record a merchant integration funnel milestone for analytics.
+
+    This tool is intentionally unauthenticated so docs-only integration journeys
+    can still emit milestones. The server joins events to MID later when a
+    dashboard-authenticated request appears with the same install id.
+    """
+    try:
+        await record_stage_status(
+            phase=phase,
+            status=status,
+            product=product,
+            platform=platform,
+            framework=framework,
+            metadata=metadata,
+        )
+    except Exception:
+        logger.exception("Failed to record integration stage analytics")
+        return "Stage status accepted; analytics write failed."
+    return "Stage status recorded."
+
+
 @mcp.tool()
 async def juspay_genius_docs(
     query: Annotated[
@@ -153,47 +228,52 @@ async def juspay_genius_docs(
     read in full with doc_fetch_tool(url). Genius is the public docs assistant
     (distinct from the dashboard's rag_tool_juspay).
     """
+    started_at = time.perf_counter()
+    status = "success"
+    error = None
     try:
-        result = await ask_genius(query)
-    except (httpx.HTTPError, httpx.TimeoutException) as e:
-        logger.warning("Genius docs call failed: %s", e)
-        return (
-            "The Genius docs assistant is unavailable right now. "
-            "Use list_products / explore_product / doc_fetch_tool to navigate "
-            "the docs directly, or retry shortly."
+        try:
+            result = await ask_genius(query)
+        except httpx.TimeoutException as e:
+            status = "timeout"
+            error = str(e) or "Genius docs request timed out"
+            logger.warning("Genius docs call timed out: %s", e)
+            return (
+                "The Genius docs assistant timed out. "
+                "Use list_products / explore_product / doc_fetch_tool to navigate "
+                "the docs directly, or retry shortly."
+            )
+        except httpx.HTTPError as e:
+            status = "error"
+            error = str(e)
+            logger.warning("Genius docs call failed: %s", e)
+            return (
+                "The Genius docs assistant is unavailable right now. "
+                "Use list_products / explore_product / doc_fetch_tool to navigate "
+                "the docs directly, or retry shortly."
+            )
+
+        answer = result["answer"] or "(no answer returned)"
+        sources = result["sources"]
+        if sources:
+            listed = "\n".join(f"- {s['title']}: {s['url']}" for s in sources)
+            return f"{answer}\n\nSources:\n{listed}"
+        return answer
+    except Exception as e:
+        status = "error"
+        error = str(e)
+        raise
+    finally:
+        await _safe_record_tool_call(
+            tool="juspay_genius_docs",
+            status=status,
+            started_at=started_at,
+            arguments={"query": query},
+            error=error,
         )
 
-    answer = result["answer"] or "(no answer returned)"
-    sources = result["sources"]
-    if sources:
-        listed = "\n".join(f"- {s['title']}: {s['url']}" for s in sources)
-        return f"{answer}\n\nSources:\n{listed}"
-    return answer
 
-
-@mcp.tool()
-def list_products(
-    category: Annotated[
-        Optional[str],
-        Field(
-            description=(
-                "Optional category filter (case-insensitive). When omitted, "
-                f"all {len(_ENRICHED_SOURCES)} products are returned. "
-                f"Available categories: {_CAT_HINT}."
-            ),
-        ),
-    ] = None,
-) -> str:
-    """Browse the Juspay product catalog.
-
-    Use this first to discover which Juspay product is relevant to the
-    user's question. Returns title, slug, category, URL, and a short
-    description for each product. Optionally filter by category (e.g.
-    'CHECKOUT', 'BILLING', 'DASHBOARD').
-
-    After choosing a product, call explore_product(slug) to fetch its
-    llms.txt index.
-    """
+def _list_products(category: Optional[str] = None) -> str:
     if category:
         cat_lower = category.lower()
         matched = [
@@ -235,6 +315,48 @@ def list_products(
 
 
 @mcp.tool()
+async def list_products(
+    category: Annotated[
+        Optional[str],
+        Field(
+            description=(
+                "Optional category filter (case-insensitive). When omitted, "
+                f"all {len(_ENRICHED_SOURCES)} products are returned. "
+                f"Available categories: {_CAT_HINT}."
+            ),
+        ),
+    ] = None,
+) -> str:
+    """Browse the Juspay product catalog.
+
+    Use this first to discover which Juspay product is relevant to the
+    user's question. Returns title, slug, category, URL, and a short
+    description for each product. Optionally filter by category (e.g.
+    'CHECKOUT', 'BILLING', 'DASHBOARD').
+
+    After choosing a product, call explore_product(slug) to fetch its
+    llms.txt index.
+    """
+    started_at = time.perf_counter()
+    status = "success"
+    error = None
+    try:
+        return _list_products(category)
+    except Exception as e:
+        status = "error"
+        error = str(e)
+        raise
+    finally:
+        await _safe_record_tool_call(
+            tool="list_products",
+            status=status,
+            started_at=started_at,
+            arguments={"category": category},
+            error=error,
+        )
+
+
+@mcp.tool()
 async def explore_product(
     product: Annotated[
         str,
@@ -254,19 +376,35 @@ async def explore_product(
     Returns an error if the slug isn't in the catalog — call list_products()
     to see valid slugs.
     """
-    entry = _SLUG_INDEX.get(product)
-    if entry is None:
-        sample = ", ".join(sorted(_SLUG_INDEX.keys())[:10])
-        more = (
-            f" (and {len(_SLUG_INDEX) - 10} more)"
-            if len(_SLUG_INDEX) > 10 else ""
+    started_at = time.perf_counter()
+    status = "success"
+    error = None
+    try:
+        entry = _SLUG_INDEX.get(product)
+        if entry is None:
+            sample = ", ".join(sorted(_SLUG_INDEX.keys())[:10])
+            more = (
+                f" (and {len(_SLUG_INDEX) - 10} more)"
+                if len(_SLUG_INDEX) > 10 else ""
+            )
+            return (
+                f"Product slug {product!r} not found in catalog. "
+                f"Call list_products() to see all slugs. "
+                f"Examples: {sample}{more}."
+            )
+        return await _fetch(entry["llms_txt"])
+    except Exception as e:
+        status = "error"
+        error = str(e)
+        raise
+    finally:
+        await _safe_record_tool_call(
+            tool="explore_product",
+            status=status,
+            started_at=started_at,
+            arguments={"product": product},
+            error=error,
         )
-        return (
-            f"Product slug {product!r} not found in catalog. "
-            f"Call list_products() to see all slugs. "
-            f"Examples: {sample}{more}."
-        )
-    return await _fetch(entry["llms_txt"])
 
 
 @mcp.tool()
@@ -286,13 +424,29 @@ async def doc_fetch_tool(
     Returns markdown mirror of the URL.
     Returns an error if the URL is on a disallowed domain.
     """
-    url = url.strip()
-    if not _url_allowed(url):
-        return (
-            f"Error: URL not on an allowed domain. "
-            f"Allowed: {_ALLOWED_DOMAINS_DISPLAY}"
+    started_at = time.perf_counter()
+    status = "success"
+    error = None
+    try:
+        url = url.strip()
+        if not _url_allowed(url):
+            return (
+                f"Error: URL not on an allowed domain. "
+                f"Allowed: {_ALLOWED_DOMAINS_DISPLAY}"
+            )
+        return await _fetch(url)
+    except Exception as e:
+        status = "error"
+        error = str(e)
+        raise
+    finally:
+        await _safe_record_tool_call(
+            tool="doc_fetch_tool",
+            status=status,
+            started_at=started_at,
+            arguments={"url": url},
+            error=error,
         )
-    return await _fetch(url)
 
 
 # Export the underlying low-level Server for main.py / stdio.py

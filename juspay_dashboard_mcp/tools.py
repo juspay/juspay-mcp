@@ -8,13 +8,22 @@ import json
 import mcp.types as types
 import inspect
 import logging
+import os
+import time
 from mcp.server.lowlevel import Server
 from mcp.server.sse import SseServerTransport
 
+from juspay_mcp.analytics import record_tool_call
+from juspay_mcp.analytics.config import is_local_development
+from juspay_mcp.analytics.identity import (
+    extract_mid as extract_analytics_mid,
+    resolve_mid_from_dashboard_token,
+)
 from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
+from juspay_dashboard_mcp.config import JUSPAY_BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +39,68 @@ def set_juspay_request_credentials(credentials):
 def get_juspay_request_credentials():
     """Get Juspay credentials from current request context."""
     return juspay_request_credentials.get()
+
+
+def _dashboard_token_for_analytics(juspay_creds: dict | None, meta_info: dict | None) -> str | None:
+    if isinstance(juspay_creds, dict) and juspay_creds.get("dashboard_token"):
+        return str(juspay_creds["dashboard_token"])
+    if isinstance(meta_info, dict) and meta_info.get("x-web-logintoken"):
+        return str(meta_info["x-web-logintoken"])
+    if not is_local_development():
+        return None
+    return os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
+
+
+async def _mid_for_analytics(
+    *,
+    response: object | None,
+    juspay_creds: dict | None,
+    meta_info: dict | None,
+) -> str | None:
+    mid = extract_analytics_mid(response)
+    if mid:
+        return mid
+    mid = extract_analytics_mid(juspay_creds)
+    if mid:
+        return mid
+    if is_local_development():
+        mid = os.environ.get("JUSPAY_MERCHANT_ID")
+        if mid:
+            return mid.strip() or None
+    return await resolve_mid_from_dashboard_token(
+        token=_dashboard_token_for_analytics(juspay_creds, meta_info),
+        portal_base_url=JUSPAY_BASE_URL,
+    )
+
+
+async def _safe_record_tool_call(
+    *,
+    tool: str,
+    status: str,
+    started_at: float,
+    arguments: dict,
+    response: object | None = None,
+    juspay_creds: dict | None = None,
+    meta_info: dict | None = None,
+    error: str | None = None,
+) -> None:
+    try:
+        analytics_mid = await _mid_for_analytics(
+            response=response,
+            juspay_creds=juspay_creds,
+            meta_info=meta_info,
+        )
+        await record_tool_call(
+            tool=tool,
+            status=status,
+            started_at=started_at,
+            arguments=arguments,
+            error=error,
+            mid=analytics_mid,
+        )
+    except Exception:
+        logger.exception("Failed to emit dashboard analytics event for %s", tool)
+
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
@@ -698,7 +769,9 @@ async def list_my_tools() -> list[types.Tool]:
 
 @app.call_tool()
 async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
-    logger.info(f"Tool called: {name} with arguments: {arguments}")
+    started_at = time.perf_counter()
+    analytics_arguments = dict(arguments or {})
+    logger.info("Tool called: %s", name)
     try:
         # Import here to avoid circular imports
         from juspay_dashboard_mcp.api.utils import set_juspay_credentials
@@ -754,8 +827,25 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
 
         else:
             raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
+        await _safe_record_tool_call(
+            tool=name,
+            status="success",
+            started_at=started_at,
+            arguments=analytics_arguments,
+            response=response,
+            juspay_creds=juspay_creds,
+            meta_info=meta_info,
+        )
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
         logger.error(f"Error in tool execution: {e}")
+        await _safe_record_tool_call(
+            tool=name,
+            status="error",
+            started_at=started_at,
+            arguments=analytics_arguments,
+            juspay_creds=get_juspay_request_credentials(),
+            error=str(e),
+        )
         return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]
