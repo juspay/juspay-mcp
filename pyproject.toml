@@ -19,6 +19,11 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 
+[project.optional-dependencies]
+# In-app KMS decrypt of CLI_ANALYTICS_INGEST_TOKEN (Juspay deployment: install juspay-mcp[kms]).
+# Self-hosters can omit this and pass the token as plaintext.
+kms = ["boto3>=1.34.0"]
+
 [tool.setuptools]
 packages = ["juspay_mcp", "juspay_mcp.api", "juspay_mcp.api_schema", "juspay_mcp.auth", "juspay_mcp.analytics", "juspay_dashboard_mcp", "juspay_dashboard_mcp.api", "juspay_dashboard_mcp.api_schema", "juspay_docs_mcp", "juspay_ai_studio_mcp", "juspay_ai_studio_mcp.api", "juspay_ai_studio_mcp.api_schema"]
 
