@@ -37,6 +37,7 @@ from juspay_mcp.analytics.context import (
     set_current_context as set_analytics_context,
 )
 from juspay_mcp.analytics.client import shutdown as shutdown_analytics
+from juspay_mcp.analytics.config import warm as warm_analytics
 
 # Determine which MCP app to use based on JUSPAY_MCP_TYPE
 JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
@@ -127,6 +128,7 @@ def main(host: str, port: int, mode: str):
         return
     
     # Run in HTTP/SSE mode (default)
+    warm_analytics()  # resolve (and KMS-decrypt if configured) the analytics token once, at startup
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
         sse_dashboard_endpoint_path = "/juspay-dashboard"
