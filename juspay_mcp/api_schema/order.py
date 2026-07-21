@@ -33,13 +33,13 @@ class JuspayOrderFulfillmentPayload(WithRoutingId):
 
 
 class JuspayCreateOrderPayload(WithRoutingId):
-    order_id: str = Field(..., description="Unique identifier for the order (max 21 alphanumeric chars).")
+    order_id: Optional[str] = Field(None, description="Unique identifier for the order (max 21 alphanumeric chars). If not provided, will be auto-generated.")
     amount: str = Field(..., description="The order amount (e.g., '100.00').")
     currency: str = Field(..., description="Currency code (e.g., 'INR').")
-    customer_id: str = Field(..., description="Merchant's identifier for the customer.")
-    customer_email: str = Field(..., description="Customer's email address.")
-    customer_phone: str = Field(..., description="Customer's phone number.")
-    return_url: str = Field(..., description="URL to redirect after payment.")
+    customer_id: Optional[str] = Field(None, description="Merchant's identifier for the customer. If not provided, will be taken from meta_info.")
+    customer_email: Optional[str] = Field(None, description="Customer's email address. If not provided, will be taken from meta_info.")
+    customer_phone: Optional[str] = Field(None, description="Customer's phone number. If not provided, will be taken from meta_info.")
+    return_url: Optional[str] = Field(None, description="URL to redirect after payment.")
     
     description: Optional[str] = Field(None, description="Description of the order.")
     product_id: Optional[str] = Field(None, description="Product identifier.")

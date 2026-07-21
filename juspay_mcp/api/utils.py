@@ -33,13 +33,18 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
-async def post(api_url: str, payload: dict, routing_id: str | None = None, meta_info: dict = None) -> dict:
+async def post(api_url: str, payload: dict, routing_id: str | None = None, meta_info: dict = None, additional_headers: dict = None) -> dict:
     effective_routing_id = routing_id or payload.get("customer_id")
-    headers = get_json_headers(routing_id=effective_routing_id, meta_info=meta_info) 
+    headers = get_json_headers(routing_id=effective_routing_id, meta_info=meta_info)
+    
+    if additional_headers:
+        headers.update(additional_headers)
+        logger.info(f"Additional headers added: {additional_headers}")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with body: {payload}")
+            logger.info(f"Calling Juspay API at: {api_url} with headers: {headers}")
+            logger.info(f"Request body: {payload}")
             response = await client.post(api_url, headers=headers, json=payload)
             response.raise_for_status()
             response_data = response.json()
