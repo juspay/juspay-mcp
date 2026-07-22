@@ -42,12 +42,22 @@ def _mid_from_request(request: Request) -> str | None:
     return None
 
 
+def _id_from_request(request: Request, query_key: str, header_key: str) -> str | None:
+    # Query param first, header fallback. The query string is the durable carrier:
+    # some clients don't forward custom headers at all (e.g. older Codex), and
+    # TLS-inspecting corporate proxies strip custom headers — but the URL query
+    # always reaches the origin. The header stays as a secondary path.
+    return _empty_to_none(request.query_params.get(query_key)) or _empty_to_none(
+        request.headers.get(header_key)
+    )
+
+
 def from_request(request: Request, mcp: str) -> AnalyticsRequestContext:
     return AnalyticsRequestContext(
         mcp=mcp,
-        install_id=_empty_to_none(request.headers.get(INSTALL_ID_HEADER)),
+        install_id=_id_from_request(request, "install_id", INSTALL_ID_HEADER),
         mid=_mid_from_request(request),
-        session_id=_empty_to_none(request.headers.get(SESSION_ID_HEADER)),
+        session_id=_id_from_request(request, "session_id", SESSION_ID_HEADER),
     )
 
 
