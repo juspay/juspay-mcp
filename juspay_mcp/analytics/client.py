@@ -23,6 +23,7 @@ _client: httpx.AsyncClient | None = None
 _pending: set[asyncio.Task] = set()
 _disabled_reason: str | None = None
 _disabled_logged = False
+_ingest_error_logged = False  # warn-once latch for POST failures (kept quiet after the first)
 
 
 def _get_client(timeout: float) -> httpx.AsyncClient:
@@ -41,6 +42,7 @@ def _disable(reason: str) -> None:
 
 
 async def _post(url: str, token: str, timeout: float, payload: dict[str, Any]) -> None:
+    global _ingest_error_logged
     try:
         resp = await _get_client(timeout).post(
             url, json=payload, headers={"Authorization": f"Bearer {token}"}
@@ -49,8 +51,15 @@ async def _post(url: str, token: str, timeout: float, payload: dict[str, Any]) -
             _disable("ingest token rejected — check CLI_ANALYTICS_INGEST_TOKEN")
             return
         resp.raise_for_status()
-    except Exception:
-        logger.debug("Analytics ingest failed", exc_info=True)  # best-effort: drop the event
+    except Exception as exc:
+        # Best-effort: the event is dropped either way. Surface the FIRST failure at WARNING
+        # (with the reason) so a broken egress path / DNS / TLS is diagnosable in prod without
+        # DEBUG logs; stay quiet after that to avoid spam if genius is unreachable.
+        if not _ingest_error_logged:
+            logger.warning("Analytics ingest failed (further failures silenced): %r", exc)
+            _ingest_error_logged = True
+        else:
+            logger.debug("Analytics ingest failed", exc_info=True)
 
 
 async def record_event(
