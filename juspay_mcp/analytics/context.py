@@ -16,6 +16,7 @@ class AnalyticsRequestContext:
     install_id: str | None
     mid: str | None
     session_id: str | None = None
+    agent: str | None = None
 
 
 _current: ContextVar[AnalyticsRequestContext | None] = ContextVar(
@@ -53,11 +54,17 @@ def _id_from_request(request: Request, query_key: str, header_key: str) -> str |
 
 
 def from_request(request: Request, mcp: str) -> AnalyticsRequestContext:
+    # `agent` = the CLI-written query slug (claude/codex/cursor/…), falling back to the
+    # client's User-Agent (a standard header proxies don't strip) when the slug is absent.
+    agent = _empty_to_none(request.query_params.get("agent")) or _empty_to_none(
+        request.headers.get("user-agent")
+    )
     return AnalyticsRequestContext(
         mcp=mcp,
         install_id=_id_from_request(request, "install_id", INSTALL_ID_HEADER),
         mid=_mid_from_request(request),
         session_id=_id_from_request(request, "session_id", SESSION_ID_HEADER),
+        agent=agent,
     )
 
 
