@@ -30,6 +30,7 @@ async def _emit(payload: dict[str, Any], *, mid: str | None = None) -> None:
 
     event = {
         "mcp": ctx.mcp,
+        "agent": ctx.agent,
         **payload,
     }
     event = fit_jsonb_payload(event, cfg.event_max_bytes)
