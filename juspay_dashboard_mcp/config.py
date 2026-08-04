@@ -7,9 +7,23 @@
 import os
 import base64
 import dotenv
-import logging 
+import logging
+from contextvars import ContextVar
 
 logger = logging.getLogger(__name__)
+
+
+tenant_account_id: ContextVar[str | None] = ContextVar("tenant_account_id", default=None)
+
+
+def set_tenant_account_id(value: str | None):
+    """Set the resolved tenantAccountId for the current context."""
+    tenant_account_id.set(value)
+
+
+def get_tenant_account_id() -> str | None:
+    """Get the resolved tenantAccountId from the current context."""
+    return tenant_account_id.get()
 
 dotenv.load_dotenv()
 
@@ -76,12 +90,17 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
 
     default_headers["x-web-logintoken"] = token
 
+    resolved_tenant_id = get_tenant_account_id() or (juspay_creds or {}).get("tenant_id")
+
     # Some Juspay endpoints (e.g. integration monitoring) take a list as the
     # request body. The header-from-payload extraction below only makes sense
     # for dict bodies — guard accordingly so list payloads no longer crash
     # with `'list' object has no attribute 'get'`.
     if isinstance(payload, dict):
-        if payload.get("tenant_id"):
+        if resolved_tenant_id:
+            default_headers["x-tenant-id"] = resolved_tenant_id
+            payload.pop("tenant_id", None)
+        elif payload.get("tenant_id"):
             default_headers["x-tenant-id"] = payload.pop("tenant_id")
 
         if payload.get("cookie"):

@@ -89,6 +89,9 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
             or request.headers.get("JUSPAY_AI_STUDIO_TOKEN")
         )
         
+        base_url_override = request.headers.get("x-base-url")
+        tenant_id_override = request.headers.get("x-tenant-id")
+
         juspay_credentials = {}
         if api_key:
             juspay_credentials["api_key"] = api_key
@@ -96,6 +99,10 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
             juspay_credentials["merchant_id"] = merchant_id
         if dashboard_token:
             juspay_credentials["dashboard_token"] = dashboard_token
+        if base_url_override:
+            juspay_credentials["base_url"] = base_url_override
+        if tenant_id_override:
+            juspay_credentials["tenant_id"] = tenant_id_override
         if JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
             if pp_ai_studio_api_key:
                 juspay_credentials["pp_ai_studio_api_key"] = pp_ai_studio_api_key
