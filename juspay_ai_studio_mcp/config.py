@@ -77,7 +77,7 @@ def get_common_headers(payload: dict | None = None, meta_info: dict = None, jusp
     payload = payload or {}
     token = None
 
-    if juspay_creds:
+    if juspay_creds and _token_from_credentials(juspay_creds):
         verify_dynamic_credentials(juspay_creds)
         token = _token_from_credentials(juspay_creds)
     elif meta_info:

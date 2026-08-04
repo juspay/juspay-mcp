@@ -775,7 +775,8 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
     try:
         # Import here to avoid circular imports
         from juspay_dashboard_mcp.api.utils import set_juspay_credentials
-        
+        from juspay_dashboard_mcp.config import set_tenant_account_id
+
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name), None)
         if not tool_entry:
             raise ValueError(f"Unknown tool: {name}")
@@ -799,6 +800,8 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
                 raise ValueError(f"Validation error: {str(e)}")
         else:
             payload_dict = arguments
+
+        set_tenant_account_id(None)
 
         juspay_creds = get_juspay_request_credentials()
         if juspay_creds:

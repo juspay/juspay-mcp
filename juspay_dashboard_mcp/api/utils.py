@@ -8,7 +8,12 @@ import os
 import httpx
 import logging
 from contextvars import ContextVar
-from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
+from urllib.parse import urlparse
+from juspay_dashboard_mcp.config import (
+    get_common_headers,
+    set_tenant_account_id,
+    JUSPAY_BASE_URL,
+)
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -23,6 +28,38 @@ def set_juspay_credentials(creds: dict | None):
 def get_juspay_credentials() -> dict | None:
     """Get Juspay credentials from the current context."""
     return juspay_credentials.get()
+
+
+def _normalize_host(value: str | None) -> str | None:
+    """Reduce a host or URL to a bare lowercase hostname for comparison."""
+    if not value:
+        return None
+    value = value.strip()
+    if "//" not in value:
+        value = f"//{value}"
+    return (urlparse(value).hostname or "").lower() or None
+
+
+def bind_tenant_from_auth_response(data: dict, juspay_creds: dict | None) -> None:
+    """Reject the request if the token's tenant/host disagrees with the edge routing."""
+    creds = juspay_creds or {}
+    resolved_tenant = data.get("tenantAccountId")
+
+    expected_tenant = creds.get("tenant_id")
+    if expected_tenant and resolved_tenant and expected_tenant != resolved_tenant:
+        raise Exception(
+            "Tenant mismatch: token belongs to a different tenant than the one this request was routed as."
+        )
+
+    expected_host = _normalize_host(creds.get("base_url"))
+    actual_host = _normalize_host(data.get("validHost"))
+    if expected_host and actual_host and expected_host != actual_host:
+        raise Exception(
+            f"Host mismatch: token resolved to '{actual_host}', expected '{expected_host}'."
+        )
+
+    if resolved_tenant:
+        set_tenant_account_id(resolved_tenant)
 
 async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
     # Get Juspay credentials from context or use meta_info for backward compatibility
@@ -143,10 +180,12 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     if not auth_type and juspay_creds:
         auth_type = juspay_creds.get("auth_type")
 
+    base_url = (juspay_creds or {}).get("base_url") or JUSPAY_BASE_URL
+
     try:
         if auth_type == "oauth":
             resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
-            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
+            url = f"{base_url}/ec/v2/authorize?resource={resource_param}"
             oauth_headers = {
                 "Authorization": token_to_use,
             }
@@ -156,12 +195,12 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, headers=oauth_headers)
                 resp.raise_for_status()
-                # Authorization successful, return JUSPAY_BASE_URL for OAuth
-                logger.info(f"OAuth auth_type detected, returning {JUSPAY_BASE_URL}")
-                return JUSPAY_BASE_URL
+                bind_tenant_from_auth_response(resp.json(), juspay_creds)
+                logger.info(f"OAuth auth_type detected, returning {base_url}")
+                return base_url
         else:
             # For non-OAuth, use regular token validation endpoint
-            validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
+            validate_url = f"{base_url}/api/ec/v1/validate/token"
             json_payload = {"token": token_to_use}
             juspay_creds = get_juspay_credentials()
             request_api_headers = get_common_headers(json_payload, meta_info, juspay_creds)
@@ -176,12 +215,13 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                 )
                 resp.raise_for_status()
                 data = resp.json()
+                bind_tenant_from_auth_response(data, juspay_creds)
                 valid_host = data.get("validHost")
                 if not valid_host:
                     raise Exception("validHost not found in Juspay token validation response.")
                 if not valid_host.startswith("http"):
                     valid_host = f"https://{valid_host}"
-                logger.info(f"Using valid host: {valid_host}")    
+                logger.info(f"Using valid host: {valid_host}")
                 return valid_host
     except Exception as e:
         logger.error(f"Token validation failed: {e}")
@@ -219,10 +259,12 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
     if not auth_type and juspay_creds:
         auth_type = juspay_creds.get("auth_type")
 
+    base_url = (juspay_creds or {}).get("base_url") or JUSPAY_BASE_URL
+
     try:
         if auth_type == "oauth":
             resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
-            url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
+            url = f"{base_url}/ec/v2/authorize?resource={resource_param}"
             oauth_headers = {
                 "Authorization": token_to_use,
             }
@@ -233,14 +275,15 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
                 resp = await client.get(url, headers=oauth_headers)
                 resp.raise_for_status()
                 data = resp.json()
+                bind_tenant_from_auth_response(data, juspay_creds)
                 context = data.get("context")
                 # Check if context is JUSPAY
                 isadmin = context == "JUSPAY"
-                logger.info(f"OAuth auth_type detected, context: {context}, isadmin: {isadmin}, returning {JUSPAY_BASE_URL}")
-                return JUSPAY_BASE_URL, isadmin
+                logger.info(f"OAuth auth_type detected, context: {context}, isadmin: {isadmin}, returning {base_url}")
+                return base_url, isadmin
         else:
             # For non-OAuth, use regular token validation endpoint
-            validate_url = f"{JUSPAY_BASE_URL}/api/ec/v1/validate/token"
+            validate_url = f"{base_url}/api/ec/v1/validate/token"
             json_payload = {"token": token_to_use}
             # Pass juspay_creds to get_common_headers to avoid environment variable verification
             juspay_creds = get_juspay_credentials()
@@ -254,10 +297,11 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
                 )
                 resp.raise_for_status()
                 data = resp.json()
+                bind_tenant_from_auth_response(data, juspay_creds)
                 context = data.get("context")
                 # Check if context is JUSPAY
-                isadmin = context == "JUSPAY" 
-                
+                isadmin = context == "JUSPAY"
+
                 valid_host = data.get("validHost")
                 if not valid_host:
                     raise Exception("validHost not found in Juspay token validation response.")

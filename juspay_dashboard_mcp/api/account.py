@@ -9,7 +9,10 @@ import os
 
 import httpx
 
-from juspay_dashboard_mcp.api.utils import get_juspay_credentials
+from juspay_dashboard_mcp.api.utils import (
+    bind_tenant_from_auth_response,
+    get_juspay_credentials,
+)
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL
 
 logger = logging.getLogger(__name__)
@@ -36,11 +39,14 @@ async def get_merchant_details_juspay(payload: dict = None, meta_info: dict = No
     if not token:
         raise Exception("Juspay token not provided.")
 
-    url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?{_AUTHORIZE_QUERY}"
+    base_url = (juspay_creds or {}).get("base_url") or JUSPAY_BASE_URL
+    url = f"{base_url}/ec/v2/authorize?{_AUTHORIZE_QUERY}"
     headers = {"Authorization": token}
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         logger.info(f"GET {url}")
         resp = await client.get(url, headers=headers)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        bind_tenant_from_auth_response(data, juspay_creds)
+        return data
