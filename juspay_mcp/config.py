@@ -94,7 +94,7 @@ def get_common_headers(routing_id: str | None = None, juspay_creds: dict = None)
     Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
     If juspay_creds is provided, uses dynamic credentials; otherwise falls back to env vars.
     """
-    if juspay_creds:
+    if juspay_creds and (juspay_creds.get("api_key") or juspay_creds.get("merchant_id")):
         verify_dynamic_credentials(juspay_creds)
         api_key = juspay_creds["api_key"]
         merchant_id = juspay_creds["merchant_id"]

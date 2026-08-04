@@ -65,7 +65,7 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
     Returns common headers used by all API calls.
     If juspay_creds is provided, uses dynamic credentials; otherwise falls back to env vars and meta_info.
     """
-    if juspay_creds:
+    if juspay_creds and juspay_creds.get("dashboard_token"):
         # Use dynamic credentials from headers
         verify_dynamic_credentials(juspay_creds)
         token = juspay_creds["dashboard_token"]

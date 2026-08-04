@@ -41,14 +41,7 @@ def _normalize_host(value: str | None) -> str | None:
 
 
 def bind_tenant_from_auth_response(data: dict, juspay_creds: dict | None) -> None:
-    """Validate an auth response against the tenant the edge routed this request as.
-
-    `base_url` and `tenant_id` are injected by the edge proxy for external
-    organizations; the values here come from the token itself, so a mismatch
-    means the routing and the credential disagree and the request must not
-    proceed. Both checks are skipped when the edge sent no override, leaving
-    single-tenant traffic untouched.
-    """
+    """Reject the request if the token's tenant/host disagrees with the edge routing."""
     creds = juspay_creds or {}
     resolved_tenant = data.get("tenantAccountId")
 
