@@ -25,6 +25,7 @@ from starlette.responses import JSONResponse, Response
 from .config import OAuthConfig
 from .context import OAuthRequestContext, PortalUserInfo, clear_current, set_current
 from .portal_client import PortalClient
+from .tenant import BASE_URL_HEADER, resolve as resolve_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +70,15 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         )
         self._skip_path_prefixes = skip_path_prefixes
 
-    async def _validate_with_cache(self, token: str) -> PortalUserInfo | None:
+    async def _validate_with_cache(
+        self, token: str, cfg: OAuthConfig
+    ) -> PortalUserInfo | None:
         # Dev bypass: useful for curl-driven smoke tests so we don't need a
         # real Portal token. The token value is configured via env and never
         # rotates, so it must NEVER be set in production.
-        if self._cfg.dev_test_token and token == self._cfg.dev_test_token:
+        if cfg.dev_test_token and token == cfg.dev_test_token:
             return PortalUserInfo(
-                merchant_id=self._cfg.dev_test_merchant_id,
+                merchant_id=cfg.dev_test_merchant_id,
                 user_id="dev-user",
                 email="dev@example.com",
                 context="MERCHANT",
@@ -84,21 +87,28 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
                 valid_host=None,
             )
 
+        # Keyed by portal too: the same token string must not be treated as
+        # validated for a tenant it was never presented to.
+        cache_key = f"{cfg.portal_base_url}\n{token}"
         now = time.time()
-        cached = self._cache.get(token)
+        cached = self._cache.get(cache_key)
         if cached is not None:
             user_info, expiry = cached
             if expiry > now:
                 return user_info
-            self._cache.pop(token, None)
+            self._cache.pop(cache_key, None)
 
-        user_info = await self._portal.validate(token)
+        user_info = await self._portal.validate(
+            token, portal_base_url=cfg.portal_base_url
+        )
         if user_info is None:
             return None
-        self._cache[token] = (user_info, now + self._cfg.validation_cache_ttl_seconds)
+        self._cache[cache_key] = (user_info, now + cfg.validation_cache_ttl_seconds)
         return user_info
 
-    def _challenge_header(self, request: Request, error: str | None = None) -> str:
+    def _challenge_header(
+        self, request: Request, cfg: OAuthConfig, error: str | None = None
+    ) -> str:
         # Per RFC 9728 §5.1 the WWW-Authenticate header must point to the
         # resource_metadata URL. We use the per-mount path when present so the
         # client can fall back to well-known probing if the header is dropped
@@ -107,16 +117,20 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         # Strip any trailing /messages or /stream suffix so we land on the
         # mount-level well-known doc.
         base = path.rsplit("/", 1)[0] if path.count("/") > 1 else path
-        prm_url = f"{self._cfg.mcp_server_url}{base}/.well-known/oauth-protected-resource"
+        prm_url = f"{cfg.mcp_server_url}{base}/.well-known/oauth-protected-resource"
         parts = [f'Bearer resource_metadata="{prm_url}"']
-        if self._cfg.scopes_supported:
-            parts.append(f'scope="{" ".join(self._cfg.scopes_supported)}"')
+        if cfg.scopes_supported:
+            parts.append(f'scope="{" ".join(cfg.scopes_supported)}"')
         if error:
             parts.append(f'error="{error}"')
         return ", ".join(parts)
 
     def _unauthorized(
-        self, request: Request, error: str | None = None, message: str = "Authentication required"
+        self,
+        request: Request,
+        cfg: OAuthConfig,
+        error: str | None = None,
+        message: str = "Authentication required",
     ) -> Response:
         return JSONResponse(
             {
@@ -125,7 +139,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
                 "id": None,
             },
             status_code=401,
-            headers={"WWW-Authenticate": self._challenge_header(request, error)},
+            headers={"WWW-Authenticate": self._challenge_header(request, cfg, error)},
         )
 
     async def dispatch(
@@ -141,17 +155,21 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         ):
             return await call_next(request)
 
+        cfg = resolve_tenant(self._cfg, request)
+
         auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
         if not auth_header or not auth_header.lower().startswith("bearer "):
-            return self._unauthorized(request)
+            return self._unauthorized(request, cfg)
 
         token = auth_header[7:].strip()
         if not token:
-            return self._unauthorized(request, error="invalid_token")
+            return self._unauthorized(request, cfg, error="invalid_token")
 
-        user_info = await self._validate_with_cache(token)
+        user_info = await self._validate_with_cache(token, cfg)
         if user_info is None:
-            return self._unauthorized(request, error="invalid_token", message="Invalid or expired token")
+            return self._unauthorized(
+                request, cfg, error="invalid_token", message="Invalid or expired token"
+            )
 
         ctx = OAuthRequestContext(access_token=token, user_info=user_info)
         set_current(ctx)
@@ -173,6 +191,12 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
             # juspay_dashboard_mcp/api/utils.py:get_juspay_host_from_api.
             "auth_type": "oauth",
         }
+        base_url_override = request.headers.get(BASE_URL_HEADER)
+        tenant_id_override = request.headers.get("x-tenant-id")
+        if base_url_override:
+            request.state.juspay_credentials["base_url"] = base_url_override
+        if tenant_id_override:
+            request.state.juspay_credentials["tenant_id"] = tenant_id_override
 
         try:
             return await call_next(request)

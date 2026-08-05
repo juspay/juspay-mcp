@@ -52,12 +52,19 @@ class PortalClient:
         if self._owns_http:
             await self._http.aclose()
 
+    def _portal(self, portal_base_url: str | None) -> str:
+        return (portal_base_url or self._cfg.portal_base_url).rstrip("/")
+
     async def exchange_code(
-        self, client_id: str, client_secret: str, code: str
+        self,
+        client_id: str,
+        client_secret: str,
+        code: str,
+        portal_base_url: str | None = None,
     ) -> TokenResponse | None:
         try:
             resp = await self._http.post(
-                f"{self._cfg.portal_base_url}/ec/v2/token",
+                f"{self._portal(portal_base_url)}/ec/v2/token",
                 json={
                     "client_id": client_id,
                     "client_secret": client_secret,
@@ -87,11 +94,15 @@ class PortalClient:
         )
 
     async def refresh(
-        self, client_id: str, client_secret: str, refresh_token: str
+        self,
+        client_id: str,
+        client_secret: str,
+        refresh_token: str,
+        portal_base_url: str | None = None,
     ) -> TokenResponse | None:
         try:
             resp = await self._http.post(
-                f"{self._cfg.portal_base_url}/ec/v2/token",
+                f"{self._portal(portal_base_url)}/ec/v2/token",
                 json={
                     "client_id": client_id,
                     "client_secret": client_secret,
@@ -120,7 +131,9 @@ class PortalClient:
             token_type=body.get("token_type", "Bearer"),
         )
 
-    async def revoke_token(self, client_id: str, token: str) -> bool:
+    async def revoke_token(
+        self, client_id: str, token: str, portal_base_url: str | None = None
+    ) -> bool:
         """Tell Portal to invalidate the OAuth session backing this bearer.
 
         Mirrors the dashboard's logout call:
@@ -132,7 +145,7 @@ class PortalClient:
         endpoint must always reply 200 to its caller per RFC 7009 §2.2, even
         if Portal rejects — so we just log on failure.
         """
-        url = f"{self._cfg.portal_base_url}/ec/v1/token/revoke/entity"
+        url = f"{self._portal(portal_base_url)}/ec/v1/token/revoke/entity"
         headers = {
             "Content-Type": "application/json",
             "x-web-logintoken": token,
@@ -155,10 +168,12 @@ class PortalClient:
         logger.info("portal revoke OK: %d", resp.status_code)
         return True
 
-    async def validate(self, token: str) -> PortalUserInfo | None:
+    async def validate(
+        self, token: str, portal_base_url: str | None = None
+    ) -> PortalUserInfo | None:
         # Build the URL as a string so httpx preserves the query verbatim.
         # See the comment on _PORTAL_VALIDATE_QUERY for why this matters.
-        url = f"{self._cfg.portal_base_url}/ec/v2/authorize?{_PORTAL_VALIDATE_QUERY}"
+        url = f"{self._portal(portal_base_url)}/ec/v2/authorize?{_PORTAL_VALIDATE_QUERY}"
         try:
             resp = await self._http.get(
                 url,
