@@ -252,34 +252,43 @@ async def _discover_async() -> list[dict]:
         return validated
 
 
-def load_dynamic_doc_sources() -> list[dict]:
-    """Try live discovery; on hard failure fall back to the last snapshot.
+def load_snapshot_sources() -> list[dict]:
+    """Load the catalog from disk only. Never touches the network, never raises."""
+    snapshot = load_snapshot()
+    if snapshot:
+        logger.info(
+            "Loaded %d sources from snapshot at %s", len(snapshot), SNAPSHOT_PATH
+        )
+    else:
+        logger.error(
+            "No snapshot at %s; docs MCP starts with an empty catalog until "
+            "the background refresh completes",
+            SNAPSHOT_PATH,
+        )
+    return snapshot
 
-    Never raises. Returns [] if both live discovery and snapshot loading fail.
+
+async def refresh_and_save() -> list[dict]:
+    """Run live discovery and persist the result. Raises if discovery fails."""
+    sources = await _discover_async()
+    if not sources:
+        raise RuntimeError("Live discovery returned 0 sources")
+    save_snapshot(sources)
+    return sources
+
+
+def load_dynamic_doc_sources() -> list[dict]:
+    """Blocking discovery with snapshot fallback. Never raises.
+
     Each entry: {name, llms_txt, description, category, title, id}.
     """
     try:
-        sources = asyncio.run(_discover_async())
-        if not sources:
-            raise RuntimeError("Live discovery returned 0 sources")
-        save_snapshot(sources)
-        return sources
+        return asyncio.run(refresh_and_save())
     except Exception as e:
         logger.warning(
             "Dynamic discovery failed: %s. Falling back to snapshot.", e
         )
-        snapshot = load_snapshot()
-        if snapshot:
-            logger.info(
-                "Loaded %d sources from snapshot at %s",
-                len(snapshot),
-                SNAPSHOT_PATH,
-            )
-            return snapshot
-        logger.error(
-            "No snapshot available; docs MCP will boot with empty source list"
-        )
-        return []
+        return load_snapshot_sources()
 
 
 # ---- CLI smoke test ------------------------------------------------------------
