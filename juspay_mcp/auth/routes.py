@@ -35,6 +35,7 @@ from starlette.routing import Route
 
 from .config import OAuthConfig
 from .metadata import authorization_server_metadata, protected_resource_metadata
+from .tenant import resolve as resolve_tenant
 from .pkce import validate_s256
 from .portal_client import PortalClient
 from .state_store import MemoryStateStore, StateData
@@ -129,43 +130,46 @@ def build_routes(
     """
 
     # ---------- well-known ----------------------------------------------------
-    async def prm_root(_: Request) -> Response:
-        return JSONResponse(protected_resource_metadata(cfg))
+    async def prm_root(request: Request) -> Response:
+        return JSONResponse(protected_resource_metadata(resolve_tenant(cfg, request)))
 
     async def prm_for_mount(request: Request) -> Response:
         # Forward-form: /{mount}/.well-known/oauth-protected-resource
         # mount is a single path segment, e.g. "juspay-dashboard-stream"
+        tcfg = resolve_tenant(cfg, request)
         mount = request.path_params["mount"]
-        resource_url = f"{cfg.mcp_server_url}/{mount}"
-        return JSONResponse(protected_resource_metadata(cfg, resource_url=resource_url))
+        resource_url = f"{tcfg.mcp_server_url}/{mount}"
+        return JSONResponse(protected_resource_metadata(tcfg, resource_url=resource_url))
 
     async def prm_reverse_form(request: Request) -> Response:
         # Reverse-form (RFC 9728 §4): /.well-known/oauth-protected-resource/{full_path}
         # full_path may span multiple segments, e.g. "dashboard/juspay-dashboard-stream"
-        # The resource URL is reconstructed from the host origin, not cfg.mcp_server_url,
+        # The resource URL is reconstructed from the host origin, not mcp_server_url,
         # because the reverse-form encodes the full absolute path from the host root.
+        tcfg = resolve_tenant(cfg, request)
         full_path = request.path_params["full_path"]
-        parsed = urlparse(cfg.mcp_server_url)
+        parsed = urlparse(tcfg.mcp_server_url)
         host_origin = f"{parsed.scheme}://{parsed.netloc}"
         resource_url = f"{host_origin}/{full_path}"
-        return JSONResponse(protected_resource_metadata(cfg, resource_url=resource_url))
+        return JSONResponse(protected_resource_metadata(tcfg, resource_url=resource_url))
 
-    async def asm(_: Request) -> Response:
-        return JSONResponse(authorization_server_metadata(cfg))
+    async def asm(request: Request) -> Response:
+        return JSONResponse(authorization_server_metadata(resolve_tenant(cfg, request)))
 
     async def jwks(_: Request) -> Response:
         return JSONResponse({"keys": []})
 
     # ---------- RFC 7591 dynamic client registration --------------------------
     async def register(request: Request) -> Response:
+        tcfg = resolve_tenant(cfg, request)
         try:
             body = await request.json()
         except Exception:
             body = {}
 
-        client_id = body.get("client_id") or cfg.upstream_client_id or f"client_{int(time.time())}"
+        client_id = body.get("client_id") or tcfg.upstream_client_id or f"client_{int(time.time())}"
         client_secret = (
-            body.get("client_secret") or cfg.upstream_client_secret or secrets.token_hex(32)
+            body.get("client_secret") or tcfg.upstream_client_secret or secrets.token_hex(32)
         )
         return JSONResponse(
             {
@@ -184,6 +188,7 @@ def build_routes(
 
     # ---------- /oauth/authorize ---------------------------------------------
     async def authorize(request: Request) -> Response:
+        tcfg = resolve_tenant(cfg, request)
         q = request.query_params
         redirect_uri = q.get("redirect_uri")
         state = q.get("state")
@@ -202,7 +207,7 @@ def build_routes(
                 "invalid_request",
                 "Only S256 PKCE challenge method is supported",
             )
-        if not _resource_is_acceptable(cfg, resource):
+        if not _resource_is_acceptable(tcfg, resource):
             return _bad_request("invalid_target", f"resource {resource!r} is not served by this server")
 
         await store.put_state(
@@ -222,12 +227,12 @@ def build_routes(
         # redirect back to /oauth/callback on THIS server, which then bounces
         # to the client-supplied redirect_uri.
         portal_params = {
-            "client_id": client_id or cfg.upstream_client_id,
-            "redirect_uri": f"{cfg.mcp_server_url}/oauth/callback",
+            "client_id": client_id or tcfg.upstream_client_id,
+            "redirect_uri": f"{tcfg.mcp_server_url}/oauth/callback",
             "scope": "user_access",
             "state": state,
         }
-        portal_url = f"{cfg.portal_base_url}?{urlencode(portal_params)}"
+        portal_url = f"{tcfg.portal_base_url}?{urlencode(portal_params)}"
         return RedirectResponse(portal_url, status_code=302)
 
     # ---------- /oauth/callback ----------------------------------------------
@@ -263,6 +268,7 @@ def build_routes(
 
     # ---------- /oauth/token --------------------------------------------------
     async def token(request: Request) -> Response:
+        tcfg = resolve_tenant(cfg, request)
         body = await _read_form_or_json(request)
         grant_type = body.get("grant_type")
         client_id, client_secret = _parse_client_credentials(request, body)
@@ -271,8 +277,8 @@ def build_routes(
             # Fall back to the server-side configured upstream client. This
             # makes the flow work for Claude Code's "none" auth method clients
             # that registered via DCR without persisting a real secret.
-            client_id = client_id or cfg.upstream_client_id
-            client_secret = client_secret or cfg.upstream_client_secret
+            client_id = client_id or tcfg.upstream_client_id
+            client_secret = client_secret or tcfg.upstream_client_secret
 
         if not client_id or not client_secret:
             return _unauthorized_client("Client credentials required")
@@ -292,7 +298,9 @@ def build_routes(
                 if not validate_s256(code_verifier, state_data.code_challenge):
                     return _bad_request("invalid_grant", "Invalid code_verifier")
 
-            token_resp = await portal.exchange_code(client_id, client_secret, code)
+            token_resp = await portal.exchange_code(
+                client_id, client_secret, code, portal_base_url=tcfg.portal_base_url
+            )
             if token_resp is None:
                 return _bad_request("invalid_grant", "Portal token exchange failed")
 
@@ -306,7 +314,7 @@ def build_routes(
                     "refresh_token": token_resp.refresh_token,
                     "expires_in": token_resp.expires_in,
                     "token_type": "Bearer",
-                    "scope": " ".join(cfg.scopes_supported),
+                    "scope": " ".join(tcfg.scopes_supported),
                 }
             )
 
@@ -314,7 +322,12 @@ def build_routes(
             refresh_token = body.get("refresh_token")
             if not refresh_token:
                 return _bad_request("invalid_request", "Missing refresh_token")
-            token_resp = await portal.refresh(client_id, client_secret, refresh_token)
+            token_resp = await portal.refresh(
+                client_id,
+                client_secret,
+                refresh_token,
+                portal_base_url=tcfg.portal_base_url,
+            )
             if token_resp is None:
                 return _bad_request("invalid_grant", "Portal refresh failed")
             return JSONResponse(
@@ -323,7 +336,7 @@ def build_routes(
                     "refresh_token": token_resp.refresh_token,
                     "expires_in": token_resp.expires_in,
                     "token_type": "Bearer",
-                    "scope": " ".join(cfg.scopes_supported),
+                    "scope": " ".join(tcfg.scopes_supported),
                 }
             )
 
@@ -346,16 +359,26 @@ def build_routes(
         # token_type_hint can be 'access_token' | 'refresh_token' per RFC 7009.
         # Portal revokes the whole entity (user session) regardless so we
         # don't need to differentiate.
+        tcfg = resolve_tenant(cfg, request)
         client_id, _client_secret = _parse_client_credentials(request, body)
-        client_id = client_id or cfg.upstream_client_id
+        client_id = client_id or tcfg.upstream_client_id
 
         revoked = False
         if token and client_id:
-            revoked = await portal.revoke_token(client_id, token)
+            revoked = await portal.revoke_token(
+                client_id, token, portal_base_url=tcfg.portal_base_url
+            )
             # Evict the validated-token cache so subsequent requests are forced
-            # to re-validate via Portal (which will now return 4xx).
+            # to re-validate via Portal (which will now return 4xx). The cache is
+            # keyed per portal, so drop every tenant's entry for this token.
             if validation_cache is not None:
                 validation_cache.pop(token, None)
+                suffix = f"\n{token}"
+                for key in [
+                    k for k in list(validation_cache)
+                    if isinstance(k, str) and k.endswith(suffix)
+                ]:
+                    validation_cache.pop(key, None)
         elif not token:
             logger.warning("/oauth/revoke called without a `token` body field")
 
