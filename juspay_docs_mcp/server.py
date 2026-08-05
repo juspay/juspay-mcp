@@ -24,7 +24,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from juspay_mcp.analytics import record_stage_status, record_tool_call
-from juspay_docs_mcp.discovery import load_dynamic_doc_sources
+from juspay_docs_mcp.discovery import load_snapshot_sources, refresh_and_save
 from juspay_docs_mcp.genius import ask_genius
 from juspay_docs_mcp.instructions import INSTRUCTIONS
 
@@ -53,10 +53,10 @@ def _url_allowed(url: str) -> bool:
 
 
 # ----------------------------------------------------------------------------
-# Catalog (loaded once at module import via discovery)
+# Catalog (snapshot at import; refreshed in the background once serving)
 # ----------------------------------------------------------------------------
 
-_ENRICHED_SOURCES: list[dict] = load_dynamic_doc_sources()
+_ENRICHED_SOURCES: list[dict] = load_snapshot_sources()
 
 
 def _slug_for(entry: dict) -> Optional[str]:
@@ -75,21 +75,60 @@ def _slug_for(entry: dict) -> Optional[str]:
 
 
 _SLUG_INDEX: dict[str, dict] = {}
-for _entry in _ENRICHED_SOURCES:
-    _slug = _slug_for(_entry)
-    if _slug:
-        _SLUG_INDEX[_slug] = _entry
-
 _DOMAINS: set[str] = set()
-for _entry in _ENRICHED_SOURCES:
-    _parsed = urlparse(_entry["llms_txt"])
-    if _parsed.scheme and _parsed.netloc:
-        _DOMAINS.add(f"{_parsed.scheme}://{_parsed.netloc}/")
+_CATEGORIES: list[str] = []
+_CAT_HINT: str = "(none discovered)"
 
-_CATEGORIES: list[str] = sorted({
-    s["category"] for s in _ENRICHED_SOURCES if s.get("category")
-})
-_CAT_HINT: str = ", ".join(_CATEGORIES) if _CATEGORIES else "(none discovered)"
+
+def _rebuild_indexes() -> None:
+    """Recompute the lookup structures derived from _ENRICHED_SOURCES."""
+    global _SLUG_INDEX, _DOMAINS, _CATEGORIES, _CAT_HINT
+
+    slug_index: dict[str, dict] = {}
+    domains: set[str] = set()
+    for entry in _ENRICHED_SOURCES:
+        slug = _slug_for(entry)
+        if slug:
+            slug_index[slug] = entry
+        parsed = urlparse(entry["llms_txt"])
+        if parsed.scheme and parsed.netloc:
+            domains.add(f"{parsed.scheme}://{parsed.netloc}/")
+
+    categories = sorted({
+        s["category"] for s in _ENRICHED_SOURCES if s.get("category")
+    })
+
+    _SLUG_INDEX = slug_index
+    _DOMAINS = domains
+    _CATEGORIES = categories
+    _CAT_HINT = ", ".join(categories) if categories else "(none discovered)"
+
+
+_rebuild_indexes()
+
+
+async def refresh_catalog() -> None:
+    """Replace the snapshot catalog with freshly discovered sources.
+
+    Runs after the server is already listening, so a slow or failing juspay.io
+    delays the refresh rather than the boot. Never raises.
+    """
+    global _ENRICHED_SOURCES
+    try:
+        sources = await refresh_and_save()
+    except Exception as e:
+        logger.warning(
+            "Catalog refresh failed: %s. Continuing with the snapshot catalog.", e
+        )
+        return
+    _ENRICHED_SOURCES = sources
+    _rebuild_indexes()
+    logger.info(
+        "Catalog refreshed: %d products across %d categories",
+        len(_ENRICHED_SOURCES),
+        len(_CATEGORIES),
+    )
+
 
 logger.info(
     "Docs MCP initialized: %d products across %d categories (allowed: %s)",
