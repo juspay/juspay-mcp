@@ -22,7 +22,7 @@ class BaseTimeRangePayload(WithHeaders):
             raise ValueError('Time must be in ISO format: YYYY-MM-DDTHH:MM:SSZ')
 
 
-class JuspayIntegrationStatusPayload(BaseTimeRangePayload):
+class IntegrationStatusPayload(BaseTimeRangePayload):
     platform: Literal["Backend", "Web", "Android", "IOS"] = Field(
         ...,
         description="Platform type. Use 'Backend' for agnostic API, or 'Web'/'Android'/'IOS' for nonagnostic API."
@@ -45,7 +45,7 @@ class JuspayIntegrationStatusPayload(BaseTimeRangePayload):
     )
 
 
-class JuspayXMidMonitoringPayload(BaseTimeRangePayload):
+class XMidMonitoringPayload(BaseTimeRangePayload):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier (e.g., '12club', 'A23Games')"
@@ -60,7 +60,7 @@ class JuspayXMidMonitoringPayload(BaseTimeRangePayload):
     )
 
 
-class JuspayIntegrationPlatformMetricsPayload(BaseTimeRangePayload):
+class IntegrationPlatformMetricsPayload(BaseTimeRangePayload):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier (e.g., '12club', 'A23Games')"
@@ -75,7 +75,7 @@ class JuspayIntegrationPlatformMetricsPayload(BaseTimeRangePayload):
     )
 
 
-class JuspayIntegrationProductCountMetricsPayload(BaseTimeRangePayload):
+class IntegrationProductCountMetricsPayload(BaseTimeRangePayload):
     merchant_id: str = Field(
         ...,
         description="Merchant identifier (e.g., 'pokerindia', 'A23Games')"

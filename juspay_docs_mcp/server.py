@@ -265,7 +265,7 @@ async def juspay_genius_docs(
 
     Returns the answer plus the source doc URLs it used; any of those can be
     read in full with doc_fetch_tool(url). Genius is the public docs assistant
-    (distinct from the dashboard's rag_tool_juspay).
+    (distinct from the dashboard's rag_tool).
     """
     started_at = time.perf_counter()
     status = "success"

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayListPaymentLinksV1Payload(WithHeaders):
+class ListPaymentLinksV1Payload(WithHeaders):
     qFilters: Optional[Dict[str, Any]] = Field(
         None,
         description="""Q API filters for payment links. Can be:
@@ -73,7 +73,7 @@ class Options(BaseModel):
     )
 
 
-class JuspayCreatePaymentLinkPayload(WithHeaders):
+class CreatePaymentLinkPayload(WithHeaders):
     amount: Union[int, float] = Field(..., description="Payment amount (required)")
     payment_page_client_id: Optional[str] = Field(
         None, description="Client ID for payment page"
@@ -213,7 +213,7 @@ class JuspayCreatePaymentLinkPayload(WithHeaders):
         extra = "allow"
 
 
-class JuspayCreateAutopayLinkPayload(WithHeaders):
+class CreateAutopayLinkPayload(WithHeaders):
     amount: Union[int, float] = Field(
         ..., description="One-time payment amount (required)"
     )

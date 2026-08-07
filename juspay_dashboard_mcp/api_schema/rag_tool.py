@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 
-class JuspayRagQueryPayload(BaseModel):
+class RagQueryPayload(BaseModel):
     """
     Payload schema for RAG query tool.
     """

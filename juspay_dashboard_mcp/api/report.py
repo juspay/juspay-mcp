@@ -6,7 +6,7 @@
 
 from juspay_dashboard_mcp.api.utils import call, post, get_admin_host,sanitize_merchant_id
 
-async def report_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def report_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns detailed information for a specific report ID, including data sources, 
     metrics, dimensions, and filters.
@@ -70,7 +70,7 @@ async def report_details_juspay(payload: dict, meta_info: dict = None) -> dict:
     # Empty body since parameters are in URL
     return await call(api_url, None, meta_info)
 
-async def list_report_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_report(payload: dict, meta_info: dict = None) -> dict:
     """
     Lists all reports configured by the merchant, along with their status, recipients, 
     thresholds, and monitoring intervals.
