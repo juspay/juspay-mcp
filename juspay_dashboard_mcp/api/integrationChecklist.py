@@ -12,7 +12,7 @@ dotenv.load_dotenv()
 JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
 integrationSuffix = "ic-api" if JUSPAY_ENV == "production" else "ic"
     
-async def get_integration_monitoring_status_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_integration_monitoring_status(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves integration monitoring status for specified platform and product.
     
@@ -57,7 +57,7 @@ async def get_integration_monitoring_status_juspay(payload: dict, meta_info: dic
     return await post(api_url, api_payload, None, meta_info)
 
 
-async def get_x_mid_monitoring_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_x_mid_monitoring(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves X-Mid monitoring metrics to check if x_merchant_id is being passed to API calls.
     
@@ -92,7 +92,7 @@ async def get_x_mid_monitoring_juspay(payload: dict, meta_info: dict = None) -> 
     return await post(api_url, api_payload, None, meta_info)
 
 
-async def get_integration_platform_metrics_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_integration_platform_metrics(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves integration metrics grouped by platform for product integration analysis.
     
@@ -138,7 +138,7 @@ async def get_integration_platform_metrics_juspay(payload: dict, meta_info: dict
     return await post(api_url, api_payload, None, meta_info)
 
 
-async def get_integration_product_count_metrics_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_integration_product_count_metrics(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves integration metrics grouped by product_integrated for product count analysis.
     

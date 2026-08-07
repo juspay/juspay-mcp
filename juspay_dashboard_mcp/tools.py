@@ -104,7 +104,7 @@ async def _safe_record_tool_call(
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
-        name="juspay_get_merchant_details",
+        name="get_merchant_details",
         description="""Return merchant and user session details for the authenticated caller.
 
 Key features:
@@ -112,11 +112,11 @@ Key features:
 - Takes no input — all information is derived from the active session.
 
 Use this when the user asks who they are, which merchant or tenant they're logged in as, what their merchant ID / user ID / tenant ID is, or to confirm session context before performing privileged actions.""",
-        model=api_schema.account.JuspayGetMerchantDetailsPayload,
-        handler=account.get_merchant_details_juspay,
+        model=api_schema.account.GetMerchantDetailsPayload,
+        handler=account.get_merchant_details,
     ),
     util.make_api_config(
-        name="juspay_list_configured_gateway",
+        name="list_configured_gateway",
         description="""Use this tool when asked about the list of payment gateways . Retrieves a list of all payment gateways (PGs) configured for a merchant, including high-level details such as gateway reference ID, creation/modification dates, configured payment methods (PMs) and configured payment flows. Note: Payment Method Types (PMTs), configured EMI plans, configured mandate/subscriptions payment methods (PMs) and configured TPV PMs are not included in the response.
 
 Key features:
@@ -127,12 +127,12 @@ Key features:
 - Details the payment flows enabled for each gateway.
 
 Use this tool to get an overview of all active payment gateways for a merchant, understand which payment methods are configured on each gateway, and check basic configuration details. Essential for gateway management and initial diagnostics.""",
-        model=api_schema.gateway.JuspayListConfiguredGatewaysPayload,
-        handler=gateway.list_configured_gateways_juspay,
+        model=api_schema.gateway.ListConfiguredGatewaysPayload,
+        handler=gateway.list_configured_gateways,
         response_schema=response_schema.list_configured_gateways_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_gateway_scheme",
+        name="get_gateway_scheme",
         description="""Use this tool when asked about configuration information about a particular gateway . This API provides detailed configuration information for a gateway, including required/optional fields, supported payment methods and supported features/payment flows for that gateway.
 
 Key features:
@@ -142,13 +142,13 @@ Key features:
 - Details supported features and payment flows (e.g., 3DS, AFT, etc.).
 
 Use this tool to understand the configuration requirements and capabilities of a specific payment gateway before or during integration. Helpful for developers and integration engineers.""",
-        model=api_schema.gateway.JuspayGetGatewaySchemePayload,
-        handler=gateway.get_gateway_scheme_juspay,
+        model=api_schema.gateway.GetGatewaySchemePayload,
+        handler=gateway.get_gateway_scheme,
         response_schema=response_schema.get_gateway_scheme_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_gateway_details",
-        description="""Use this tool when asked about detailed information about any gateway and mga_id is provided.This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from juspay_list_configured_gateway. This API returns all details of the gateway including payment methods (PM), EMI plans, mandate/subscriptions payment methods (PMs) and TPV PMs along with configured payment flows. Note: This API does not return payment method type (PMT) for each configured payment method.
+        name="get_gateway_details",
+        description="""Use this tool when asked about detailed information about any gateway and mga_id is provided.This API returns detailed information about a specific gateway configured by the merchant. Requires mga_id which can be fetched from list_configured_gateway. This API returns all details of the gateway including payment methods (PM), EMI plans, mandate/subscriptions payment methods (PMs) and TPV PMs along with configured payment flows. Note: This API does not return payment method type (PMT) for each configured payment method.
 
 Key features:
 - Fetches all configuration details for a specific merchant gateway account (mga_id).
@@ -159,12 +159,12 @@ Key features:
 - Shows all configured payment flows.
 
 Use this tool to get a complete picture of a specific configured gateway, including all its payment methods and special configurations. Essential for deep-dive analysis and troubleshooting of a particular gateway setup.""",
-        model=api_schema.gateway.JuspayGetGatewayDetailsPayload,
-        handler=gateway.get_gateway_details_juspay,
+        model=api_schema.gateway.GetGatewayDetailsPayload,
+        handler=gateway.get_gateway_details,
         response_schema=response_schema.get_gateway_details_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_gateway_scheme",
+        name="list_gateway_scheme",
         description="""This API returns a list of all available payment gateways that can be configured on PGCC. Doesn't contain any details only a list of available gateways for configuration on PGCC.
 
 Key features:
@@ -173,12 +173,12 @@ Key features:
 - No detailed configuration information is included.
 
 Use this tool to discover which payment gateways are available to be configured for a merchant on the Juspay platform. Useful for initial setup and exploring new gateway options.""",
-        model=api_schema.gateway.JuspayListGatewaySchemePayload,
-        handler=gateway.list_gateway_scheme_juspay,
+        model=api_schema.gateway.ListGatewaySchemePayload,
+        handler=gateway.list_gateway_scheme,
         response_schema=response_schema.list_gateway_scheme_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_merchant_gateways_pm_details",
+        name="get_merchant_gateways_pm_details",
         description="""This API fetches all gateways and their supported payment methods configured for the merchant. Only this API will give payment method type (PMT) for each configured payment method. Doesn't include any other details except for gateway wise configured payment methods with payment method type.
 
 Key features:
@@ -187,12 +187,12 @@ Key features:
 - Crucially, provides the Payment Method Type (PMT) for each payment method.
 
 Use this tool specifically when you need to know the Payment Method Type (PMT) for configured payment methods on each gateway. This is the only tool that provides this specific piece of information.""",
-        model=api_schema.gateway.JuspayGetMerchantGatewaysPmDetailsPayload,
-        handler=gateway.get_merchant_gateways_pm_details_juspay,
+        model=api_schema.gateway.GetMerchantGatewaysPmDetailsPayload,
+        handler=gateway.get_merchant_gateways_pm_details,
         response_schema=response_schema.get_merchant_gateways_pm_details_response_schema,
     ),
     util.make_api_config(
-        name="juspay_report_details",
+        name="report_details",
         description="""This API returns detailed information for a specific report ID, including data sources, metrics, dimensions, and filters.
 
 Key features:
@@ -202,12 +202,12 @@ Key features:
 - Details the filters applied to the report data.
 
 Use this tool to understand how a specific report is constructed, what data it contains, and how it is filtered. Essential for validating report data and understanding its scope.""",
-        model=api_schema.report.JuspayReportDetailsPayload,
-        handler=report.report_details_juspay,
+        model=api_schema.report.ReportDetailsPayload,
+        handler=report.report_details,
         response_schema=response_schema.report_details_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_report",
+        name="list_report",
         description="""This API lists all reports configured by the merchant, along with their status, recipients, thresholds, and monitoring intervals.
 
 Key features:
@@ -218,12 +218,12 @@ Key features:
 - Provides the monitoring or generation interval for each report.
 
 Use this tool to get an overview of all configured reports, check their status, and see who receives them. Useful for managing reporting and alerting configurations.""",
-        model=api_schema.report.JuspayListReportPayload,
-        handler=report.list_report_juspay,
+        model=api_schema.report.ListReportPayload,
+        handler=report.list_report,
         response_schema=response_schema.list_report_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_offer_details",
+        name="get_offer_details",
         description="""This API retrieves detailed information for a specific offer including eligibility rules, benefit types, and configurations.
 
 Key features:
@@ -233,12 +233,12 @@ Key features:
 - Provides all associated configurations.
 
 Use this tool to understand the exact mechanics of a specific offer. Essential for troubleshooting offer application issues, verifying offer setup, and for customer support inquiries about a specific promotion.""",
-        model=api_schema.offer.JuspayGetOfferDetailsPayload,
-        handler=offer.get_offer_details_juspay,
+        model=api_schema.offer.GetOfferDetailsPayload,
+        handler=offer.get_offer_details,
         response_schema=response_schema.get_offer_details_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_offers",
+        name="list_offers",
         description="""This API lists all offers configured by the merchant, with details such as status, payment methods, offer codes, and validity periods. Requires `sort_offers` (e.g., {"field": "CREATED_AT", "order": "DESCENDING"}).
 
 Key features:
@@ -250,12 +250,12 @@ Key features:
 - Supports sorting to organize the results.
 
 Use this tool to get an overview of all available offers, check their status, and see their high-level applicability. Useful for marketing teams, and for getting a list of active promotions.""",
-        model=api_schema.offer.JuspayListOffersPayload,
-        handler=offer.list_offers_juspay,
+        model=api_schema.offer.ListOffersPayload,
+        handler=offer.list_offers,
         response_schema=response_schema.list_offers_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_user",
+        name="get_user",
         description="""This API fetches details for a specific user, identified by user ID.
 
 Key features:
@@ -263,12 +263,12 @@ Key features:
 - Includes details associated with the user account.
 
 Use this tool to look up the details of a specific user on the dashboard. Essential for user management and verifying user permissions.""",
-        model=api_schema.user.JuspayGetUserPayload,
-        handler=user.get_user_juspay,
+        model=api_schema.user.GetUserPayload,
+        handler=user.get_user,
         response_schema=response_schema.get_user_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_users_v2",
+        name="list_users_v2",
         description="""This API retrieves a list of users associated with a merchant, with optional pagination.
 
 Key features:
@@ -277,48 +277,48 @@ Key features:
 - Supports pagination to handle large numbers of users.
 
 Use this tool to get a list of all dashboard users for a merchant. Useful for auditing user access and managing user accounts.""",
-        model=api_schema.user.JuspayListUsersV2Payload,
-        handler=user.list_users_v2_juspay,
+        model=api_schema.user.ListUsersV2Payload,
+        handler=user.list_users_v2,
         response_schema=response_schema.list_users_v2_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_conflict_settings",
+        name="get_conflict_settings",
         description="""This API retrieves conflict settings configuration for payment processing.
 
 Key features:
 - Fetches the current conflict settings for the merchant.
 
 Use this tool to check the conflict settings configuration for payment processing. Essential for developers and operations teams.""",
-        model=api_schema.settings.JuspayConflictSettingsPayload,
-        handler=settings.get_conflict_settings_juspay,
+        model=api_schema.settings.ConflictSettingsPayload,
+        handler=settings.get_conflict_settings,
         response_schema=response_schema.get_conflict_settings_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_general_settings",
+        name="get_general_settings",
         description="""This API retrieves general configuration settings for the merchant.
 
 Key features:
 - Fetches a wide range of general account settings for the merchant.
 
 Use this tool to get a broad overview of the merchant's primary configuration on Juspay. Useful for verifying basic setup and feature enablement.""",
-        model=api_schema.settings.JuspayGeneralSettingsPayload,
-        handler=settings.get_general_settings_juspay,
+        model=api_schema.settings.GeneralSettingsPayload,
+        handler=settings.get_general_settings,
         response_schema=response_schema.get_general_settings_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_mandate_settings",
+        name="get_mandate_settings",
         description="""This API retrieves mandate-related settings for recurring payments.
 
 Key features:
 - Fetches all settings related to payment mandates for recurring payments.
 
 Use this tool to understand how recurring payments and subscriptions are configured for the merchant. Essential for managing subscription-based services.""",
-        model=api_schema.settings.JuspayMandateSettingsPayload,
-        handler=settings.get_mandate_settings_juspay,
+        model=api_schema.settings.MandateSettingsPayload,
+        handler=settings.get_mandate_settings,
         response_schema=response_schema.get_mandate_settings_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_priority_logic_settings",
+        name="get_priority_logic_settings",
         description="""This API fetches a list of all configured priority logic rules, including their current status and full logic definition.
 
 Key features:
@@ -327,12 +327,12 @@ Key features:
 - Provides the complete logical definition of each rule.
 
 Use this tool to understand how payment gateways are prioritized for routing transactions. Essential for analyzing and troubleshooting payment routing decisions.""",
-        model=api_schema.settings.JuspayPriorityLogicSettingsPayload,
-        handler=settings.get_priority_logic_settings_juspay,
+        model=api_schema.settings.PriorityLogicSettingsPayload,
+        handler=settings.get_priority_logic_settings,
         response_schema=response_schema.get_priority_logic_settings_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_routing_settings",
+        name="get_routing_settings",
         description="""This API provides details of success rate-based routing thresholds defined by the merchant, including enablement status and downtime-based switching thresholds.
 
 Key features:
@@ -342,24 +342,24 @@ Key features:
 - Provides configuration for downtime-based gateway switching.
 
 Use this tool to check the configuration of automated, performance-based payment routing. Crucial for understanding how the system optimizes transaction success rates.""",
-        model=api_schema.settings.JuspayRoutingSettingsPayload,
-        handler=settings.get_routing_settings_juspay,
+        model=api_schema.settings.RoutingSettingsPayload,
+        handler=settings.get_routing_settings,
         response_schema=response_schema.get_routing_settings_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_webhook_settings",
+        name="get_webhook_settings",
         description="""This API retrieves webhook configuration settings for the merchant.
 
 Key features:
 - Fetches the webhook configuration settings.
 
 Use this tool to verify webhook configurations and troubleshoot notification delivery issues. Essential for developers integrating with Juspay's event system.""",
-        model=api_schema.settings.JuspayWebhookSettingsPayload,
-        handler=settings.get_webhook_settings_juspay,
+        model=api_schema.settings.WebhookSettingsPayload,
+        handler=settings.get_webhook_settings,
         response_schema=response_schema.get_webhook_settings_response_schema,
     ),
 #     util.make_api_config(
-#         name="juspay_update_webhook_settings",
+#         name="update_webhook_settings",
 #         description="""Update the merchant's webhook URL and event subscriptions.
 
 # Key features:
@@ -368,15 +368,15 @@ Use this tool to verify webhook configurations and troubleshoot notification del
 # - Optionally configures HTTP basic-auth credentials Juspay should use when calling the webhook URL.
 
 # Important caveats — warn the user before calling this:
-# - `webhookEvents` REPLACES the current subscription map. Events the caller doesn't include get unsubscribed. To preserve existing events, fetch them first with `juspay_get_webhook_settings` and merge.
+# - `webhookEvents` REPLACES the current subscription map. Events the caller doesn't include get unsubscribed. To preserve existing events, fetch them first with `get_webhook_settings` and merge.
 # - Advanced webhook config fields (custom webhook URL routes, JWT key references, full-gateway-response toggle, SSL-cert-based webhooks) are reset to defaults by this tool. Don't use it on merchants that depend on those — modify those via the dashboard instead.
 
 # Use this when the user asks to configure webhooks, set their webhook URL, or change which Juspay events they receive.""",
-#         model=api_schema.settings.JuspayUpdateWebhookSettingsPayload,
-#         handler=settings.update_webhook_settings_juspay,
+#         model=api_schema.settings.UpdateWebhookSettingsPayload,
+#         handler=settings.update_webhook_settings,
 #     ),
     util.make_api_config(
-        name="juspay_create_api_key",
+        name="create_api_key",
         description="""Generate a new API key for the authenticated merchant.
 
 Key features:
@@ -386,11 +386,11 @@ Key features:
 - Returns: id, status (ACTIVE), apiKey, maskedApiKey, scope, dateCreated, lastUpdated, merchantAccountId, version, metadata.
 
 Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Warn the user that the plaintext key cannot be retrieved later — it must be saved at creation time.""",
-        model=api_schema.api_keys.JuspayCreateApiKeyPayload,
-        handler=api_keys.create_api_key_juspay,
+        model=api_schema.api_keys.CreateApiKeyPayload,
+        handler=api_keys.create_api_key,
     ),
 #     util.make_api_config(
-#         name="juspay_update_general_settings",
+#         name="update_general_settings",
 #         description="""Update the merchant's general settings.
 
 # Key features:
@@ -399,11 +399,11 @@ Use this when the user asks to generate, mint, or provision a Juspay API key for
 # - No client-side validation on the value.
 
 # Use this when the user asks to set, change, or clear the payment redirect URL / return URL for their merchant account.""",
-#         model=api_schema.settings.JuspayUpdateGeneralSettingsPayload,
-#         handler=settings.update_general_settings_juspay,
+#         model=api_schema.settings.UpdateGeneralSettingsPayload,
+#         handler=settings.update_general_settings,
 #     ),
     util.make_api_config(
-        name="juspay_alert_details",
+        name="alert_details",
         description="""Provides detailed information for a specific alert ID, including source, monitored metrics, and applied filters.
 
 Key features:
@@ -413,12 +413,12 @@ Key features:
 - Shows the applied filters that trigger the alert.
 
 Use this tool to understand why a specific alert was triggered or to review the exact configuration of an alert. Essential for operations teams and developers responsible for system monitoring.""",
-        model=api_schema.alert.JuspayAlertDetailsPayload,
-        handler=alert.alert_details_juspay,
+        model=api_schema.alert.AlertDetailsPayload,
+        handler=alert.alert_details,
         response_schema=response_schema.alert_details_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_alerts",
+        name="list_alerts",
         description="""Retrieves all alerts configured by the merchant, including their status, recipients, thresholds, and monitoring intervals.
 
 Key features:
@@ -429,12 +429,12 @@ Key features:
 - Provides the monitoring interval for each alert.
 
 Use this tool to get a complete overview of the monitoring and alerting setup for the merchant. Useful for auditing alerts and managing notification configurations.""",
-        model=api_schema.alert.JuspayListAlertsPayload,
-        handler=alert.list_alerts_juspay,
+        model=api_schema.alert.ListAlertsPayload,
+        handler=alert.list_alerts,
         response_schema=response_schema.list_alerts_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_orders_v4",
+        name="list_orders_v4",
         description="""Retrieves a list of orders created within a specified time range. Supports an optional top-level 'limit' parameter and optional 'flatFilters' for payment status and order type.Domain is a mandatory field for this tool and should always be provided . If unsure about the domain, use 'txnsELS' as the default value.
 
 Key features:
@@ -445,12 +445,12 @@ Key features:
 - Requires a 'domain' parameter, typically 'txnsELS'.
 
 Use this tool to search for orders based on time, status, or type. Essential for generating order reports, reconciling transactions, and getting a high-level view of order activity.""",
-        model=api_schema.orders.JuspayListOrdersV4Payload,
-        handler=orders.list_orders_v4_juspay,
+        model=api_schema.orders.ListOrdersV4Payload,
+        handler=orders.list_orders_v4,
         response_schema=response_schema.list_orders_v4_response_schema,
     ),
     util.make_api_config(
-        name="juspay_get_order_details",
+        name="get_order_details",
         description="""Returns complete details for a given order ID. 
 
 CRITICAL RETRY LOGIC: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID is likely a transaction ID (txn_id) instead of an order ID. You MUST extract the order_id from the txn_id and retry the call.
@@ -475,12 +475,12 @@ Key features:
 
 
 Use this tool to look up the status of a specific payment, troubleshoot a customer's order issue, verify transaction details for reconciliation, or fetch data for customer support inquiries. Essential for support teams, operations personnel, and developers who need to inspect the state of individual orders.""",
-        model=api_schema.orders.JuspayGetOrderDetailsPayload,
-        handler=orders.get_order_details_juspay,
+        model=api_schema.orders.GetOrderDetailsPayload,
+        handler=orders.get_order_details,
         response_schema=response_schema.get_order_details_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_payment_links_v1",
+        name="list_payment_links_v1",
         description="""Retrieves a list of payment links created within a specified time range (mandatory). Supports filters from the transactions (txns) domain such as payment_status and order_type.
 
 Key features:
@@ -489,12 +489,12 @@ Key features:
 - Supports filtering by order type.
 
 Use this tool to search for payment links, check their status, or generate reports on link usage. Useful for support teams and for tracking payments made via links.""",
-        model=api_schema.payments.JuspayListPaymentLinksV1Payload,
-        handler=payments.list_payment_links_v1_juspay,
+        model=api_schema.payments.ListPaymentLinksV1Payload,
+        handler=payments.list_payment_links_v1,
         response_schema=response_schema.list_payment_links_v1_response_schema,
     ),
     util.make_api_config(
-        name="juspay_list_surcharge_rules",
+        name="list_surcharge_rules",
         description="""No input required. Returns a list of all configured surcharge rules, including their current status and rule definitions.
 
 Key features:
@@ -503,8 +503,8 @@ Key features:
 - Provides the full definition of each rule.
 
 Use this tool to review and audit all configured surcharge rules. Essential for understanding how and when additional fees are applied to transactions.""",
-        model=api_schema.surcharge.JuspayListSurchargeRulesPayload,
-        handler=surcharge.list_surcharge_rules_juspay,
+        model=api_schema.surcharge.ListSurchargeRulesPayload,
+        handler=surcharge.list_surcharge_rules,
         response_schema=response_schema.list_surcharge_rules_response_schema,
     ),
     util.make_api_config(
@@ -515,7 +515,7 @@ Use this tool to review and audit all configured surcharge rules. Essential for 
         response_schema=response_schema.q_api_response_schema,
     ),
     util.make_api_config(
-        name="list_outages_juspay",
+        name="list_outages",
         description="""Returns a list of outages within a specified time range.
 
 Key features:
@@ -524,12 +524,12 @@ Key features:
 - Converts outage period timestamps to IST in the response.
 
 Use this tool to check for any service disruptions or performance degradation issues. Essential for monitoring system health and understanding the impact of outages on payment processing.""",
-        model=api_schema.outages.JuspayListOutagesPayload,
-        handler=outages.list_outages_juspay,
+        model=api_schema.outages.ListOutagesPayload,
+        handler=outages.list_outages,
         response_schema=response_schema.list_outages_response_schema,
     ),
     util.make_api_config(
-        name="create_payment_link_juspay",
+        name="create_payment_link",
         description="""Use this tool when asked to create a payment link.
 IMPORTANT: You must ask the user for the required fields (amount), do not assume any of these fields always prompt the user.
 Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified.
@@ -540,15 +540,15 @@ EMI OPTIONS: If the user requests EMI options, ask them to choose from: 1) Stand
 For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless).
 Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
 Set showEmiOption to true only if any EMI option is requested.
-RECREATE FROM ORDER: If the user asks to recreate a payment link and provides an order ID, first call the 'juspay_get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, payment methods, etc.) to create a new payment link with the same parameters.
+RECREATE FROM ORDER: If the user asks to recreate a payment link and provides an order ID, first call the 'get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, payment methods, etc.) to create a new payment link with the same parameters.
 CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the payment link.
 """,
-        model=api_schema.payments.JuspayCreatePaymentLinkPayload,
-        handler=payments.create_payment_link_juspay,
+        model=api_schema.payments.CreatePaymentLinkPayload,
+        handler=payments.create_payment_link,
         response_schema=None,
     ),
     util.make_api_config(
-        name="create_autopay_link_juspay",
+        name="create_autopay_link",
         description="""Use this tool when asked to create an autopay payment link or recurring payment link or mandate payment link.
 IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency), do not assume any of these fields always prompt the user.
 Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified , the user should be prompted for the email ID and phone number if they want to send email and sms or Whatsapp message.
@@ -558,11 +558,11 @@ NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one ca
 EMI OPTIONS: If the user requests EMI options, prompt them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi).
 For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless), Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
 Set showEmiOption to true only if any EMI option is requested.
-RECREATE FROM ORDER: If the user asks to recreate an autopay payment link and provides an order ID, first call the 'juspay_get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, mandate details, payment methods, etc.) to create a new autopay payment link with the same parameters.
+RECREATE FROM ORDER: If the user asks to recreate an autopay payment link and provides an order ID, first call the 'get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, mandate details, payment methods, etc.) to create a new autopay payment link with the same parameters.
 CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the autopay payment link.
 """,
-        model=api_schema.payments.JuspayCreateAutopayLinkPayload,
-        handler=payments.create_autopay_link_juspay,
+        model=api_schema.payments.CreateAutopayLinkPayload,
+        handler=payments.create_autopay_link,
         response_schema=None,
     ),
     util.make_api_config(
@@ -613,15 +613,15 @@ IMPORTANT: Do not summarize the output. Exact values are required for q_api filt
         response_schema=response_schema.qapi_field_value_discovery_response_schema,
     ),
     util.make_api_config(
-    name="rag_tool_juspay",
+    name="rag_tool",
     description="Use this tool when you need to retrieve information about Juspay's products, services, APIs, integration guides, or technical documentation . The Data source for this tool is  https://juspay.io/in/docs (Juspay's Product Documentation) . This tool provides comprehensive info regarding Juspay's product documnetations.",
-    model=api_schema.rag_tool.JuspayRagQueryPayload,
+    model=api_schema.rag_tool.RagQueryPayload,
     handler=rag_tool.query_rag_tool,
     response_schema=response_schema.rag_query_response_schema,
     ),
     # ----- Integration Checklist tools (ported from PR #67) -------------------
     util.make_api_config(
-        name="juspay_integration_monitoring_status",
+        name="integration_monitoring_status",
         description="""Track integration progress across platforms and products for a particular merchant. Use this tool when you need to view passed/failed stages and action items for merchant integrations.
 
 **When to call this tool:**
@@ -630,7 +630,7 @@ IMPORTANT: Do not summarize the output. Exact values are required for q_api filt
 - To identify action items and next steps for integration completion
 - When troubleshooting integration issues or blockers
 - To view detailed stage-wise breakdown of integration checklist
-- When user asks about integration status and doesn't mention platform or product_integrated, first call `juspay_integration_platform_metrics` to get the default platform, then `juspay_integration_product_count_metrics` to get the default product_integrated for that platform, then call this tool with both.
+- When user asks about integration status and doesn't mention platform or product_integrated, first call `integration_platform_metrics` to get the default platform, then `integration_product_count_metrics` to get the default product_integrated for that platform, then call this tool with both.
 
 **Tool capabilities:**
 - Platform-aware monitoring (Backend uses agnostic API, Web/Android/iOS use nonagnostic API)
@@ -656,12 +656,12 @@ IMPORTANT: Do not summarize the output. Exact values are required for q_api filt
 - Module metadata including platform dependencies and minimum requirements
 
 Use this tool to monitor integration progress, identify failed stages that need attention, and provide actionable guidance for completing merchant integrations.""",
-        model=api_schema.integrationChecklist.JuspayIntegrationStatusPayload,
-        handler=integrationChecklist.get_integration_monitoring_status_juspay,
+        model=api_schema.integrationChecklist.IntegrationStatusPayload,
+        handler=integrationChecklist.get_integration_monitoring_status,
         response_schema=response_schema.integration_monitoring_status_response_schema,
     ),
     util.make_api_config(
-        name="juspay_x_mid_monitoring",
+        name="x_mid_monitoring",
         description="""Retrieves X-Mid validation monitoring data for merchant transactions.
 
 This tool provides X-Mid validation results for API transactions within a specified time range, helping merchants monitor the validation status of their X-Mid headers across different API endpoints.
@@ -684,12 +684,12 @@ Response includes:
 - Validation status (PASSED/FAILED) for each API endpoint/shortcode
 
 Use this tool to monitor X-Mid header validation compliance, track validation failures across different API endpoints, and ensure proper X-Mid implementation for merchant transactions.""",
-        model=api_schema.integrationChecklist.JuspayXMidMonitoringPayload,
-        handler=integrationChecklist.get_x_mid_monitoring_juspay,
+        model=api_schema.integrationChecklist.XMidMonitoringPayload,
+        handler=integrationChecklist.get_x_mid_monitoring,
         response_schema=response_schema.x_mid_monitoring_response_schema,
     ),
     util.make_api_config(
-        name="juspay_integration_platform_metrics",
+        name="integration_platform_metrics",
         description="""Retrieve available platforms for a particular merchant. Returns the list of platforms (Android, iOS, Web) configured for the merchant.
 
 **When to call this tool:**
@@ -716,19 +716,19 @@ Use this tool to monitor X-Mid header validation compliance, track validation fa
 **Important note:** API typically returns Android, iOS, and Web platforms only. Add Backend separately for full coverage.
 
 Use this tool to get the list of available platforms for a merchant, not for integration status tracking.""",
-        model=api_schema.integrationChecklist.JuspayIntegrationPlatformMetricsPayload,
-        handler=integrationChecklist.get_integration_platform_metrics_juspay,
+        model=api_schema.integrationChecklist.IntegrationPlatformMetricsPayload,
+        handler=integrationChecklist.get_integration_platform_metrics,
         response_schema=response_schema.integration_platform_metrics_response_schema,
     ),
     util.make_api_config(
-        name="juspay_integration_product_count_metrics",
+        name="integration_product_count_metrics",
         description="""Analyze integration usage patterns by product type for a particular merchant. Use this tool when you need to understand which integration products are most actively used and their adoption patterns.
 
 **When to call this tool:**
 - When asked about product integration usage patterns or adoption rates
 - To identify the most popular integration types for a merchant
 - When analyzing integration health across different product types
-- For product selection: if user didn't provide platform, call `juspay_integration_platform_metrics` first to get the default platform, then call this tool with that platform.
+- For product selection: if user didn't provide platform, call `integration_platform_metrics` first to get the default platform, then call this tool with that platform.
 
 **Tool capabilities:**
 - Groups integration data by product_integrated type (Payment Page Signature, Payment Page Session, EC + SDK, EC Only)
@@ -750,8 +750,8 @@ Use this tool to get the list of available platforms for a merchant, not for int
 - Platform-specific product integration data
 
 Use this tool to analyze product integration patterns, identify the most actively used integration types, and understand product adoption trends for merchant integrations.""",
-        model=api_schema.integrationChecklist.JuspayIntegrationProductCountMetricsPayload,
-        handler=integrationChecklist.get_integration_product_count_metrics_juspay,
+        model=api_schema.integrationChecklist.IntegrationProductCountMetricsPayload,
+        handler=integrationChecklist.get_integration_product_count_metrics,
         response_schema=response_schema.integration_product_count_metrics_response_schema,
     ),
 ]

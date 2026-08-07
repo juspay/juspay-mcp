@@ -9,7 +9,7 @@ from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_a
 
 logger = logging.getLogger(__name__)
 
-async def list_configured_gateways_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves a list of all payment gateways (PGs) configured for a merchant,
     including high-level details such as gateway reference ID, creation/modification dates,
@@ -64,7 +64,7 @@ async def list_configured_gateways_juspay(payload: dict, meta_info: dict = None)
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides detailed configuration information for a gateway, including:
     1. Required and optional fields (with descriptions and data types).
@@ -125,7 +125,7 @@ async def get_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> di
 
     return await post(api_url, request_data, None, meta_info)
 
-async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns detailed information about a specific gateway configured by the merchant.
 
@@ -154,11 +154,11 @@ async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> d
     """
     
     host, isadmin = await get_admin_host(meta_info=meta_info)
-    logger.info(f"[DEBUG] get_gateway_details_juspay - host: {host}, isadmin: {isadmin}")
+    logger.info(f"[DEBUG] get_gateway_details - host: {host}, isadmin: {isadmin}")
     
     mga_id = payload.pop("mga_id", None)
     merchant_id_from_payload = payload.get("merchantId")
-    logger.info(f"[DEBUG] get_gateway_details_juspay - merchantId from payload: {merchant_id_from_payload}")
+    logger.info(f"[DEBUG] get_gateway_details - merchantId from payload: {merchant_id_from_payload}")
     
     # Get merchantId from meta_info for authorization check
     mid_from_meta = None
@@ -172,14 +172,14 @@ async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> d
     
     # Use sanitize_merchant_id to filter out placeholder values
     merchant_id = sanitize_merchant_id(merchant_id_from_payload, mid_from_meta)
-    logger.info(f"[DEBUG] get_gateway_details_juspay - Final merchantId: {merchant_id}")
+    logger.info(f"[DEBUG] get_gateway_details - Final merchantId: {merchant_id}")
         
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
     
     # Build request data with merchantId
     request_data = {"merchantId": merchant_id}
-    logger.info(f"[DEBUG] get_gateway_details_juspay - Final request_data: {request_data}")
+    logger.info(f"[DEBUG] get_gateway_details - Final request_data: {request_data}")
     
     # Conditional URL based on admin status
     if isadmin:
@@ -187,11 +187,11 @@ async def get_gateway_details_juspay(payload: dict, meta_info: dict = None) -> d
     else:
         api_url = f"{host}/api/ec/v1/gateway/{mga_id}"
     
-    logger.info(f"[DEBUG] get_gateway_details_juspay - Final api_url: {api_url}")
+    logger.info(f"[DEBUG] get_gateway_details - Final api_url: {api_url}")
 
     return await post(api_url, request_data, None, meta_info)
 
-async def list_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides a list of all available payment gateways that can be configured on PGCC.
     Useful for checking support for specific gateways (e.g., "Does Juspay support Gateway X?").
@@ -242,7 +242,7 @@ async def list_gateway_scheme_juspay(payload: dict, meta_info: dict = None) -> d
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_merchant_gateways_pm_details_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_merchant_gateways_pm_details(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches all gateways and their supported payment methods for the merchant.
 

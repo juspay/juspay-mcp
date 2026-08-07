@@ -8,7 +8,7 @@ import json
 
 from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id
 
-async def get_conflict_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_conflict_settings(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves conflict settings configuration.
 
@@ -58,7 +58,7 @@ async def get_conflict_settings_juspay(payload: dict, meta_info: dict = None) ->
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_general_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_general_settings(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves general configuration settings.
 
@@ -108,7 +108,7 @@ async def get_general_settings_juspay(payload: dict, meta_info: dict = None) -> 
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_mandate_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_mandate_settings(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves mandate-related settings.
 
@@ -163,7 +163,7 @@ async def get_mandate_settings_juspay(payload: dict, meta_info: dict = None) -> 
         
     return await post(api_url, request_data, None, meta_info)
 
-async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_priority_logic_settings(payload: dict, meta_info: dict = None) -> dict:
     """
     Fetches a list of all configured priority logic rules, including their current 
     status and full logic definition. Returns only the latest 2 logics to avoid
@@ -227,7 +227,7 @@ async def get_priority_logic_settings_juspay(payload: dict, meta_info: dict = No
         response["logics"] = sorted_logics[:2]
     return response
 
-async def get_routing_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_routing_settings(payload: dict, meta_info: dict = None) -> dict:
     """
     Provides details of success rate–based routing thresholds defined by the merchant, 
     including enablement status and downtime-based switching thresholds.
@@ -278,7 +278,7 @@ async def get_routing_settings_juspay(payload: dict, meta_info: dict = None) -> 
     
     return await post(api_url, request_data, None, meta_info)
 
-async def get_webhook_settings_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def get_webhook_settings(payload: dict, meta_info: dict = None) -> dict:
     """
     Retrieves webhook configuration settings.
 
@@ -329,7 +329,7 @@ async def get_webhook_settings_juspay(payload: dict, meta_info: dict = None) -> 
     return await post(api_url, request_data, None, meta_info)
 
 
-async def update_general_settings_juspay(payload: dict, meta_info: dict = None):
+async def update_general_settings(payload: dict, meta_info: dict = None):
     """Update the merchant's general settings.
 
     Currently exposes only `returnUrl` (the payment redirect URL). Pass an
@@ -341,7 +341,7 @@ async def update_general_settings_juspay(payload: dict, meta_info: dict = None):
     return await put(api_url, request_payload, None, meta_info)
 
 
-async def update_webhook_settings_juspay(payload: dict, meta_info: dict = None):
+async def update_webhook_settings(payload: dict, meta_info: dict = None):
     """Update the merchant's webhook URL and event subscriptions.
 
     Builds the `webhookConfigs` JSON string from a fixed template plus the

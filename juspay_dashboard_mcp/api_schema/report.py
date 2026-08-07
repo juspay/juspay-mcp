@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
-class JuspayReportDetailsPayload(WithHeaders):
+class ReportDetailsPayload(WithHeaders):
     task_uid: str = Field(
         ...,
         description="Unique identifier for the report/task to retrieve details for."
@@ -19,7 +19,7 @@ class JuspayReportDetailsPayload(WithHeaders):
         description="Name of the user requesting the report."
     )
 
-class JuspayListReportPayload(WithHeaders):
+class ListReportPayload(WithHeaders):
     merchantId: str = Field(
         ...,
         description="Merchant identifier for which to list reports."

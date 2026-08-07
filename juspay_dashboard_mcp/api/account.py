@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 _AUTHORIZE_QUERY = "resource={%22COMMON%22%20%3A%20%22R%22}"
 
 
-async def get_merchant_details_juspay(payload: dict = None, meta_info: dict = None) -> dict:
+async def get_merchant_details(payload: dict = None, meta_info: dict = None) -> dict:
     """Return merchant + user session details for the authenticated caller.
 
     Calls Portal's authorize endpoint and surfaces the full response so the

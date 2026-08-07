@@ -8,7 +8,7 @@ from juspay_dashboard_mcp.api.utils import post, get_admin_host, sanitize_mercha
 import logging
     
     
-async def list_outages_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def list_outages(payload: dict, meta_info: dict = None) -> dict:
     """
     Returns a list of outages within a specified time range, optionally filtered by merchant ID.
 
