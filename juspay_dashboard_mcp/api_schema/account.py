@@ -7,7 +7,7 @@
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
-class JuspayGetMerchantDetailsPayload(WithHeaders):
+class GetMerchantDetailsPayload(WithHeaders):
     """Return merchant and user details for the authenticated session.
 
     Takes no input arguments — Portal derives everything from the bearer

@@ -13,6 +13,7 @@ consumers, etc.). Flip to `true` on the OAuth-protected deployment.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from dataclasses import dataclass, field
@@ -34,6 +35,48 @@ def _env_list(name: str, default: list[str]) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _env_tenant_clients(name: str) -> dict[str, dict[str, str]]:
+    """Parse a JSON object of tenant id -> {client_id, client_secret}.
+
+    Malformed input is dropped with a log line rather than raised: a bad value
+    must not stop the server from booting on the shared credentials.
+    """
+    raw = os.getenv(name)
+    if not raw or not raw.strip():
+        return {}
+
+    try:
+        parsed = json.loads(raw)
+    except ValueError as e:
+        logger.error("%s is not valid JSON (%s) — per-tenant clients ignored.", name, e)
+        return {}
+    if not isinstance(parsed, dict):
+        logger.error("%s must be a JSON object keyed by tenant id — ignored.", name)
+        return {}
+
+    clients: dict[str, dict[str, str]] = {}
+    skipped = 0
+    for tenant_id, entry in parsed.items():
+        client_id = (entry or {}).get("client_id") if isinstance(entry, dict) else None
+        client_secret = (entry or {}).get("client_secret") if isinstance(entry, dict) else None
+        tenant_id = (tenant_id or "").strip()
+        client_id = str(client_id or "").strip()
+        client_secret = str(client_secret or "").strip()
+        if not tenant_id or not client_id or not client_secret:
+            skipped += 1
+            continue
+        clients[tenant_id] = {"client_id": client_id, "client_secret": client_secret}
+
+    if skipped:
+        logger.error(
+            "%s: skipped %d entr%s missing a tenant id, client_id or client_secret.",
+            name,
+            skipped,
+            "y" if skipped == 1 else "ies",
+        )
+    return clients
+
+
 DEFAULT_SCOPES = [
     "analytics:read",
     "orders:read",
@@ -53,6 +96,7 @@ class OAuthConfig:
     portal_base_url: str
     upstream_client_id: str
     upstream_client_secret: str
+    tenant_clients: dict[str, dict[str, str]]
     scopes_supported: list[str]
     state_ttl_seconds: int
     validation_cache_ttl_seconds: int
@@ -74,6 +118,7 @@ def load() -> OAuthConfig:
         portal_base_url=os.getenv("PORTAL_BASE_URL", "https://portal.juspay.in").rstrip("/"),
         upstream_client_id=os.getenv("OAUTH_CLIENT_ID", ""),
         upstream_client_secret=os.getenv("OAUTH_CLIENT_SECRET", ""),
+        tenant_clients=_env_tenant_clients("OAUTH_TENANT_CLIENTS"),
         scopes_supported=_env_list("OAUTH_SCOPES_SUPPORTED", DEFAULT_SCOPES),
         state_ttl_seconds=int(os.getenv("OAUTH_STATE_TTL_SECONDS", "600")),
         validation_cache_ttl_seconds=int(
@@ -92,7 +137,14 @@ def load() -> OAuthConfig:
             cfg.scopes_supported,
             "set" if cfg.dev_test_token else "unset",
         )
-        if not cfg.upstream_client_id or not cfg.upstream_client_secret:
+        if cfg.tenant_clients:
+            logger.info(
+                "Per-tenant OAuth clients loaded for %d tenant(s).",
+                len(cfg.tenant_clients),
+            )
+        if (
+            not cfg.upstream_client_id or not cfg.upstream_client_secret
+        ) and not cfg.tenant_clients:
             logger.warning(
                 "OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET not set — Portal token "
                 "exchange will fail until they are configured."

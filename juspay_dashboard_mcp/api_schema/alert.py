@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
-class JuspayAlertDetailsPayload(WithHeaders):
+class AlertDetailsPayload(WithHeaders):
     task_uid: str = Field(
         ...,
         description="Unique alert ID for which details are to be fetched."
@@ -18,7 +18,7 @@ class JuspayAlertDetailsPayload(WithHeaders):
         description="User name associated with the alert."
     )
 
-class JuspayListAlertsPayload(WithHeaders):
+class ListAlertsPayload(WithHeaders):
     merchant_id: str = Field(
         ...,
         description="Merchant ID for which alerts are to be listed."

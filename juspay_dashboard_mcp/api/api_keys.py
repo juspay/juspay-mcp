@@ -7,7 +7,7 @@
 from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
 
 
-async def create_api_key_juspay(payload: dict, meta_info: dict = None) -> dict:
+async def create_api_key(payload: dict, meta_info: dict = None) -> dict:
     """Generate a new API key for the authenticated merchant.
 
     Accepts a `description` label that identifies the key in the merchant's
