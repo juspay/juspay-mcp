@@ -32,6 +32,24 @@ def get_juspay_request_credentials():
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
+        name="session_preflight_check_juspay",
+        description="""ALWAYS call this before `session_api_juspay`. Reports which mandatory params are still missing for the configured payment gateway.
+
+Key features:
+- Accepts a partial (or empty) session payload — nothing is required, so it can be called as soon as you start gathering details.
+- Combines the required fields of the session create API with the extra params the configured gateway demands (e.g. currency).
+- Returns `missing` (absent or blank params, each with a description to help collect it) and `satisfied`.
+- Each entry carries a `source`: 'session_schema' means the session create call itself will fail without it; 'gateway' means the session succeeds but the payment cannot complete.
+- Returns a `next_action` instruction telling you what to do next — follow it.
+- Accepts an optional `gateway` name; falls back to DEFAULT requirements (and flags `gateway_recognised: false`) when the name is unknown.
+- Makes no network call and creates nothing — it is safe to call repeatedly while collecting details.
+
+Use this tool to find out what to ask the user for before attempting a payment session. Anything reported in `missing` must be obtained from the user — never guess, invent, default or use placeholder values for it. Ask the user for the missing params, then call this tool again. Only call `session_api_juspay` once this returns `ready: true`.""",
+        model=api_schema.session_preflight.JuspaySessionPreflightPayload,
+        handler=session_preflight.session_preflight_check_juspay,
+        response_schema=response_schema.session_preflight_response_schema,
+    ),
+    util.make_api_config(
         name="session_api_juspay",
         description="Creates a new Juspay session for a given order.",
         model=api_schema.session.JuspaySessionPayload,
