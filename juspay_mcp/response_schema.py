@@ -4,6 +4,51 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+session_preflight_response_schema = {
+    "type": "object",
+    "properties": {
+        "ready": {
+            "type": "boolean",
+            "description": "True when nothing is missing and the session can be created."
+        },
+        "gateway": {
+            "type": "string",
+            "description": "The gateway whose requirements were applied ('DEFAULT' if the requested one was unknown)."
+        },
+        "gateway_recognised": {
+            "type": "boolean",
+            "description": "False when the requested gateway had no configured requirements and DEFAULT was used instead."
+        },
+        "next_action": {
+            "type": "string",
+            "description": "Instruction for the calling agent. When params are missing it directs the agent to ask the user for them rather than guessing or using placeholders, and to re-run this check before creating the session."
+        },
+        "missing": {
+            "type": "array",
+            "description": "Mandatory params that are absent (or blank) and must be collected from the user before proceeding.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "field": {"type": "string", "description": "Name of the missing param."},
+                    "description": {"type": "string", "description": "What the param is, to help collect it."},
+                    "source": {
+                        "type": "string",
+                        "description": "'session_schema' if the session create call itself will fail without it; 'gateway' if the session succeeds but the payment cannot complete.",
+                        "enum": ["session_schema", "gateway"]
+                    }
+                },
+                "required": ["field", "source"]
+            }
+        },
+        "satisfied": {
+            "type": "array",
+            "description": "Mandatory params already supplied.",
+            "items": {"type": "string"}
+        }
+    },
+    "required": ["ready", "gateway", "next_action", "missing", "satisfied"]
+}
+
 session_response_schema = {
     "type": "object",
     "properties": {
