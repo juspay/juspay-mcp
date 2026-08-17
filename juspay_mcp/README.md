@@ -126,9 +126,25 @@ JUSPAY_MCP_TYPE="CORE"
 # Environment: "sandbox" (default) or "production"
 JUSPAY_ENV="sandbox"
 
+# Optional: multi-tenant host routing. Maps the `x-tenant-id` request header to
+# the API host to call. Values may be bare hosts (https:// is assumed) or full URLs.
+JUSPAY_TENANT_HOST_MAP='{"juspay":"api.juspay.in"}'
+
 # Optional: Include response schemas in tool descriptions
 INCLUDE_RESPONSE_SCHEMA="false"
 ```
+
+### Tenant-based host routing
+
+When running as an HTTP server, the base URL for every upstream Juspay API call
+is resolved per request, in this order:
+
+1. **`x-tenant-id` header**, looked up in `JUSPAY_TENANT_HOST_MAP`.
+2. **`JUSPAY_PROD_BASE_URL` / `JUSPAY_SANDBOX_BASE_URL`**, selected by `JUSPAY_ENV`.
+
+If `JUSPAY_TENANT_HOST_MAP` is unset, malformed, or does not contain the incoming
+tenant id, the request falls back to the default host and a warning is logged.
+In stdio mode there are no request headers, so the default host is always used.
 
 ## Available Tools
 

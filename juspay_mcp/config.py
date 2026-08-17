@@ -7,14 +7,15 @@
 import os
 import base64
 import dotenv
-import logging 
+import json
+import logging
 
 logger = logging.getLogger(__name__)
 dotenv.load_dotenv()
 
 JUSPAY_API_KEY = os.getenv("JUSPAY_API_KEY")
 JUSPAY_MERCHANT_ID = os.getenv("JUSPAY_MERCHANT_ID")
-JUSPAY_ENV = os.getenv("JUSPAY_ENV", "sandbox").lower() 
+JUSPAY_ENV = os.getenv("JUSPAY_ENV", "sandbox").lower()
 
 if JUSPAY_ENV == "production":
     JUSPAY_BASE_URL = os.getenv("JUSPAY_PROD_BASE_URL", "https://api.juspay.in")
@@ -23,43 +24,134 @@ else:
     JUSPAY_BASE_URL = os.getenv("JUSPAY_SANDBOX_BASE_URL", "https://sandbox.juspay.in")
     logger.info("Using Juspay Sandbox Environment")
 
+TENANT_HOST_MAP_ENV = "JUSPAY_TENANT_HOST_MAP"
 
+
+def _normalize_base_url(value: str) -> str:
+    """Turn a bare host or a full URL into a scheme-qualified base URL."""
+    value = value.strip().rstrip("/")
+    if "://" not in value:
+        value = f"https://{value}"
+    return value
+
+
+def _load_tenant_host_map() -> dict[str, str]:
+    """Parse the tenant-id -> host mapping from the environment.
+
+    Expected shape: JUSPAY_TENANT_HOST_MAP='{"juspay":"api.juspay.in"}'
+    Values may be bare hosts (https:// is assumed) or full URLs. A missing or
+    malformed value yields an empty map, which makes `resolve_base_url` fall
+    back to JUSPAY_BASE_URL.
+    """
+    raw = os.getenv(TENANT_HOST_MAP_ENV)
+    if not raw or not raw.strip():
+        logger.info("%s not set; all requests use %s", TENANT_HOST_MAP_ENV, JUSPAY_BASE_URL)
+        return {}
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as e:
+        logger.error("%s is not valid JSON (%s); ignoring it", TENANT_HOST_MAP_ENV, e)
+        return {}
+
+    if not isinstance(parsed, dict):
+        logger.error("%s must be a JSON object, got %s; ignoring it", TENANT_HOST_MAP_ENV, type(parsed).__name__)
+        return {}
+
+    mapping: dict[str, str] = {}
+    for tenant_id, host in parsed.items():
+        tenant_id = str(tenant_id).strip()
+        if not tenant_id or not isinstance(host, str) or not host.strip():
+            logger.error("%s: skipping malformed entry %r -> %r", TENANT_HOST_MAP_ENV, tenant_id, host)
+            continue
+        mapping[tenant_id] = _normalize_base_url(host)
+
+    logger.info("Loaded tenant host map for tenants: %s", sorted(mapping))
+    return mapping
+
+
+TENANT_HOST_MAP = _load_tenant_host_map()
+
+
+def resolve_base_url(juspay_creds: dict | None = None) -> str:
+    """Resolve the base URL for the current request.
+
+    Precedence:
+      1. `x-tenant-id` looked up in JUSPAY_TENANT_HOST_MAP.
+      2. JUSPAY_BASE_URL, derived from JUSPAY_ENV.
+    """
+    tenant_id = ((juspay_creds or {}).get("tenant_id") or "").strip()
+
+    if tenant_id:
+        host = TENANT_HOST_MAP.get(tenant_id)
+        if host:
+            return host
+        if TENANT_HOST_MAP:
+            logger.warning(
+                "Tenant '%s' is not present in %s; falling back to the default host",
+                tenant_id,
+                TENANT_HOST_MAP_ENV,
+            )
+        else:
+            logger.warning(
+                "Received tenant '%s' but %s is not configured; falling back to the default host",
+                tenant_id,
+                TENANT_HOST_MAP_ENV,
+            )
+
+    return JUSPAY_BASE_URL
+
+
+def build_api_url(path: str, juspay_creds: dict | None = None) -> str:
+    """Join an ENDPOINTS path onto the base URL resolved for this request.
+
+    Absolute URLs are passed through untouched.
+    """
+    if path.startswith(("http://", "https://")):
+        return path
+    if not path.startswith("/"):
+        path = f"/{path}"
+    return f"{resolve_base_url(juspay_creds)}{path}"
+
+
+# Paths only — the base URL is resolved per request by `build_api_url`, because
+# a tenant supplied via `x-tenant-id` can change the host on every call.
 ENDPOINTS = {
-    "session": f"{JUSPAY_BASE_URL}/session",
-    "refund": f"{JUSPAY_BASE_URL}/orders/{{order_id}}/refunds", 
+    "session": "/session",
+    "refund": "/orders/{order_id}/refunds",
 
     # Customer APIs
-    "customer": f"{JUSPAY_BASE_URL}/customers/{{customer_id}}",
-    "create_customer": f"{JUSPAY_BASE_URL}/customers",
-    "update_customer": f"{JUSPAY_BASE_URL}/customers/{{customer_id}}",
+    "customer": "/customers/{customer_id}",
+    "create_customer": "/customers",
+    "update_customer": "/customers/{customer_id}",
 
     # Order APIs
-    "order_status": f"{JUSPAY_BASE_URL}/orders/{{order_id}}",
-    "create_order": f"{JUSPAY_BASE_URL}/orders",
-    "update_order": f"{JUSPAY_BASE_URL}/orders/{{order_id}}",
-    "order_fulfillment": f"{JUSPAY_BASE_URL}/orders/{{order_id}}/fulfillment",
-    "txn_refund": f"{JUSPAY_BASE_URL}/refunds",
-    "create_txn": f"{JUSPAY_BASE_URL}/txns",
+    "order_status": "/orders/{order_id}",
+    "create_order": "/orders",
+    "update_order": "/orders/{order_id}",
+    "order_fulfillment": "/orders/{order_id}/fulfillment",
+    "txn_refund": "/refunds",
+    "create_txn": "/txns",
 
     # Card APIs
-    "card_add": f"{JUSPAY_BASE_URL}/card/add",
-    "cards": f"{JUSPAY_BASE_URL}/cards",
-    "card_delete": f"{JUSPAY_BASE_URL}/card/delete",
-    "card_update": f"{JUSPAY_BASE_URL}/card/update", 
-    "card_info": f"{JUSPAY_BASE_URL}/cardbins",
-    "bin_list": f"{JUSPAY_BASE_URL}/v2/bins/eligibility",
+    "card_add": "/card/add",
+    "cards": "/cards",
+    "card_delete": "/card/delete",
+    "card_update": "/card/update",
+    "card_info": "/cardbins",
+    "bin_list": "/v2/bins/eligibility",
 
     # UPI APIs
-    "saved_payment_methods": f"{JUSPAY_BASE_URL}/customers/{{customer_id}}/payment_methods",
-    "verify_vpa": f"{JUSPAY_BASE_URL}/v2/upi/verify-vpa",
+    "saved_payment_methods": "/customers/{customer_id}/payment_methods",
+    "verify_vpa": "/v2/upi/verify-vpa",
     # Note: UPI collect and UPI intent both use the create_txn endpoint which is already defined
 
     # Offer APIs
-    "offer_list": f"{JUSPAY_BASE_URL}/v1/offers/list",
-    "offer_order_status": f"{JUSPAY_BASE_URL}/orders/{{order_id}}",
+    "offer_list": "/v1/offers/list",
+    "offer_order_status": "/orders/{order_id}",
 
     # Wallet APIs
-    "list_wallets": f"{JUSPAY_BASE_URL}/{{customer_id}}/wallets"
+    "list_wallets": "/customers/{customer_id}/wallets"
 }
 
 def verify_env_vars():
