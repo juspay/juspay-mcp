@@ -14,3 +14,7 @@ wheels/
 /result
 /.pre-commit-config.yaml
 /.direnv
+
+
+# DOCS
+/.planning
