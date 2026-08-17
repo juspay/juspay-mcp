@@ -32,6 +32,6 @@ async def list_wallets(payload: dict) -> dict:
         raise ValueError("The payload must include 'customer_id'")
 
     routing_id = payload.get("routing_id", customer_id)
-    api_url = f"https://api.juspay.in/customers/{customer_id}/wallets"
+    api_url = ENDPOINTS["list_wallets"].format(customer_id=customer_id)
 
     return await call(api_url, routing_id)

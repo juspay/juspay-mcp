@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import httpx
-from juspay_mcp.config import get_json_headers
+from juspay_mcp.config import build_api_url, get_json_headers
 import logging 
 from contextvars import ContextVar
 
@@ -26,7 +26,8 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
     # Get Juspay credentials from context
     juspay_creds = get_juspay_credentials()
     headers = get_json_headers(routing_id=customer_id, juspay_creds=juspay_creds)
-    
+    api_url = build_api_url(api_url, juspay_creds)
+
     if additional_headers:
         headers.update(additional_headers)
 
@@ -54,7 +55,8 @@ async def post(api_url: str, payload: dict, routing_id: str | None = None) -> di
     effective_routing_id = routing_id or payload.get("customer_id")
     # Get Juspay credentials from context
     juspay_creds = get_juspay_credentials()
-    headers = get_json_headers(routing_id=effective_routing_id, juspay_creds=juspay_creds) 
+    headers = get_json_headers(routing_id=effective_routing_id, juspay_creds=juspay_creds)
+    api_url = build_api_url(api_url, juspay_creds)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
