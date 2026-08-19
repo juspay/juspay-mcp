@@ -336,13 +336,24 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         else:
             payload_dict = arguments 
         
-        juspay_creds = get_juspay_request_credentials()
+        # `x-merchantid` in the payload is the agent's per-call override of the
+        # static JUSPAY_MERCHANT_ID header/env var, so it wins over both. It is
+        # transport credentials rather than request data, so it never reaches
+        # the upstream body — unlike the `merchant_id` some endpoints require in
+        # their own payload, which is left untouched.
+        juspay_creds = dict(get_juspay_request_credentials() or {})
+        merchant_id_override = arguments.pop("x-merchantid", None)
+        if isinstance(merchant_id_override, str):
+            merchant_id_override = merchant_id_override.strip()
+        if merchant_id_override:
+            logger.info("Using x-merchantid from the tool payload")
+            juspay_creds["merchant_id"] = merchant_id_override
+
         if juspay_creds:
-            logger.info("Using header credentials for Juspay API calls")
-            set_juspay_credentials(juspay_creds)
+            logger.info(f"Resolving Juspay credentials from: {', '.join(sorted(juspay_creds))}")
         else:
-            logger.info("No header credentials found, falling back to environment variables")
-            set_juspay_credentials(None)
+            logger.info("No request credentials found, falling back to environment variables")
+        set_juspay_credentials(juspay_creds or None)
 
         meta_info = arguments.pop("juspay_meta_info", None)
 

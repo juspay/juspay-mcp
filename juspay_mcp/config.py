@@ -160,16 +160,32 @@ def verify_env_vars():
         logger.error("JUSPAY_API_KEY or JUSPAY_MERCHANT_ID not set in environment variables.")
         raise ValueError("JUSPAY_API_KEY and JUSPAY_MERCHANT_ID environment variables must be set.")
 
-def verify_dynamic_credentials(juspay_creds: dict):
-    """Verifies that required Juspay credentials are present in the auth context."""
-    if not juspay_creds:
-        raise ValueError("No Juspay credentials found in authentication context")
-    
-    api_key = juspay_creds.get("api_key")
-    merchant_id = juspay_creds.get("merchant_id")
-    
-    if not api_key or not merchant_id:
-        raise ValueError("Missing api_key or merchant_id in Juspay credentials")
+def resolve_credentials(juspay_creds: dict | None = None) -> tuple[str, str]:
+    """Resolve (api_key, merchant_id) for this request, one field at a time.
+
+    A request-supplied value always wins; the environment is the per-field
+    fallback. Resolving each field independently is what lets an agent pass
+    `merchant_id` in a tool payload while the API key still comes from the
+    static header or the environment — the two no longer have to arrive
+    together.
+    """
+    creds = juspay_creds or {}
+    api_key = (creds.get("api_key") or JUSPAY_API_KEY or "").strip()
+    merchant_id = (creds.get("merchant_id") or JUSPAY_MERCHANT_ID or "").strip()
+
+    missing = [
+        name
+        for name, value in (("api_key", api_key), ("merchant_id", merchant_id))
+        if not value
+    ]
+    if missing:
+        raise ValueError(
+            f"Missing Juspay credentials: {', '.join(missing)}. Supply them per request "
+            "(JUSPAY_API_KEY / JUSPAY_MERCHANT_ID headers, or a merchant_id in the tool "
+            "payload) or set the JUSPAY_API_KEY / JUSPAY_MERCHANT_ID environment variables."
+        )
+
+    return api_key, merchant_id
 
 def get_base64_auth(api_key: str = None):
     """Returns the base64 encoded auth string."""
@@ -183,33 +199,19 @@ def get_base64_auth(api_key: str = None):
 def get_common_headers(routing_id: str | None = None, juspay_creds: dict = None):
     """
     Returns common headers used by all API calls.
-    Uses the provided routing_id, or defaults to JUSPAY_MERCHANT_ID if None.
-    If juspay_creds is provided, uses dynamic credentials; otherwise falls back to env vars.
+    Each credential is resolved independently by `resolve_credentials`: a
+    request-supplied api_key/merchant_id wins, the environment fills the rest.
+    Uses the provided routing_id, or defaults to the resolved merchant_id.
     """
-    if juspay_creds and (juspay_creds.get("api_key") or juspay_creds.get("merchant_id")):
-        verify_dynamic_credentials(juspay_creds)
-        api_key = juspay_creds["api_key"]
-        merchant_id = juspay_creds["merchant_id"]
-        effective_routing_id = routing_id or merchant_id
-        
-        return {
-            "Authorization": f"Basic {get_base64_auth(api_key)}",
-            "x-merchantid": merchant_id,
-            "x-routing-id": effective_routing_id,
-            "Accept": "application/json",
-            "x-request-id": f"mcp-tool-{os.urandom(6).hex()}" 
-        }
-    else:
-        # Fallback to environment variables
-        verify_env_vars()
-        effective_routing_id = routing_id or JUSPAY_MERCHANT_ID
-        return {
-            "Authorization": f"Basic {get_base64_auth()}",
-            "x-merchantid": JUSPAY_MERCHANT_ID,
-            "x-routing-id": effective_routing_id,
-            "Accept": "application/json",
-            "x-request-id": f"mcp-tool-{os.urandom(6).hex()}" 
-        }
+    api_key, merchant_id = resolve_credentials(juspay_creds)
+
+    return {
+        "Authorization": f"Basic {get_base64_auth(api_key)}",
+        "x-merchant-id": merchant_id, # ideally this should be updated to x-merchantid, post payments service starts accepting it
+        "x-routing-id": routing_id or merchant_id,
+        "Accept": "application/json",
+        "x-request-id": f"mcp-tool-{os.urandom(6).hex()}"
+    }
 
 def get_json_headers(routing_id: str | None = None, juspay_creds: dict = None):
     """Returns headers for JSON content type."""

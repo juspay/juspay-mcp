@@ -8,6 +8,18 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class WithRoutingId(BaseModel):
+    merchant_id_header: Optional[str] = Field(
+        None,
+        alias="x-merchantid",
+        description=(
+            "Merchant to execute this call as, sent upstream as the x-merchantid header. "
+            "Overrides the JUSPAY_MERCHANT_ID header and the JUSPAY_MERCHANT_ID environment "
+            "variable for this call only. Omit it to use the configured default merchant. "
+            "This is transport credentials, not request data — it is stripped from the body "
+            "before the call, and is unrelated to any `merchant_id` an endpoint takes in its "
+            "own payload."
+        )
+    )
     routing_id: Optional[str] = Field(
         None,
         description=(
