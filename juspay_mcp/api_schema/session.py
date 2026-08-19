@@ -22,6 +22,7 @@ class JuspaySessionPayload(WithRoutingId):
     )
     return_url: str = Field(..., description="URL for redirection post payment.")
     
+    currency: Optional[str] = Field(None, description="Currency code (e.g., 'INR'). The session is created without it, but the payment cannot complete — session_preflight_check_juspay reports it as a gateway requirement.")
     description: Optional[str] = Field(None, description="Order description for user.")
     first_name: Optional[str] = Field(None, description="Customer's first name.")
     last_name: Optional[str] = Field(None, description="Customer's last name.")
