@@ -23,10 +23,6 @@ class GetOfferDetailsPayload(WithHeaders):
         description="Whether this is a batch offer (default: False)."
     )
 
-class SortOffersOptions(BaseModel):
-    field: str = Field(..., description="Field to sort by, e.g., 'CREATED_AT'.")
-    order: Literal["ASCENDING", "DESCENDING"] = Field(..., description="Sort order.")
-
 class ListOffersPayload(WithHeaders):
     merchant_id: str = Field(
         ...,
@@ -48,7 +44,7 @@ class ListOffersPayload(WithHeaders):
         default=None,
         description="Limit for number of offers to fetch."
     )
-    sort_offers: SortOffersOptions = Field(
+    sort_offers: Dict[str, str] = Field(
         ...,
-        description="Sorting options for offers (required). Use field='CREATED_AT' and order='ASCENDING' or 'DESCENDING'. Default to {'field': 'CREATED_AT', 'order': 'DESCENDING'} unless user specifies otherwise."
+        description="Sorting options for offers (required). An object with two keys: 'field' (the field to sort by, e.g. 'CREATED_AT') and 'order' (either 'ASCENDING' or 'DESCENDING'). Default to {'field': 'CREATED_AT', 'order': 'DESCENDING'} unless user specifies otherwise."
     )
