@@ -385,7 +385,7 @@ Key features:
 - Accepts a `description` for identification in the API Keys listing.
 - Returns: id, status (ACTIVE), apiKey, maskedApiKey, scope, dateCreated, lastUpdated, merchantAccountId, version, metadata.
 
-Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Warn the user that the plaintext key cannot be retrieved later — it must be saved at creation time.""",
+Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Note that the plaintext key cannot be retrieved later — it needs to be saved at creation time.""",
         model=api_schema.api_keys.CreateApiKeyPayload,
         handler=api_keys.create_api_key,
     ),
@@ -453,9 +453,9 @@ Use this tool to search for orders based on time, status, or type. Essential for
         name="get_order_details",
         description="""Returns complete details for a given order ID. 
 
-CRITICAL RETRY LOGIC: If you receive an error like "Order with id = 'xyz' does not exist", the provided ID is likely a transaction ID (txn_id) instead of an order ID. You MUST extract the order_id from the txn_id and retry the call.
+Retry handling, essential to this flow: an error like "Order with id = 'xyz' does not exist" usually means the ID provided is a transaction ID (txn_id) rather than an order ID. In that case the order_id needs to be extracted from the txn_id and the call retried.
 
-Extraction patterns (ALWAYS follow these steps):
+Extraction patterns (these steps apply in order):
 1. Remove the last '-' and number (e.g., '-1', '-2') from the end
 2. If there's still a '-' and number at the end, remove that too (for silent retries)  
 3. Take the part after the merchant prefix (usually after the first or second hyphen)
@@ -467,7 +467,7 @@ Examples:
 - 6E-JFTWE26E7250714112817-1 → JFTWE26E7250714112817
 - merchant-ORDER123-1-1 → ORDER123
 
-MANDATORY: When you get "does not exist" error, immediately extract order_id using above patterns and call this tool again with the extracted order_id.
+This step is required for the flow to succeed: on a "does not exist" error, the order_id is extracted using the patterns above and this tool is called again with the extracted order_id.
 
 Key features:
 - Fetches complete order details for a specific order ID (if txn_id provided extract order_id using above logic).
@@ -531,17 +531,17 @@ Use this tool to check for any service disruptions or performance degradation is
     util.make_api_config(
         name="create_payment_link",
         description="""Use this tool when asked to create a payment link.
-IMPORTANT: You must ask the user for the required fields (amount), do not assume any of these fields always prompt the user.
+Important for this flow: the required fields (amount) come from the user; none of these fields are assumed, and the user is always prompted for them.
 Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified.
 If the user does not ask to send the email , WhatsApp message or SMS then do not mark the fields - shouldSendMail,shouldSendSMS and shouldSendWhatsapp as true.
-CRITICAL: Do not assume or auto-generate these values -  prompt the user to provide them explicitly if they ask for it.
+This matters for correctness: these values are not assumed or auto-generated; the user provides them explicitly when they ask for them.
 NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one card type (credit/debit/cardless) must be enabled within that EMI type.
 EMI OPTIONS: If the user requests EMI options, ask them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi).
 For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless).
-Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
+It is essential here that the user specifies which EMI options they want whenever they ask for EMI.
 Set showEmiOption to true only if any EMI option is requested.
 RECREATE FROM ORDER: If the user asks to recreate a payment link and provides an order ID, first call the 'get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, payment methods, etc.) to create a new payment link with the same parameters.
-CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the payment link.
+An important part of this flow: when all the necessary parameters are already provided, no further confirmation is needed and the payment link is created directly.
 """,
         model=api_schema.payments.CreatePaymentLinkPayload,
         handler=payments.create_payment_link,
@@ -550,16 +550,16 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
     util.make_api_config(
         name="create_autopay_link",
         description="""Use this tool when asked to create an autopay payment link or recurring payment link or mandate payment link.
-IMPORTANT: You must ask the user for ALL required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency), do not assume any of these fields always prompt the user.
+Important for this flow: all the required fields (amount, mandate_max_amount, mandate_start_date, mandate_end_date, mandate_frequency) come from the user; none of these fields are assumed, and the user is always prompted for them.
 Also, if the user asks to send an email, prompt the user to specify the email (shouldSendMail should be enabled), and similarly if the user asks to send SMS (shouldSendSMS should be enabled) or WhatsApp message (shouldSendWhatsapp should be enabled), prompt the user to ask for the mobile number if not already specified , the user should be prompted for the email ID and phone number if they want to send email and sms or Whatsapp message.
 If the user does not ask to send the email , WhatsApp message or SMS then do not mark the fields - shouldSendMail,shouldSendSMS and shouldSendWhatsapp as true.
-CRITICAL: Do not assume or auto-generate these values - prompt the user to provide them explicitly if they ask for it.
+This matters for correctness: these values are not assumed or auto-generated; the user provides them explicitly when they ask for them.
 NOTE: If any EMI option is enabled in payment_filter.emiOptions, at least one card type (credit/debit/cardless) must be enabled within that EMI type.
 EMI OPTIONS: If the user requests EMI options, prompt them to choose from: 1) Standard EMI (standardEmi), 2) Low Cost EMI (lowCostEmi), 3) No Cost EMI (noCostEmi).
-For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless), Please note that it's extremely necessary to ask the user which EMI OPTIONS they want if the user asks for them.
+For each selected EMI type, ask which card types to enable: credit cards (standard_credit/low_cost_credit/no_cost_credit), debit cards (standard_debit/low_cost_debit/no_cost_debit), or cardless EMI (standard_cardless/low_cost_cardless/no_cost_cardless). It is essential here that the user specifies which EMI options they want whenever they ask for EMI.
 Set showEmiOption to true only if any EMI option is requested.
 RECREATE FROM ORDER: If the user asks to recreate an autopay payment link and provides an order ID, first call the 'get_order_details' tool with that order_id to fetch the existing order details, then use those details (amount, customer information, mandate details, payment methods, etc.) to create a new autopay payment link with the same parameters.
-CRITICAL : If all the necessary parameters are provided do not ask for confirmation from the user, directly create the autopay payment link.
+An important part of this flow: when all the necessary parameters are already provided, no further confirmation is needed and the autopay payment link is created directly.
 """,
         model=api_schema.payments.CreateAutopayLinkPayload,
         handler=payments.create_autopay_link,
@@ -569,7 +569,7 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
         name="qapi_info",
         description="""Step 1 of 3: Discover valid dimensions and metrics for analytics queries.
 
-This tool must be called before q_api to obtain the authoritative list of supported fields for a domain.
+This tool provides the authoritative list of supported fields for a domain and is called before q_api.
 The field names returned by this tool should be used when constructing q_api queries.
 
 Required Sequence:
@@ -583,7 +583,7 @@ Key features:
 
 Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
 
-IMPORTANT: Do not summarize the output. The exact field names are required for q_api queries.""",
+Worth noting: the output is used as returned rather than summarized, since q_api queries require the exact field names.""",
         model=api_schema.qapi_info.QApiInfoPayload,
         handler=qapi_info.qapi_info,
         response_schema=response_schema.qapi_info_response_schema,
@@ -607,7 +607,7 @@ Key features:
 
 Supported domains: kvorders, kvtxns, kvrefundtxns, kvoffers, mandateexecutionkv, fulfillmentorders, sdklogs, kvcustomer, kvmandates, unauthtxns, apirequests.
 
-IMPORTANT: Do not summarize the output. Exact values are required for q_api filters.""",
+Worth noting: the output is used as returned rather than summarized, since q_api filters require the exact values.""",
         model=api_schema.qapi_info.QApiFieldValueDiscoveryPayload,
         handler=qapi_info.qapi_field_value_discovery,
         response_schema=response_schema.qapi_field_value_discovery_response_schema,
@@ -645,7 +645,7 @@ IMPORTANT: Do not summarize the output. Exact values are required for q_api filt
 - product_integrated: Must be one of "Payment Page Signature", "Payment Page Session", "EC + SDK", "EC Only"
 - merchant_id: Merchant ID
 - start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
-- Date range limit: only last 45 days of data is available — refuse older windows.
+- Date range limit: only the last 45 days of data is available; older windows cannot be served.
 - Default range: last 30 days when the user doesn't specify one.
 
 **Response provides:**
@@ -675,7 +675,7 @@ Key features:
 Required inputs:
 - merchant_id: Merchant ID for which to retrieve X-Mid validation data
 - start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
-- Date range limit: only last 45 days of data is available — refuse older windows.
+- Date range limit: only the last 45 days of data is available; older windows cannot be served.
 - Default range: last 30 days when the user doesn't specify one.
 
 Response includes:
@@ -706,7 +706,7 @@ Use this tool to monitor X-Mid header validation compliance, track validation fa
 **Required inputs:**
 - merchant_id: Merchant ID for platform metrics analysis
 - start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
-- Date range limit: only last 45 days of data is available — refuse older windows.
+- Date range limit: only the last 45 days of data is available; older windows cannot be served.
 - Default range: last 30 days when the user doesn't specify one.
 
 **Response provides:**
@@ -742,7 +742,7 @@ Use this tool to get the list of available platforms for a merchant, not for int
 - merchant_id: Merchant ID for product count metrics analysis
 - platform: Platform filter (e.g., 'Android', 'iOS', 'Web') — mandatory for accurate filtering
 - start_time / end_time: ISO format YYYY-MM-DDTHH:MM:SSZ. Convert natural language windows (last N days) to absolute timestamps.
-- Date range limit: only last 45 days of data is available — refuse older windows.
+- Date range limit: only the last 45 days of data is available; older windows cannot be served.
 - Default range: last 30 days when the user doesn't specify one.
 
 **Response provides:**
