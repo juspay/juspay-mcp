@@ -167,7 +167,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     if not token_to_use and meta_info:
         token_to_use = meta_info.get("x-web-logintoken")
         
-    logger.info(f"Using token for validation: {token_to_use}")  
+    logger.info("Validating Juspay token")
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 

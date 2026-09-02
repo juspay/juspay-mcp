@@ -5,11 +5,23 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 """Bearer auth middleware.
 
-For any non-public path it requires `Authorization: Bearer <token>`, validates
-the token against Portal (with a short-lived LRU cache to avoid hammering the
-upstream), and pushes a PortalUserInfo onto a ContextVar so tool handlers can
-read it. On failure it returns a JSON-RPC `-32001` error with the
-`WWW-Authenticate` header demanded by RFC 9728 §5.1.
+For any non-public path it looks for a credential, in this strict order:
+
+1. `Authorization: Bearer <token>` — validated against Portal (with a
+   short-lived cache to avoid hammering the upstream) and tagged
+   `auth_type="oauth"`. This covers both the redirect flow and a client that
+   obtained a Portal token out-of-band and sends it itself. A bearer that is
+   present but invalid is REJECTED — it never falls through to step 2, so an
+   expired OAuth token can't silently become a different kind of login.
+2. Header credentials (`JUSPAY_WEB_LOGIN_TOKEN` / `JUSPAY_API_KEY`), only when
+   `allow_header_credentials` is set and step 1 found no bearer at all. These
+   are left untagged, which routes them to `/api/ec/v1/validate/token`.
+3. Nothing — a JSON-RPC `-32001` error with the `WWW-Authenticate` header
+   demanded by RFC 9728 §5.1, which is what prompts an MCP client to start
+   the authorization-code flow.
+
+On success a PortalUserInfo (step 1 only) is pushed onto a ContextVar so tool
+handlers can read it.
 """
 
 from __future__ import annotations
@@ -24,6 +36,7 @@ from starlette.responses import JSONResponse, Response
 
 from .config import OAuthConfig
 from .context import OAuthRequestContext, PortalUserInfo, clear_current, set_current
+from .header_creds import extract_header_credentials, has_credential
 from .portal_client import PortalClient
 from .tenant import BASE_URL_HEADER, resolve as resolve_tenant
 
@@ -58,10 +71,12 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         portal: PortalClient,
         validation_cache: dict[str, tuple[PortalUserInfo, float]] | None = None,
         skip_path_prefixes: tuple[str, ...] = (),
+        allow_header_credentials: bool = False,
     ) -> None:
         super().__init__(app)
         self._cfg = cfg
         self._portal = portal
+        self._allow_header_credentials = allow_header_credentials
         # token -> (user_info, expiry_epoch). When `validation_cache` is passed
         # in, the same dict is also shared with /oauth/revoke so that revoked
         # tokens are evicted immediately instead of lingering until their TTL.
@@ -159,6 +174,16 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
 
         auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
         if not auth_header or not auth_header.lower().startswith("bearer "):
+            if self._allow_header_credentials:
+                creds = extract_header_credentials(request)
+                if has_credential(creds):
+                    logger.debug(
+                        "No bearer; authenticating with header credentials: %s",
+                        ", ".join(sorted(creds)),
+                    )
+                    request.state.juspay_credentials = creds
+                    request.state.oauth_context = None
+                    return await call_next(request)
             return self._unauthorized(request, cfg)
 
         token = auth_header[7:].strip()
@@ -175,7 +200,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         set_current(ctx)
         # Also stash on request.state so existing handlers can read it inline.
         request.state.oauth_context = ctx
-        # Compatibility shim for the legacy ContextVar in juspay_mcp.tools:
+        # Bridge to the juspay_credentials ContextVar in juspay_mcp.tools:
         # populate juspay_credentials with the Portal-issued token so existing
         # handlers keep working without any modification. The dashboard mcp
         # already expects `dashboard_token`; core expects `api_key` +
@@ -186,7 +211,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
             "dashboard_token": token,
             # Signals to the dashboard tool handlers (which have their own
             # token-validation step) that this request is OAuth-sourced. They
-            # branch on this to hit /ec/v2/authorize instead of the legacy
+            # branch on this to hit /ec/v2/authorize instead of the direct-token
             # /api/ec/v1/validate/token endpoint. See
             # juspay_dashboard_mcp/api/utils.py:get_juspay_host_from_api.
             "auth_type": "oauth",
