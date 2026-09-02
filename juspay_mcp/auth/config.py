@@ -5,10 +5,18 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 """OAuth runtime configuration sourced from environment variables.
 
-`OAUTH_ENABLED` is the master switch: when false (the default for now) the
-existing header-based JuspayHeaderAuthMiddleware path is retained so we can
-ship this code without breaking current callers (juspay-genius, internal
-consumers, etc.). Flip to `true` on the OAuth-protected deployment.
+Two independent switches:
+
+`OAUTH_ENABLED` — mount the `/oauth/*` + `.well-known` routes and accept
+`Authorization: Bearer` tokens. When false the server runs the plain
+header-credential path (JuspayHeaderAuthMiddleware) exactly as before.
+
+`AUTH_ALLOW_HEADER_CREDENTIALS` — only consulted when OAuth is enabled. When
+true (the default) a request that carries NO bearer may still authenticate
+with the `JUSPAY_WEB_LOGIN_TOKEN` / `JUSPAY_API_KEY` headers, so the redirect
+flow and directly-supplied tokens coexist on one deployment. A bearer that is
+*present but invalid* is always rejected — it never falls through to the
+header path. Set to false to accept bearer tokens only.
 """
 
 from __future__ import annotations
@@ -92,6 +100,7 @@ DEFAULT_SCOPES = [
 @dataclass(frozen=True)
 class OAuthConfig:
     enabled: bool
+    allow_header_credentials: bool
     mcp_server_url: str
     portal_base_url: str
     upstream_client_id: str
@@ -114,6 +123,7 @@ class OAuthConfig:
 def load() -> OAuthConfig:
     cfg = OAuthConfig(
         enabled=_env_bool("OAUTH_ENABLED", False),
+        allow_header_credentials=_env_bool("AUTH_ALLOW_HEADER_CREDENTIALS", True),
         mcp_server_url=os.getenv("MCP_SERVER_URL", "http://localhost:8080").rstrip("/"),
         portal_base_url=os.getenv("PORTAL_BASE_URL", "https://portal.juspay.in").rstrip("/"),
         upstream_client_id=os.getenv("OAUTH_CLIENT_ID", ""),
@@ -137,6 +147,13 @@ def load() -> OAuthConfig:
             cfg.scopes_supported,
             "set" if cfg.dev_test_token else "unset",
         )
+        if cfg.allow_header_credentials:
+            logger.info(
+                "AUTH_ALLOW_HEADER_CREDENTIALS=true — requests without a bearer "
+                "may still authenticate with JUSPAY_WEB_LOGIN_TOKEN / JUSPAY_API_KEY."
+            )
+        else:
+            logger.info("AUTH_ALLOW_HEADER_CREDENTIALS=false — bearer tokens only.")
         if cfg.tenant_clients:
             logger.info(
                 "Per-tenant OAuth clients loaded for %d tenant(s).",

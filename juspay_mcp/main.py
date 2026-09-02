@@ -27,6 +27,7 @@ from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from juspay_mcp.auth import config as auth_config
+from juspay_mcp.auth.header_creds import extract_header_credentials
 from juspay_mcp.auth.middleware import BearerAuthMiddleware
 from juspay_mcp.auth.portal_client import PortalClient
 from juspay_mcp.auth.routes import build_routes as build_oauth_routes
@@ -84,37 +85,10 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
     Middleware to extract Juspay credentials from headers.
     Supports partial credentials - tools will fallback to environment variables for missing values.
     """
-    
-    async def dispatch(self, request: Request, call_next):
-        api_key = request.headers.get("JUSPAY_API_KEY")
-        merchant_id = request.headers.get("JUSPAY_MERCHANT_ID") 
-        dashboard_token = request.headers.get("JUSPAY_WEB_LOGIN_TOKEN")
-        pp_ai_studio_api_key = request.headers.get("PP_AI_STUDIO_API_KEY")
-        pp_ai_studio_token = (
-            request.headers.get("PP_AI_STUDIO_TOKEN")
-            or request.headers.get("JUSPAY_AI_STUDIO_TOKEN")
-        )
-        
-        base_url_override = request.headers.get("x-base-url")
-        tenant_id_override = request.headers.get("x-tenant-id")
 
-        juspay_credentials = {}
-        if api_key:
-            juspay_credentials["api_key"] = api_key
-        if merchant_id:
-            juspay_credentials["merchant_id"] = merchant_id
-        if dashboard_token:
-            juspay_credentials["dashboard_token"] = dashboard_token
-        if base_url_override:
-            juspay_credentials["base_url"] = base_url_override
-        if tenant_id_override:
-            juspay_credentials["tenant_id"] = tenant_id_override
-        if JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
-            if pp_ai_studio_api_key:
-                juspay_credentials["pp_ai_studio_api_key"] = pp_ai_studio_api_key
-            if pp_ai_studio_token:
-                juspay_credentials["pp_ai_studio_token"] = pp_ai_studio_token
-            
+    async def dispatch(self, request: Request, call_next):
+        juspay_credentials = extract_header_credentials(request)
+
         if juspay_credentials:
             credential_summary = ", ".join(juspay_credentials.keys())
             logger.debug(f"Setting partial Juspay credentials from headers: {credential_summary}")
@@ -499,7 +473,9 @@ def main(host: str, port: int, mode: str):
                         await portal_client.aclose()
             logger.info("StreamableHTTP session manager stopped")
 
-    # Authentication middleware — OAuth bearer when enabled, else legacy header path.
+    # Authentication middleware. With OAuth enabled the bearer middleware also
+    # accepts header credentials on requests that carry no bearer at all (see
+    # AUTH_ALLOW_HEADER_CREDENTIALS); without OAuth it's the header path only.
     # In DASHBOARD mode the docs endpoints are public (no auth required).
     docs_skip_prefixes: tuple[str, ...] = ()
     if JUSPAY_MCP_TYPE == "DASHBOARD":
@@ -523,6 +499,7 @@ def main(host: str, port: int, mode: str):
                 portal=portal_client,
                 validation_cache=oauth_validation_cache,
                 skip_path_prefixes=docs_skip_prefixes,
+                allow_header_credentials=oauth_cfg.allow_header_credentials,
             ),
         ]
     else:
@@ -564,6 +541,12 @@ def main(host: str, port: int, mode: str):
         logger.info(f"  Authorize:                     {oauth_cfg.mcp_server_url}/oauth/authorize")
         logger.info(f"  Token:                         {oauth_cfg.mcp_server_url}/oauth/token")
         logger.info(f"  Portal IdP:                    {oauth_cfg.portal_base_url}")
+        logger.info(
+            "  Header credentials:            %s",
+            "accepted when no bearer is present"
+            if oauth_cfg.allow_header_credentials
+            else "rejected (bearer only)",
+        )
 
     uvicorn.run(starlette_app, host=host, port=port, lifespan="on")
 
