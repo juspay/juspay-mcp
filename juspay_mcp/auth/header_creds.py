@@ -30,6 +30,12 @@ _CREDENTIAL_KEYS = (
 )
 
 
+def _strip_bearer(value: str | None) -> str | None:
+    if value and value[:7].lower() == "bearer ":
+        return value[7:].strip() or None
+    return value
+
+
 def extract_header_credentials(request: Request) -> dict:
     """Pull Juspay credentials out of the request headers.
 
@@ -38,7 +44,7 @@ def extract_header_credentials(request: Request) -> dict:
     """
     api_key = request.headers.get("JUSPAY_API_KEY")
     merchant_id = request.headers.get("JUSPAY_MERCHANT_ID")
-    dashboard_token = request.headers.get("JUSPAY_WEB_LOGIN_TOKEN")
+    dashboard_token = _strip_bearer(request.headers.get("JUSPAY_WEB_LOGIN_TOKEN"))
     pp_ai_studio_api_key = request.headers.get("PP_AI_STUDIO_API_KEY")
     pp_ai_studio_token = (
         request.headers.get("PP_AI_STUDIO_TOKEN")
