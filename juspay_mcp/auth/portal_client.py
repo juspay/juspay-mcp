@@ -177,7 +177,7 @@ class PortalClient:
         try:
             resp = await self._http.get(
                 url,
-                headers={"Authorization": f"Bearer {token}"},
+                headers={"Authorization": token},
             )
         except httpx.HTTPError as e:
             logger.error("portal validate failed: %s", e)
