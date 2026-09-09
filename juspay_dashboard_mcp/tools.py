@@ -538,6 +538,34 @@ CRITICAL : If all the necessary parameters are provided do not ask for confirmat
     ),
     # Payout Orders Tools
     util.make_api_config(
+        name="create_payout_order",
+        description="""NOTE: Use this tool only if the query is related to payouts or settlements.
+
+Creates a payout order using the dashboard payout API. This is a write operation and should only be called when the user has explicitly provided the payout details and intends to create the payout order.
+
+Required fields:
+- orderId: Unique payout order reference.
+- beneType: Beneficiary payment type.
+- amount: Total payout order amount.
+- customerId: Merchant-generated customer identifier.
+- customerPhone: Customer mobile number.
+- customerEmail: Customer email address.
+
+The dashboard request body is flat. Pass only the beneficiary fields required for the selected beneType. The tool defaults orderType to the maker-checker mode when omitted.
+
+Required beneficiary fields by beneType:
+- CARD: beneCardReference, beneBankCode, beneCardType, beneBrand
+- PLAIN_CARD: beneBankCode, beneCardType, beneBrand
+- ACCOUNT_IFSC: beneAccount, beneIfsc
+- UPI_ID: beneVpa
+- WALLET: beneWalletBrand
+- BENE_ID: beneId
+- PAYOUT_LINK: beneMobileNo""",
+        model=api_schema.payout_orders.CreatePayoutOrderPayload,
+        handler=payout_orders.create_payout_order,
+        response_schema=None,
+    ),
+    util.make_api_config(
         name="list_payout_orders",
         description="""NOTE: Use this tool only if the query is related to payouts or settlements.
 
