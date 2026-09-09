@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, call, ist_to_utc, make_payout_additional_headers
+from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, ist_to_utc, make_payout_additional_headers, post
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from typing import Dict, Any
@@ -15,6 +15,105 @@ import re
 import logging
 
 dotenv.load_dotenv()
+
+
+COMMON_CREATE_PAYOUT_ORDER_FIELDS = {
+    "orderId",
+    "beneType",
+    "amount",
+    "customerId",
+    "customerPhone",
+    "customerEmail",
+    "orderType",
+    "preferredMethodList",
+    "udf1",
+    "udf2",
+    "udf3",
+    "udf4",
+    "udf5",
+    "scheduleTime",
+    "fulfillmentCurrency",
+    "sourceCurrency",
+    "idempotencyKey",
+    "tenant_id",
+    "juspay_meta_info",
+}
+
+BENE_TYPE_FIELD_RULES = {
+    "CARD": {
+        "required": {"beneCardReference", "beneBankCode", "beneCardType", "beneBrand"},
+        "allowed": {"beneName", "beneCardReference", "beneBankCode", "beneCardType", "beneBrand", "payeeAdditionalDetails"},
+    },
+    "PLAIN_CARD": {
+        "required": {"beneBankCode", "beneCardType", "beneBrand"},
+        "allowed": {"beneName", "beneBankCode", "beneCardType", "beneBrand", "last4ofCard", "payeeAdditionalDetails"},
+    },
+    "ACCOUNT_IFSC": {
+        "required": {"beneAccount", "beneIfsc"},
+        "allowed": {"beneName", "beneAccount", "beneIfsc", "beneLegalEntityIdentifier", "payeeAdditionalDetails"},
+    },
+    "UPI_ID": {
+        "required": {"beneVpa"},
+        "allowed": {"beneName", "beneVpa", "payeeAdditionalDetails"},
+    },
+    "WALLET": {
+        "required": {"beneWalletBrand"},
+        "allowed": {"beneWalletIdentifier", "beneWalletBrand", "beneWalletIdentifierType", "payeeAdditionalDetails"},
+    },
+    "BENE_ID": {
+        "required": {"beneId"},
+        "allowed": {"beneName", "beneId", "payeeAdditionalDetails"},
+    },
+    "PAYOUT_LINK": {
+        "required": {"beneMobileNo"},
+        "allowed": {"beneName", "beneMobileNo"},
+    },
+}
+
+
+def make_flat_payout_order_payload(payload: dict) -> dict:
+    bene_type = payload.get("beneType")
+    rules = BENE_TYPE_FIELD_RULES.get(bene_type)
+    if not rules:
+        raise ValueError(f"Unsupported beneType: {bene_type}")
+
+    missing_fields = [field for field in rules["required"] if not payload.get(field)]
+    if missing_fields:
+        raise ValueError(f"Missing required fields for beneType {bene_type}: {missing_fields}")
+
+    allowed_fields = COMMON_CREATE_PAYOUT_ORDER_FIELDS | rules["allowed"]
+    request_payload = {
+        key: value
+        for key, value in payload.items()
+        if key in allowed_fields and value is not None
+    }
+    request_payload["orderType"] = request_payload.get("orderType") or "APPROVE_AND_FULFILL_ONLY"
+    return request_payload
+
+
+async def create_payout_order(payload: dict, meta_info: dict = None) -> dict:
+    """
+    Creates a payout order from the dashboard MCP using the dashboard payout API.
+    """
+    required_fields = [
+        "orderId",
+        "beneType",
+        "amount",
+        "customerId",
+        "customerPhone",
+        "customerEmail",
+    ]
+
+    for field in required_fields:
+        if not payload.get(field):
+            raise ValueError(f"The payload must include '{field}'.")
+
+    request_payload = make_flat_payout_order_payload(payload)
+
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    additional_headers = make_payout_additional_headers(meta_info)
+    api_url = f"{host}/api/payout/batch/dashboard/v1/orders"
+    return await post(api_url, request_payload, additional_headers=additional_headers, meta_info=meta_info)
 
 
 async def list_payout_orders(payload: dict, meta_info: dict = None) -> dict:
@@ -112,8 +211,8 @@ async def get_payout_order_details(payload: dict, meta_info: dict) -> dict:
     - Transaction ID: 5c8e3f9bff064048ac46b98e04ea75c2-f1-t2 → 5c8e3f9bff064048ac46b98e04ea75c2
 
     Pattern extraction process:
-    1. Remove transaction suffix (-t\d+) if present
-    2. Remove fulfillment suffix (-f\d+) if present
+    1. Remove transaction suffix (-t\\d+) if present
+    2. Remove fulfillment suffix (-f\\d+) if present
     3. Return the base order ID
 
     If the first attempt fails with "Could not find resource" error, the function automatically extracts the order_id using the above patterns and retries the call.
