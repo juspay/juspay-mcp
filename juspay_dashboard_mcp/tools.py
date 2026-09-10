@@ -565,6 +565,146 @@ An important part of this flow: when all the necessary parameters are already pr
         handler=payments.create_autopay_link,
         response_schema=None,
     ),
+    # Payout Orders Tools
+    util.make_api_config(
+        name="create_payout_order",
+        description="""This tool can be used to create a payout order using the dashboard payout API. This write operation supports payout order creation with flat beneficiary fields.
+
+Required fields:
+- orderId: Unique payout order reference.
+- beneType: Beneficiary payment type.
+- amount: Total payout order amount.
+- customerId: Merchant-generated customer identifier.
+- customerPhone: Customer mobile number.
+- customerEmail: Customer email address.
+
+The dashboard request body is flat. Beneficiary fields are selected based on beneType. The tool defaults orderType to the maker-checker mode when omitted.
+
+Required beneficiary fields by beneType:
+- CARD: beneCardReference, beneBankCode, beneCardType, beneBrand
+- PLAIN_CARD: beneBankCode, beneCardType, beneBrand
+- ACCOUNT_IFSC: beneAccount, beneIfsc
+- UPI_ID: beneVpa
+- WALLET: beneWalletBrand
+- BENE_ID: beneId
+- PAYOUT_LINK: beneMobileNo""",
+        model=api_schema.payout_orders.CreatePayoutOrderPayload,
+        handler=payout_orders.create_payout_order,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="list_payout_orders",
+        description="""This tool can be used to retrieve a list of payout orders within a specified time range. It provides information about disbursement transactions processed through the payout system.
+
+Key features:
+- Fetches payout orders within a given start and end time range
+- Supports pagination with limit and offset parameters (max 100 orders per request)
+- Returns detailed payout order information including fulfillments and transactions
+- Provides order status, amounts, customer details, and timestamps
+- Includes beneficiary information and transaction processing details
+
+Applicable for tracking payout order status, generating payout reconciliation reports, monitoring disbursement operations, and investigating payout-related issues.""",
+        model=api_schema.payout_orders.ListPayoutOrdersPayload,
+        handler=payout_orders.list_payout_orders,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_order_details",
+        description="""This tool can be used to retrieve complete details for a specific payout order ID. It provides information about individual payout transactions including fulfillment status, transaction details, and beneficiary information.
+
+The tool accepts an order ID, fulfillment ID, or transaction ID. If lookup by the provided ID fails because the resource is not found, it retries using the base order ID extracted from supported suffix patterns.
+
+Applicable for investigating payout transaction issues, verifying beneficiary details, checking transaction status, and troubleshooting failed or pending payouts.""",
+        model=api_schema.payout_orders.GetPayoutOrderDetailsPayload,
+        handler=payout_orders.get_payout_order_details,
+        response_schema=None,
+    ),
+    # Payout Gateways Tools
+    util.make_api_config(
+        name="list_configured_payout_gateways",
+        description="""This tool can be used to retrieve all payout gateway credentials configured for the merchant's payout operations.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.list_configured__payout_gateways,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_gateways",
+        description="""This tool can be used to retrieve all available payout gateway types that can be configured for payout operations.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_payout_gateways,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_gateway_details",
+        description="""This tool can be used to retrieve detailed configuration information for a specific payout gateway credential identified by gateway type and rail.""",
+        model=api_schema.payout_gateways.GetPayoutGatewayDetailsPayload,
+        handler=payout_gateways.get_payout_gateway_details,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_active_payout_gateways",
+        description="""This tool can be used to retrieve active payout methods available for the merchant based on priority logic configuration.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_active_payout_gateways,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_priority_logics",
+        description="""This tool can be used to retrieve the priority logic configuration for payout routing and gateway selection.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_payout_priority_logics,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_weblabs",
+        description="""This tool can be used to retrieve WebLab configuration settings, feature flags, and experimental settings for payout operations.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_gateways.get_payout_weblabs,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_balance",
+        description="""This tool can be used to retrieve current balance information from configured payout gateways. The isForce field enables force refresh when needed.""",
+        model=api_schema.payout_gateways.GetPayoutBalancePayload,
+        handler=payout_gateways.get_payout_balance,
+        response_schema=None,
+    ),
+    # Payout Settings Tools
+    util.make_api_config(
+        name="get_payout_configs",
+        description="""This tool can be used to retrieve payout system configuration settings for the merchant account.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_settings.get_payout_configs,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_encryption_or_ssl_keys",
+        description="""This tool can be used to retrieve encryption and SSL keys used for secure payout operations.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_settings.get_payout_encryption_or_ssl_keys,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="list_beneficiaries_per_customer_id",
+        description="""This tool can be used to retrieve all beneficiaries associated with a specific customer ID.""",
+        model=api_schema.payout_beneficiary_details.ListBeneficiariesPerCustomerIdPayload,
+        handler=payout_beneficiary_details.list_beneficiaries_per_customerId,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_beneficiary_details",
+        description="""This tool can be used to retrieve detailed information for a specific beneficiary identified by customer ID and beneficiary ID.""",
+        model=api_schema.payout_beneficiary_details.GetBeneficiaryDetailsPayload,
+        handler=payout_beneficiary_details.get_beneficiary_details,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_outages",
+        description="""This tool can be used to retrieve current payout system outages and service disruptions.""",
+        model=api_schema.headers.WithHeaders,
+        handler=payout_settings.get_payout_outages,
+        response_schema=None,
+    ),
     util.make_api_config(
         name="qapi_info",
         description="""Step 1 of 3: Discover valid dimensions and metrics for analytics queries.

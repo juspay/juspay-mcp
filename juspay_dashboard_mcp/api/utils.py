@@ -391,3 +391,22 @@ def sanitize_merchant_id(merchant_id_from_payload: str, mid_from_meta: str) -> s
         logger.info(f"merchantId from payload '{merchant_id_from_payload}' is a placeholder, using meta_info value: {mid_from_meta}")
         return mid_from_meta
     return merchant_id_from_payload or mid_from_meta
+
+
+def make_payout_additional_headers(meta_info: dict = None) -> dict:
+    """
+    Constructs payout-specific auth headers using request-scoped credentials,
+    meta_info, or the dashboard token environment variable.
+    """
+    juspay_creds = get_juspay_credentials()
+    token = None
+    if juspay_creds:
+        token = juspay_creds.get("dashboard_token")
+    if not token and meta_info:
+        token = meta_info.get("x-web-logintoken")
+    if not token:
+        token = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
+    if not token:
+        raise ValueError("Authorization token not found in request context, meta_info, or environment variables.")
+
+    return {"Authorization": token, "X-Token-Type": "Euler"}
