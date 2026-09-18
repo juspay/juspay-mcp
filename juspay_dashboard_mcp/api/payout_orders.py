@@ -6,7 +6,7 @@
 
 from datetime import datetime, timezone
 from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, ist_to_utc, make_payout_additional_headers, post
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from typing import Dict, Any
 import os
@@ -15,7 +15,6 @@ import re
 import logging
 
 dotenv.load_dotenv()
-
 
 COMMON_CREATE_PAYOUT_ORDER_FIELDS = {
     "orderId",
@@ -71,6 +70,25 @@ BENE_TYPE_FIELD_RULES = {
 }
 
 
+def make_payout_approval_url(host: str, merchant_order_id: str) -> str:
+    """Build the Portal URL for approving a payout order."""
+    if not host:
+        raise ValueError("A resolved Juspay host is required.")
+    if not merchant_order_id:
+        raise ValueError("The payload must include 'merchantOrderId'.")
+    return f"{host.rstrip('/')}/payout-maker-checker/{quote(str(merchant_order_id), safe='')}"
+
+
+async def get_payout_approval_link(payload: dict, meta_info: dict = None) -> dict:
+    """Returns the Portal link for approving a maker-checker payout order."""
+    merchant_order_id = payload.get("merchantOrderId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    return {
+        "merchantOrderId": merchant_order_id,
+        "approvalUrl": make_payout_approval_url(host, merchant_order_id),
+    }
+
+
 def make_flat_payout_order_payload(payload: dict) -> dict:
     bene_type = payload.get("beneType")
     rules = BENE_TYPE_FIELD_RULES.get(bene_type)
@@ -113,7 +131,12 @@ async def create_payout_order(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/orders"
-    return await post(api_url, request_payload, additional_headers=additional_headers, meta_info=meta_info)
+    response = await post(api_url, request_payload, additional_headers=additional_headers, meta_info=meta_info)
+    merchant_order_id = response.get("merchantOrderId") or payload["orderId"]
+    return {
+        **response,
+        "approvalUrl": make_payout_approval_url(host, merchant_order_id),
+    }
 
 
 async def list_payout_orders(payload: dict, meta_info: dict = None) -> dict:

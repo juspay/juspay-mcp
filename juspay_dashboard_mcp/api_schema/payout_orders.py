@@ -38,6 +38,14 @@ class GetPayoutOrderDetailsPayload(WithHeaders):
     )
 
 
+class GetPayoutApprovalLinkPayload(WithHeaders):
+    merchantOrderId: str = Field(
+        ...,
+        min_length=1,
+        description="Merchant order ID for the payout awaiting maker-checker approval.",
+    )
+
+
 class PayoutPayeeDocument(BaseModel):
     docId: str = Field(..., description="Document identifier, for example PAN number.")
     docType: str = Field(..., description="Document type, for example PAN.")

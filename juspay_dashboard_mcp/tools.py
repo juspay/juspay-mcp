@@ -579,6 +579,7 @@ Required fields:
 - customerEmail: Customer email address.
 
 The dashboard request body is flat. Beneficiary fields are selected based on beneType. The tool defaults orderType to the maker-checker mode when omitted.
+The response includes approvalUrl, which opens the payout order in the resolved Juspay Portal for approval.
 
 Required beneficiary fields by beneType:
 - CARD: beneCardReference, beneBankCode, beneCardType, beneBrand
@@ -590,6 +591,15 @@ Required beneficiary fields by beneType:
 - PAYOUT_LINK: beneMobileNo""",
         model=api_schema.payout_orders.CreatePayoutOrderPayload,
         handler=payout_orders.create_payout_order,
+        response_schema=None,
+    ),
+    util.make_api_config(
+        name="get_payout_approval_link",
+        description="""Returns the Juspay Portal link for approving a payout order in the maker-checker flow.
+
+Use the merchantOrderId from an existing payout order. This tool only constructs the approval link; it does not create, approve, or modify the payout order.""",
+        model=api_schema.payout_orders.GetPayoutApprovalLinkPayload,
+        handler=payout_orders.get_payout_approval_link,
         response_schema=None,
     ),
     util.make_api_config(
