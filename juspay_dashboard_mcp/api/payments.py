@@ -10,6 +10,29 @@ import random
 import string
 import time
 
+def attach_dashboard_link(response, host: str):
+    """Add the dashboard viewer URL for the created payment link to `response`.
+
+    The order ID is read back off the response rather than the request: the
+    retry loop below regenerates it on duplicate-order conflicts, so the
+    request's copy can point at a different order than the one created.
+
+    `host` comes from token validation (`get_juspay_host_from_api`), never from
+    a caller-supplied header — the link is rendered as a clickable URL in the
+    MCP client, so a caller-controlled host would be a phishing vector. The
+    link carries no credential; viewing it requires a dashboard login.
+    """
+    if not isinstance(response, dict) or not host:
+        return response
+
+    order_id = response.get("order_id")
+    if not order_id:
+        return response
+
+    response["dashboard_link"] = f"{host.rstrip('/')}/payments/payment-links/{order_id}"
+    return response
+
+
 OPTIONAL_PAYMENT_FIELDS = [
     "currency",
     "mobile_country_code",
@@ -294,7 +317,8 @@ async def create_payment_link(payload: dict, meta_info: dict = None) -> dict:
 
     while retry_count <= max_retries:
         try:
-            return await post(api_url, request_data, None, meta_info)
+            response = await post(api_url, request_data, None, meta_info)
+            return attach_dashboard_link(response, host)
 
         except Exception as e:
             error_message = str(e).lower()
@@ -517,7 +541,8 @@ async def create_autopay_link(payload: dict, meta_info: dict = None) -> dict:
 
     while retry_count <= max_retries:
         try:
-            return await post(api_url, request_data, None, meta_info)
+            response = await post(api_url, request_data, None, meta_info)
+            return attach_dashboard_link(response, host)
 
         except Exception as e:
             error_message = str(e).lower()
