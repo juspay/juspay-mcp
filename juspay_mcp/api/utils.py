@@ -33,20 +33,17 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            safe_headers = ["x-request-id"]
-            logger.info(
-                f"Calling Juspay API at: {api_url} with permitted headers: {safe_headers if safe_headers else 'None'}"
-            )
+            logger.info(f"Calling Juspay API: GET {api_url}")
             response = await client.get(api_url, headers=headers)
-            logger.info(f"Response: {response}")
             response.raise_for_status()
             response_data = response.json()
-            logger.info(f"Get API Response Data: {response_data}")
+            logger.info(f"Juspay API response: GET {api_url} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "No response"
+            logger.error(f"HTTP error: {status} calling GET {api_url}")
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
+            raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
@@ -60,16 +57,17 @@ async def post(api_url: str, payload: dict, routing_id: str | None = None) -> di
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with body: {payload}")
+            logger.info(f"Calling Juspay API: POST {api_url}")
             response = await client.post(api_url, headers=headers, json=payload)
             response.raise_for_status()
             response_data = response.json()
-            logger.info(f"API Response Data: {response_data}")
+            logger.info(f"Juspay API response: POST {api_url} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "No response"
+            logger.error(f"HTTP error: {status} calling POST {api_url}")
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
+            raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e

@@ -33,6 +33,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse, Response
 from starlette.routing import Route
 
+from .client_store import ClientData, MemoryClientStore
 from .config import OAuthConfig
 from .metadata import authorization_server_metadata, protected_resource_metadata
 from .tenant import resolve as resolve_tenant
@@ -119,6 +120,7 @@ def build_routes(
     cfg: OAuthConfig,
     portal: PortalClient,
     store: MemoryStateStore,
+    client_store: MemoryClientStore,
     validation_cache: dict | None = None,
 ) -> list[Route]:
     """Construct the OAuth/discovery route list.
@@ -161,27 +163,48 @@ def build_routes(
 
     # ---------- RFC 7591 dynamic client registration --------------------------
     async def register(request: Request) -> Response:
-        tcfg = resolve_tenant(cfg, request)
         try:
             body = await request.json()
         except Exception:
             body = {}
 
-        client_id = body.get("client_id") or tcfg.upstream_client_id or f"client_{int(time.time())}"
-        client_secret = (
-            body.get("client_secret") or tcfg.upstream_client_secret or secrets.token_hex(32)
+        redirect_uris = body.get("redirect_uris") or []
+        if not isinstance(redirect_uris, list) or not redirect_uris:
+            return _bad_request(
+                "invalid_client_metadata", "redirect_uris is required and must be a non-empty list"
+            )
+        for uri in redirect_uris:
+            parsed = urlparse(uri) if isinstance(uri, str) else None
+            if not parsed or parsed.scheme not in ("http", "https") or not parsed.netloc:
+                return _bad_request(
+                    "invalid_redirect_uri", f"redirect_uri {uri!r} is not a valid absolute URL"
+                )
+
+        client_id = f"mcp_{secrets.token_hex(16)}"
+        client_secret = secrets.token_hex(32)
+        client_name = body.get("client_name", "MCP Client")
+
+        await client_store.put_client(
+            client_id,
+            ClientData(
+                client_secret=client_secret,
+                redirect_uris=redirect_uris,
+                client_name=client_name,
+                created_at=time.time(),
+            ),
         )
+
         return JSONResponse(
             {
                 "client_id": client_id,
                 "client_secret": client_secret,
                 "client_id_issued_at": int(time.time()),
                 "client_secret_expires_at": 0,
-                "redirect_uris": body.get("redirect_uris", []),
+                "redirect_uris": redirect_uris,
                 "grant_types": ["authorization_code", "refresh_token"],
                 "response_types": ["code"],
                 "token_endpoint_auth_method": "client_secret_post",
-                "client_name": body.get("client_name", "MCP Client"),
+                "client_name": client_name,
             },
             status_code=201,
         )
@@ -202,13 +225,23 @@ def build_routes(
             return _bad_request("invalid_request", "redirect_uri is required")
         if not state:
             return _bad_request("invalid_request", "state is required")
-        if code_challenge and code_challenge_method and code_challenge_method != "S256":
+        if not client_id:
+            return _bad_request("invalid_request", "client_id is required")
+        if not code_challenge or code_challenge_method != "S256":
             return _bad_request(
                 "invalid_request",
-                "Only S256 PKCE challenge method is supported",
+                "PKCE (code_challenge with S256 code_challenge_method) is required",
             )
         if not _resource_is_acceptable(tcfg, resource):
             return _bad_request("invalid_target", f"resource {resource!r} is not served by this server")
+
+        client_data = await client_store.get_client(client_id)
+        if client_data is None:
+            return _bad_request("invalid_client", "Unknown client_id")
+        if redirect_uri not in client_data.redirect_uris:
+            return _bad_request(
+                "invalid_request", "redirect_uri does not match a URI registered for this client"
+            )
 
         await store.put_state(
             state,
@@ -227,7 +260,8 @@ def build_routes(
         # redirect back to /oauth/callback on THIS server, which then bounces
         # to the client-supplied redirect_uri.
         portal_params = {
-            "client_id": client_id or tcfg.upstream_client_id,
+            # Portal only knows our own real client_id, never the per-MCP-client one.
+            "client_id": tcfg.upstream_client_id,
             "redirect_uri": f"{tcfg.mcp_server_url}/oauth/callback",
             "scope": "user_access",
             "state": state,
@@ -274,32 +308,42 @@ def build_routes(
         client_id, client_secret = _parse_client_credentials(request, body)
 
         if not client_id or not client_secret:
-            # Fall back to the server-side configured upstream client. This
-            # makes the flow work for Claude Code's "none" auth method clients
-            # that registered via DCR without persisting a real secret.
-            client_id = client_id or tcfg.upstream_client_id
-            client_secret = client_secret or tcfg.upstream_client_secret
-
-        if not client_id or not client_secret:
             return _unauthorized_client("Client credentials required")
+
+        # Authenticate the caller against its own registered credential only.
+        client_data = await client_store.get_client(client_id)
+        if client_data is None or not secrets.compare_digest(client_data.client_secret, client_secret):
+            return _unauthorized_client("Invalid client credentials")
 
         if grant_type == "authorization_code":
             code = body.get("code")
             code_verifier = body.get("code_verifier")
+            redirect_uri = body.get("redirect_uri")
             if not code:
                 return _bad_request("invalid_request", "Missing authorization code")
+            if not redirect_uri:
+                return _bad_request("invalid_request", "redirect_uri is required")
 
             bound_state = await store.lookup_state_by_code(code)
             state_data = await store.get_state(bound_state) if bound_state else None
+            if state_data is None:
+                return _bad_request("invalid_grant", "Unknown or expired authorization code")
+            if redirect_uri != state_data.redirect_uri:
+                return _bad_request("invalid_grant", "redirect_uri does not match the authorize request")
 
-            if state_data and state_data.code_challenge:
-                if not code_verifier:
-                    return _bad_request("invalid_request", "code_verifier is required for PKCE")
-                if not validate_s256(code_verifier, state_data.code_challenge):
-                    return _bad_request("invalid_grant", "Invalid code_verifier")
+            if not code_verifier:
+                return _bad_request("invalid_request", "code_verifier is required for PKCE")
+            if not state_data.code_challenge or not validate_s256(
+                code_verifier, state_data.code_challenge
+            ):
+                return _bad_request("invalid_grant", "Invalid code_verifier")
 
+            # Portal only recognizes our own real credential, not the per-client one.
             token_resp = await portal.exchange_code(
-                client_id, client_secret, code, portal_base_url=tcfg.portal_base_url
+                tcfg.upstream_client_id,
+                tcfg.upstream_client_secret,
+                code,
+                portal_base_url=tcfg.portal_base_url,
             )
             if token_resp is None:
                 return _bad_request("invalid_grant", "Portal token exchange failed")
@@ -323,8 +367,8 @@ def build_routes(
             if not refresh_token:
                 return _bad_request("invalid_request", "Missing refresh_token")
             token_resp = await portal.refresh(
-                client_id,
-                client_secret,
+                tcfg.upstream_client_id,
+                tcfg.upstream_client_secret,
                 refresh_token,
                 portal_base_url=tcfg.portal_base_url,
             )
@@ -360,13 +404,11 @@ def build_routes(
         # Portal revokes the whole entity (user session) regardless so we
         # don't need to differentiate.
         tcfg = resolve_tenant(cfg, request)
-        client_id, _client_secret = _parse_client_credentials(request, body)
-        client_id = client_id or tcfg.upstream_client_id
 
         revoked = False
-        if token and client_id:
+        if token:
             revoked = await portal.revoke_token(
-                client_id, token, portal_base_url=tcfg.portal_base_url
+                tcfg.upstream_client_id, token, portal_base_url=tcfg.portal_base_url
             )
             # Evict the validated-token cache so subsequent requests are forced
             # to re-validate via Portal (which will now return 4xx). The cache is

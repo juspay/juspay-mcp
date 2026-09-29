@@ -27,6 +27,7 @@ from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from juspay_mcp.auth import config as auth_config
+from juspay_mcp.auth.client_store import MemoryClientStore
 from juspay_mcp.auth.header_creds import extract_header_credentials
 from juspay_mcp.auth.middleware import BearerAuthMiddleware
 from juspay_mcp.auth.portal_client import PortalClient
@@ -150,8 +151,13 @@ def main(host: str, port: int, mode: str):
     if oauth_cfg.enabled:
         portal_client = PortalClient(oauth_cfg)
         oauth_state_store = MemoryStateStore(ttl_seconds=oauth_cfg.state_ttl_seconds)
+        oauth_client_store = MemoryClientStore()
         oauth_routes_list = build_oauth_routes(
-            oauth_cfg, portal_client, oauth_state_store, validation_cache=oauth_validation_cache
+            oauth_cfg,
+            portal_client,
+            oauth_state_store,
+            oauth_client_store,
+            validation_cache=oauth_validation_cache,
         )
         logger.info("Running with OAuth bearer authentication")
     else:
