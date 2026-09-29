@@ -5,6 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import os
+import json
 import httpx
 import logging
 from contextvars import ContextVar
@@ -17,6 +18,86 @@ from juspay_dashboard_mcp.config import (
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+def mask_fields(value, sensitive_keys: set):
+    """Recursively mask dict values whose key (case-insensitive) is in `sensitive_keys`.
+
+    Also detects JSON-encoded strings (fields like `merchant_payload` that
+    carry a nested object as escaped text rather than a real dict) and masks
+    inside those too, re-encoding only if something actually changed.
+    """
+    if isinstance(value, dict):
+        return {
+            k: ("***MASKED***" if str(k).lower() in sensitive_keys else mask_fields(v, sensitive_keys))
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [mask_fields(item, sensitive_keys) for item in value]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped[:1] in ("{", "["):
+            try:
+                parsed = json.loads(value)
+            except (ValueError, TypeError):
+                return value
+            masked = mask_fields(parsed, sensitive_keys)
+            if masked != parsed:
+                return json.dumps(masked)
+        return value
+    return value
+
+
+def paginate_response(response, limit: int, offset: int = 0):
+    """Slice any top-level list fields in `response` to `[offset:offset+limit]`.
+
+    Used for upstream endpoints that return a full, unpaginated dataset — keeps
+    what's sent to the model bounded instead of dumping everything returned.
+    """
+    if isinstance(response, list):
+        return response[offset:offset + limit]
+    if not isinstance(response, dict):
+        return response
+
+    result = dict(response)
+    pagination_info = {}
+    for key, value in response.items():
+        if isinstance(value, list) and len(value) > limit:
+            sliced = value[offset:offset + limit]
+            result[key] = sliced
+            pagination_info[key] = {
+                "returned": len(sliced),
+                "total": len(value),
+                "offset": offset,
+                "limit": limit,
+            }
+    if pagination_info:
+        result["_pagination"] = pagination_info
+    return result
+
+
+def paginate_dict_keys(response, limit: int, offset: int = 0):
+    """Slice a dict by its top-level KEYS, keeping each key's full value intact.
+
+    For responses shaped as {group_name: [...], ...} (e.g. payment methods
+    grouped per gateway) where the number of groups should be bounded, but
+    truncating inside each group would hide data the caller actually needs.
+    """
+    if not isinstance(response, dict):
+        return response
+
+    keys = list(response.keys())
+    total = len(keys)
+    sliced_keys = keys[offset:offset + limit]
+    result = {k: response[k] for k in sliced_keys}
+    if total > len(sliced_keys):
+        result["_pagination"] = {
+            "returned": len(sliced_keys),
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+        }
+    return result
+
 
 # Context variable to store Juspay credentials for the current request
 juspay_credentials: ContextVar[dict | None] = ContextVar('juspay_credentials', default=None)

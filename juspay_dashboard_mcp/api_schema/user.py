@@ -23,6 +23,9 @@ class GetUserDetailsPayload(WithHeaders):
 
 class ListUsersV2Payload(WithHeaders):
     offset: Optional[int] = Field(
-        0, 
+        0,
         description="Pagination offset for the user list (default: 0)."
+    )
+    limit: Optional[int] = Field(
+        20, description="Maximum number of users to return. Defaults to 20.", ge=1, le=100
     )

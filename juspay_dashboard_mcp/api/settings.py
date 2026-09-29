@@ -6,7 +6,9 @@
 
 import json
 
-from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id, mask_fields
+
+GENERAL_SETTINGS_SECRET_KEYS = {"webhookpassword", "cardencodingkey", "paymentresponsehashkey"}
 
 async def get_conflict_settings(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -106,7 +108,8 @@ async def get_general_settings(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/general"
     
-    return await post(api_url, request_data, None, meta_info)
+    response = await post(api_url, request_data, None, meta_info)
+    return mask_fields(response, GENERAL_SETTINGS_SECRET_KEYS)
 
 async def get_mandate_settings(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -217,14 +220,26 @@ async def get_priority_logic_settings(payload: dict, meta_info: dict = None) -> 
         api_url = f"{host}/api/ec/v1/priorityLogic"
     
     response = await post(api_url, request_data, None, meta_info)
-    
+
+    # Duplicates list_configured_gateway's data and dominates response size.
+    if isinstance(response, dict):
+        response.pop("gateways", None)
+
     if isinstance(response, dict) and "logics" in response and isinstance(response["logics"], list):
         sorted_logics = sorted(
-            response["logics"], 
-            key=lambda x: x.get("lastUpdated", ""), 
+            response["logics"],
+            key=lambda x: x.get("lastUpdated", ""),
             reverse=True
         )
-        response["logics"] = sorted_logics[:2]
+        limit = payload.get("limit", 5)
+        offset = payload.get("offset", 0)
+        total = len(sorted_logics)
+        sliced = sorted_logics[offset:offset + limit]
+        response["logics"] = sliced
+        if total > len(sliced):
+            response["_pagination"] = {
+                "logics": {"returned": len(sliced), "total": total, "offset": offset, "limit": limit}
+            }
     return response
 
 async def get_routing_settings(payload: dict, meta_info: dict = None) -> dict:

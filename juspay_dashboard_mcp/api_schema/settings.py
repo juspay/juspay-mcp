@@ -25,7 +25,12 @@ class MandateSettingsPayload(WithHeaders):
 
 class PriorityLogicSettingsPayload(WithHeaders):
     """Schema for priority logic settings API."""
-    pass  # No specific fields required beyond the common headers
+    limit: Optional[int] = Field(
+        5, description="Maximum number of priority logics to return, most recently updated first. Defaults to 5.", ge=1, le=50
+    )
+    offset: Optional[int] = Field(
+        0, description="Number of priority logics to skip before returning results. Defaults to 0.", ge=0
+    )
 
 class RoutingSettingsPayload(WithHeaders):
     """Schema for routing settings API."""

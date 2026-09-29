@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_admin_host,sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, get_admin_host, sanitize_merchant_id, paginate_response
 
 async def list_surcharge_rules(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -55,5 +55,6 @@ async def list_surcharge_rules(payload: dict, meta_info: dict = None) -> dict:
         api_url = f"{host}/ec/v1/admin/rule/list"
     else:
         api_url = f"{host}/api/ec/v1/rule/list"
-    
-    return await post(api_url, request_data, None, meta_info)
+
+    response = await post(api_url, request_data, None, meta_info)
+    return paginate_response(response, payload.get("limit", 20), payload.get("offset", 0))

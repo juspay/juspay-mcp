@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, paginate_response
 
 async def get_user(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -117,5 +117,7 @@ async def list_users_v2(payload: dict, meta_info: dict = None) -> dict:
         api_url = f"{host}/ec/v2/admin/user/list"
     else:
         api_url = f"{host}/api/ec/v2/user/list"
-    
-    return await post(api_url, request_data, None, meta_info)
+
+    response = await post(api_url, request_data, None, meta_info)
+    # offset was already forwarded upstream above, so only cap the length here.
+    return paginate_response(response, payload.get("limit", 20), offset=0)
