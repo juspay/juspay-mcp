@@ -9,6 +9,15 @@ from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
+class ListConfiguredPayoutGatewaysPayload(WithHeaders):
+    limit: Optional[int] = Field(
+        20, description="Maximum number of payout gateway credentials to return. Defaults to 20.", ge=1, le=100
+    )
+    offset: Optional[int] = Field(
+        0, description="Number of payout gateway credentials to skip before returning results. Defaults to 0.", ge=0
+    )
+
+
 class GetPayoutGatewayDetailsPayload(WithHeaders):
     gateway: str = Field(
         ...,

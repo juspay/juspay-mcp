@@ -75,12 +75,11 @@ async def request(
             except ValueError:
                 return {"text": response.text}
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "No response"
+            logger.error(f"HTTP error: {status} calling {method} {url}")
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(
-                f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}"
-            )
             raise Exception(
-                f"PP Studio AI API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}"
+                f"PP Studio AI API HTTPError ({status}): {error_content}"
             ) from e
         except Exception as e:
             logger.error(f"Error during PP Studio AI API call: {e}")

@@ -5,6 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import os
+import json
 import httpx
 import logging
 from contextvars import ContextVar
@@ -17,6 +18,86 @@ from juspay_dashboard_mcp.config import (
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+def mask_fields(value, sensitive_keys: set):
+    """Recursively mask dict values whose key (case-insensitive) is in `sensitive_keys`.
+
+    Also detects JSON-encoded strings (fields like `merchant_payload` that
+    carry a nested object as escaped text rather than a real dict) and masks
+    inside those too, re-encoding only if something actually changed.
+    """
+    if isinstance(value, dict):
+        return {
+            k: ("***MASKED***" if str(k).lower() in sensitive_keys else mask_fields(v, sensitive_keys))
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [mask_fields(item, sensitive_keys) for item in value]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped[:1] in ("{", "["):
+            try:
+                parsed = json.loads(value)
+            except (ValueError, TypeError):
+                return value
+            masked = mask_fields(parsed, sensitive_keys)
+            if masked != parsed:
+                return json.dumps(masked)
+        return value
+    return value
+
+
+def paginate_response(response, limit: int, offset: int = 0):
+    """Slice any top-level list fields in `response` to `[offset:offset+limit]`.
+
+    Used for upstream endpoints that return a full, unpaginated dataset — keeps
+    what's sent to the model bounded instead of dumping everything returned.
+    """
+    if isinstance(response, list):
+        return response[offset:offset + limit]
+    if not isinstance(response, dict):
+        return response
+
+    result = dict(response)
+    pagination_info = {}
+    for key, value in response.items():
+        if isinstance(value, list) and len(value) > limit:
+            sliced = value[offset:offset + limit]
+            result[key] = sliced
+            pagination_info[key] = {
+                "returned": len(sliced),
+                "available_in_response": len(value),
+                "offset": offset,
+                "limit": limit,
+            }
+    if pagination_info:
+        result["_pagination"] = pagination_info
+    return result
+
+
+def paginate_dict_keys(response, limit: int, offset: int = 0):
+    """Slice a dict by its top-level KEYS, keeping each key's full value intact.
+
+    For responses shaped as {group_name: [...], ...} (e.g. payment methods
+    grouped per gateway) where the number of groups should be bounded, but
+    truncating inside each group would hide data the caller actually needs.
+    """
+    if not isinstance(response, dict):
+        return response
+
+    keys = list(response.keys())
+    total = len(keys)
+    sliced_keys = keys[offset:offset + limit]
+    result = {k: response[k] for k in sliced_keys}
+    if total > len(sliced_keys):
+        result["_pagination"] = {
+            "returned": len(sliced_keys),
+            "available_in_response": total,
+            "offset": offset,
+            "limit": limit,
+        }
+    return result
+
 
 # Context variable to store Juspay credentials for the current request
 juspay_credentials: ContextVar[dict | None] = ContextVar('juspay_credentials', default=None)
@@ -74,16 +155,17 @@ async def call(api_url: str, additional_headers: dict = None, meta_info: dict = 
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with headers: {headers}")
+            logger.info(f"Calling Juspay API: GET {api_url}")
             response = await client.get(api_url, headers=headers)
             response.raise_for_status()
             response_data = response.json()
-            logger.info(f"API Response Data: {response_data}")
+            logger.info(f"Juspay API response: GET {api_url} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "No response"
+            logger.error(f"HTTP error: {status} calling GET {api_url}")
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
+            raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
@@ -101,16 +183,17 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with body: {payload} and headers: {headers}")
+            logger.info(f"Calling Juspay API: POST {api_url}")
             response = await client.post(api_url, headers=headers, json=payload)
             response.raise_for_status()
             response_data = response.json()
-            logger.info(f"API Response Data: {response_data}")
+            logger.info(f"Juspay API response: POST {api_url} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "No response"
+            logger.error(f"HTTP error: {status} calling POST {api_url}")
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
+            raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
@@ -134,19 +217,20 @@ async def put(api_url: str, payload: dict, additional_headers: dict = None, meta
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"PUT {api_url} body={payload} headers={headers}")
+            logger.info(f"Calling Juspay API: PUT {api_url}")
             response = await client.put(api_url, headers=headers, json=payload)
             response.raise_for_status()
             try:
                 response_data = response.json()
             except ValueError:
                 response_data = response.text
-            logger.info(f"API Response: {response_data}")
+            logger.info(f"Juspay API response: PUT {api_url} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "No response"
+            logger.error(f"HTTP error: {status} calling PUT {api_url}")
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
-            raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
+            raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay PUT call: {e}")
             raise Exception(f"Failed to call Juspay API: {e}") from e

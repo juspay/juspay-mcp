@@ -4,10 +4,16 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, Field
 from juspay_dashboard_mcp.api_schema.headers import WithHeaders
 
 
 class ListSurchargeRulesPayload(WithHeaders):
-    """No input required. Returns a list of all configured surcharge rules, including their current status and rule definitions."""
-    pass
+    """Returns a list of all configured surcharge rules, including their current status and rule definitions."""
+    limit: Optional[int] = Field(
+        20, description="Maximum number of surcharge rules to return. Defaults to 20.", ge=1, le=100
+    )
+    offset: Optional[int] = Field(
+        0, description="Number of surcharge rules to skip before returning results. Defaults to 0.", ge=0
+    )

@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import logging
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, paginate_response, paginate_dict_keys
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +61,9 @@ async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dic
         api_url = f"{host}/ec/v1/admin/gateway/list"
     else:
         api_url = f"{host}/api/ec/v1/gateway/list"
-    
-    return await post(api_url, request_data, None, meta_info)
+
+    response = await post(api_url, request_data, None, meta_info)
+    return paginate_response(response, payload.get("limit", 20), payload.get("offset", 0))
 
 async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -285,5 +286,6 @@ async def get_merchant_gateways_pm_details(payload: dict, meta_info: dict = None
         api_url = f"{host}/ec/v1/admin/gateway/paymentMethods"
     else:
         api_url = f"{host}/api/ec/v1/gateway/paymentMethods"
-    
-    return await post(api_url, request_data, None, meta_info)
+
+    response = await post(api_url, request_data, None, meta_info)
+    return paginate_dict_keys(response, payload.get("limit", 20), payload.get("offset", 0))

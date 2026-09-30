@@ -633,7 +633,7 @@ Applicable for investigating payout transaction issues, verifying beneficiary de
     util.make_api_config(
         name="list_configured_payout_gateways",
         description="""This tool can be used to retrieve all payout gateway credentials configured for the merchant's payout operations.""",
-        model=api_schema.headers.WithHeaders,
+        model=api_schema.payout_gateways.ListConfiguredPayoutGatewaysPayload,
         handler=payout_gateways.list_configured__payout_gateways,
         response_schema=None,
     ),

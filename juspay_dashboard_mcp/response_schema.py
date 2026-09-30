@@ -1065,6 +1065,7 @@ get_priority_logic_settings_response_schema = {
         "enableGatewayReferenceIdBasedRouting": {"type": "boolean"},
         "gateways": {
             "type": "array",
+            "description": "Only present when the request passed include_gateways=true.",
             "items": {
                 "type": "object",
                 "properties": {
@@ -1078,6 +1079,10 @@ get_priority_logic_settings_response_schema = {
                     "disabled", "gateway", "paymentMethods", "testMode"
                 ]
             }
+        },
+        "_pagination": {
+            "type": "object",
+            "description": "Present when `logics`/`gateways` were truncated. Pass `offset`/`limit` to page through the rest."
         }
     },
     "required": [
@@ -1085,8 +1090,7 @@ get_priority_logic_settings_response_schema = {
         "logics",
         "useCode",
         "gatewayPriorityLogic",
-        "enableGatewayReferenceIdBasedRouting",
-        "gateways"
+        "enableGatewayReferenceIdBasedRouting"
     ]
 }
 

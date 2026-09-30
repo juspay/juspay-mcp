@@ -14,6 +14,12 @@ class ListConfiguredGatewaysPayload(WithHeaders):
         default=None,
         description="Merchant identifier for which to list configured payment gateways."
     )
+    limit: Optional[int] = Field(
+        20, description="Maximum number of gateways to return. Defaults to 20.", ge=1, le=100
+    )
+    offset: Optional[int] = Field(
+        0, description="Number of gateways to skip before returning results. Defaults to 0.", ge=0
+    )
 
 class GetGatewaySchemePayload(WithHeaders):
     gateway: str = Field(
@@ -45,6 +51,10 @@ class ListGatewaySchemePayload(WithHeaders):
 class GetMerchantGatewaysPmDetailsPayload(WithHeaders):
     """
     Fetches all gateways and their supported payment methods for the merchant.
-    No input required.
     """
-    pass
+    limit: Optional[int] = Field(
+        20, description="Maximum number of entries to return. Defaults to 20.", ge=1, le=100
+    )
+    offset: Optional[int] = Field(
+        0, description="Number of entries to skip before returning results. Defaults to 0.", ge=0
+    )

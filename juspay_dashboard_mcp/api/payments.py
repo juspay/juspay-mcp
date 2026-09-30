@@ -4,7 +4,9 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, mask_fields
+
+PAYMENT_LINK_PII_KEYS = {"customeremail", "customerphone"}
 
 import random
 import string
@@ -152,7 +154,8 @@ async def list_payment_links_v1(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/paymentLinks/list"
 
-    return await post(api_url, request_payload, None, meta_info)
+    response = await post(api_url, request_payload, None, meta_info)
+    return mask_fields(response, PAYMENT_LINK_PII_KEYS)
 
 
 def generate_order_id() -> str:
