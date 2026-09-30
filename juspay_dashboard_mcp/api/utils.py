@@ -66,7 +66,7 @@ def paginate_response(response, limit: int, offset: int = 0):
             result[key] = sliced
             pagination_info[key] = {
                 "returned": len(sliced),
-                "total": len(value),
+                "available_in_response": len(value),
                 "offset": offset,
                 "limit": limit,
             }
@@ -92,7 +92,7 @@ def paginate_dict_keys(response, limit: int, offset: int = 0):
     if total > len(sliced_keys):
         result["_pagination"] = {
             "returned": len(sliced_keys),
-            "total": total,
+            "available_in_response": total,
             "offset": offset,
             "limit": limit,
         }
