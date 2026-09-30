@@ -31,6 +31,12 @@ class PriorityLogicSettingsPayload(WithHeaders):
     offset: Optional[int] = Field(
         0, description="Number of priority logics to skip before returning results. Defaults to 0.", ge=0
     )
+    include_gateways: Optional[bool] = Field(
+        False,
+        description="Include the merchant's full configured-gateway catalog in the response. "
+        "Omitted by default since it's unrelated to which priority logics are returned and can be "
+        "large — call list_configured_gateway directly instead unless you specifically need it here.",
+    )
 
 class RoutingSettingsPayload(WithHeaders):
     """Schema for routing settings API."""

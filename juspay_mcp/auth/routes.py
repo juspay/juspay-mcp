@@ -181,33 +181,38 @@ def build_routes(
                 )
 
         client_id = f"mcp_{secrets.token_hex(16)}"
-        client_secret = secrets.token_hex(32)
         client_name = body.get("client_name", "MCP Client")
 
+        is_public = body.get("token_endpoint_auth_method") == "none"
+        client_secret = None if is_public else secrets.token_hex(32)
+        auth_method = "none" if is_public else "client_secret_post"
+
+        now = time.time()
         await client_store.put_client(
             client_id,
             ClientData(
                 client_secret=client_secret,
                 redirect_uris=redirect_uris,
                 client_name=client_name,
-                created_at=time.time(),
+                created_at=now,
+                last_used_at=now,
             ),
         )
 
-        return JSONResponse(
-            {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "client_id_issued_at": int(time.time()),
-                "client_secret_expires_at": 0,
-                "redirect_uris": redirect_uris,
-                "grant_types": ["authorization_code", "refresh_token"],
-                "response_types": ["code"],
-                "token_endpoint_auth_method": "client_secret_post",
-                "client_name": client_name,
-            },
-            status_code=201,
-        )
+        response_body = {
+            "client_id": client_id,
+            "client_id_issued_at": int(now),
+            "client_secret_expires_at": 0,
+            "redirect_uris": redirect_uris,
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+            "token_endpoint_auth_method": auth_method,
+            "client_name": client_name,
+        }
+        if client_secret is not None:
+            response_body["client_secret"] = client_secret
+
+        return JSONResponse(response_body, status_code=201)
 
     # ---------- /oauth/authorize ---------------------------------------------
     async def authorize(request: Request) -> Response:
@@ -307,13 +312,17 @@ def build_routes(
         grant_type = body.get("grant_type")
         client_id, client_secret = _parse_client_credentials(request, body)
 
-        if not client_id or not client_secret:
+        if not client_id:
             return _unauthorized_client("Client credentials required")
 
         # Authenticate the caller against its own registered credential only.
         client_data = await client_store.get_client(client_id)
-        if client_data is None or not secrets.compare_digest(client_data.client_secret, client_secret):
+        if client_data is None:
             return _unauthorized_client("Invalid client credentials")
+        if client_data.client_secret is not None:
+            if not client_secret or not secrets.compare_digest(client_data.client_secret, client_secret):
+                return _unauthorized_client("Invalid client credentials")
+        await client_store.touch_client(client_id)
 
         if grant_type == "authorization_code":
             code = body.get("code")

@@ -146,6 +146,7 @@ def main(host: str, port: int, mode: str):
     oauth_cfg = auth_config.load()
     portal_client = None
     oauth_state_store = None
+    oauth_client_store = None
     oauth_routes_list: list = []
     oauth_validation_cache: dict = {}
     if oauth_cfg.enabled:
@@ -391,6 +392,12 @@ def main(host: str, port: int, mode: str):
                     await stack.enter_async_context(docs_session_mgr.run())
                     logger.info("Docs StreamableHTTP session manager started")
                     logger.info("All StreamableHTTP session managers started successfully")
+                    if oauth_state_store is not None:
+                        await oauth_state_store.start()
+                        logger.info("OAuth state store sweeper started")
+                    if oauth_client_store is not None:
+                        await oauth_client_store.start()
+                        logger.info("OAuth client store sweeper started")
                     docs_refresh = asyncio.create_task(refresh_catalog())
                     yield
             finally:
@@ -398,6 +405,12 @@ def main(host: str, port: int, mode: str):
                     docs_refresh.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await docs_refresh
+                if oauth_state_store is not None:
+                    await oauth_state_store.stop()
+                if oauth_client_store is not None:
+                    await oauth_client_store.stop()
+                if portal_client is not None:
+                    await portal_client.aclose()
                 await shutdown_analytics()
             logger.info("StreamableHTTP session managers stopped")
     elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
@@ -438,6 +451,12 @@ def main(host: str, port: int, mode: str):
                     await stack.enter_async_context(docs_session_mgr.run())
                     logger.info("Docs StreamableHTTP session manager started")
                     logger.info("All StreamableHTTP session managers started successfully")
+                    if oauth_state_store is not None:
+                        await oauth_state_store.start()
+                        logger.info("OAuth state store sweeper started")
+                    if oauth_client_store is not None:
+                        await oauth_client_store.start()
+                        logger.info("OAuth client store sweeper started")
                     docs_refresh = asyncio.create_task(refresh_catalog())
                     yield
             finally:
@@ -445,6 +464,12 @@ def main(host: str, port: int, mode: str):
                     docs_refresh.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await docs_refresh
+                if oauth_state_store is not None:
+                    await oauth_state_store.stop()
+                if oauth_client_store is not None:
+                    await oauth_client_store.stop()
+                if portal_client is not None:
+                    await portal_client.aclose()
             logger.info("StreamableHTTP session managers stopped")
 
     else:
@@ -470,11 +495,16 @@ def main(host: str, port: int, mode: str):
                 if oauth_state_store is not None:
                     await oauth_state_store.start()
                     logger.info("OAuth state store sweeper started")
+                if oauth_client_store is not None:
+                    await oauth_client_store.start()
+                    logger.info("OAuth client store sweeper started")
                 try:
                     yield
                 finally:
                     if oauth_state_store is not None:
                         await oauth_state_store.stop()
+                    if oauth_client_store is not None:
+                        await oauth_client_store.stop()
                     if portal_client is not None:
                         await portal_client.aclose()
             logger.info("StreamableHTTP session manager stopped")
