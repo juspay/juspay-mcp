@@ -51,6 +51,10 @@ jobs:
               'juspay_docs_mcp.server',
               'juspay_docs_mcp.instructions',
               'juspay_docs_mcp.discovery',
+              'juspay_ai_studio_mcp',
+              'juspay_ai_studio_mcp.server',
+              'juspay_ai_studio_mcp.tools',
+              'juspay_ai_studio_mcp.config',
           ]
           failed = []
           for mod in tests:
