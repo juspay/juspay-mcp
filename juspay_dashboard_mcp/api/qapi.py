@@ -23,8 +23,8 @@ from juspay_dashboard_mcp.api_schema.qapi import (
     QApiErrorResponse,
     QApiPayload,
 )
-from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
-from juspay_dashboard_mcp.api.utils import get_juspay_credentials
+from juspay_dashboard_mcp.config import get_common_headers
+from juspay_dashboard_mcp.api.utils import get_juspay_credentials, get_juspay_host_from_api
 from juspay_dashboard_mcp.api.qapi_info import validate_schema_signature
 
 logger = logging.getLogger(__name__)
@@ -80,11 +80,13 @@ async def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
                 mode="json", by_alias=True
             )
 
+        # Validates the token and resolves the request tenant's host, like every other tool.
+        host = await get_juspay_host_from_api(meta_info=meta_info)
         juspay_creds = get_juspay_credentials()
         headers = get_common_headers({}, meta_info, juspay_creds)
         headers["Content-Type"] = "application/json"
 
-        api_url = f"{JUSPAY_BASE_URL}/api/q/query"
+        api_url = f"{host}/api/q/query"
         logging.info(f"QAPI Call: url={api_url} payload={serialized_payload}")
 
         async with httpx.AsyncClient(timeout=120.0) as client:

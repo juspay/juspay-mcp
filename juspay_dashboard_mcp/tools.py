@@ -69,7 +69,8 @@ async def _mid_for_analytics(
             return mid.strip() or None
     return await resolve_mid_from_dashboard_token(
         token=_dashboard_token_for_analytics(juspay_creds, meta_info),
-        portal_base_url=JUSPAY_BASE_URL,
+        # The token only means something to the Portal of the request's tenant.
+        portal_base_url=(juspay_creds or {}).get("base_url") or JUSPAY_BASE_URL,
     )
 
 

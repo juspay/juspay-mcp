@@ -13,8 +13,8 @@ from difflib import SequenceMatcher
 
 import httpx
 
-from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
-from juspay_dashboard_mcp.api.utils import get_juspay_credentials
+from juspay_dashboard_mcp.config import get_common_headers
+from juspay_dashboard_mcp.api.utils import get_juspay_credentials, get_juspay_host_from_api
 
 logger = logging.getLogger(__name__)
 
@@ -105,9 +105,11 @@ HIGH_CARDINALITY_DIMENSIONS: set[str] = {
 }
 
 
-def _get_headers(meta_info: dict = None) -> dict:
+async def _host_and_headers(meta_info: dict = None) -> tuple[str, dict]:
+    """The request tenant's host (validating the token, like every other tool) and its headers."""
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     juspay_creds = get_juspay_credentials()
-    return get_common_headers({}, meta_info, juspay_creds)
+    return host, get_common_headers({}, meta_info, juspay_creds)
 
 
 def generate_schema_signature(domain: str, dimensions: list, metrics: list) -> str:
@@ -161,8 +163,8 @@ async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
     Also returns a schema_signature that must be passed to q_api and qapi_field_value_discovery.
     """
     domain = payload.get("domain", "kvorders")
-    headers = _get_headers(meta_info)
-    url = f"{JUSPAY_BASE_URL}/api/q/{domain}/info"
+    host, headers = await _host_and_headers(meta_info)
+    url = f"{host}/api/q/{domain}/info"
 
     dimensions: list = []
     filters: list = []
@@ -218,10 +220,10 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
     if default_limit > 50:
         return {"error": "default_limit cannot be greater than 50.", "results": []}
 
-    headers = _get_headers(meta_info)
+    host, headers = await _host_and_headers(meta_info)
 
     # Fetch domain info to validate dimensions
-    info_url = f"{JUSPAY_BASE_URL}/api/q/{domain}/info"
+    info_url = f"{host}/api/q/{domain}/info"
     info_fields: set[str] = set()
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -304,7 +306,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
                     "ordering": "Desc",
                 },
             }
-            fv_url = f"{JUSPAY_BASE_URL}/api/q/query?api=filters"
+            fv_url = f"{host}/api/q/query?api=filters"
             logger.info(f"[field_value_discovery] POST {fv_url} for dimension={dimension}")
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(
