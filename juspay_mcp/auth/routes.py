@@ -113,6 +113,26 @@ def _resource_is_acceptable(cfg: OAuthConfig, resource: str | None) -> bool:
     return parsed.netloc == issuer_host or parsed.netloc in cfg.extra_resource_hostnames
 
 
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def _redirect_uri_allowed(cfg: OAuthConfig, uri: object) -> bool:
+    """Loopback http(s) on any port, or an exact match against the configured allowlist."""
+    if not isinstance(uri, str):
+        return False
+    try:
+        parsed = urlparse(uri)
+        host = parsed.hostname
+        parsed.port  # raises ValueError on a malformed port
+    except ValueError:
+        return False
+    if parsed.fragment or parsed.username or parsed.password:
+        return False
+    if parsed.scheme in ("http", "https") and host in _LOOPBACK_HOSTS:
+        return True
+    return uri in cfg.allowed_redirect_uris
+
+
 # ---- Handlers ----------------------------------------------------------------
 
 
@@ -174,10 +194,11 @@ def build_routes(
                 "invalid_client_metadata", "redirect_uris is required and must be a non-empty list"
             )
         for uri in redirect_uris:
-            parsed = urlparse(uri) if isinstance(uri, str) else None
-            if not parsed or parsed.scheme not in ("http", "https") or not parsed.netloc:
+            if not _redirect_uri_allowed(cfg, uri):
+                logger.warning("rejected DCR redirect_uri %r", uri)
                 return _bad_request(
-                    "invalid_redirect_uri", f"redirect_uri {uri!r} is not a valid absolute URL"
+                    "invalid_redirect_uri",
+                    f"redirect_uri {uri!r} is not allowed; only loopback or pre-approved URIs are accepted",
                 )
 
         client_id = f"mcp_{secrets.token_hex(16)}"

@@ -45,7 +45,6 @@ jobs:
               'juspay_dashboard_mcp.config',
               'juspay_dashboard_mcp.api.orders',
               'juspay_dashboard_mcp.api.gateway',
-              'juspay_dashboard_mcp.api.api_keys',
               'juspay_dashboard_mcp.api_schema.orders',
               'juspay_docs_mcp',
               'juspay_docs_mcp.server',
