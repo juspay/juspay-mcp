@@ -375,20 +375,6 @@ Use this tool to verify webhook configurations and troubleshoot notification del
 #         model=api_schema.settings.UpdateWebhookSettingsPayload,
 #         handler=settings.update_webhook_settings,
 #     ),
-    util.make_api_config(
-        name="create_api_key",
-        description="""Generate a new API key for the authenticated merchant.
-
-Key features:
-- Creates a new ACTIVE API key bound to the caller's merchant account.
-- The plaintext `apiKey` is returned ONCE in the response — store it immediately; the dashboard only retains its masked form afterwards.
-- Accepts a `description` for identification in the API Keys listing.
-- Returns: id, status (ACTIVE), apiKey, maskedApiKey, scope, dateCreated, lastUpdated, merchantAccountId, version, metadata.
-
-Use this when the user asks to generate, mint, or provision a Juspay API key for server-to-server payment API access. Note that the plaintext key cannot be retrieved later — it needs to be saved at creation time.""",
-        model=api_schema.api_keys.CreateApiKeyPayload,
-        handler=api_keys.create_api_key,
-    ),
 #     util.make_api_config(
 #         name="update_general_settings",
 #         description="""Update the merchant's general settings.

@@ -118,6 +118,9 @@ class OAuthConfig:
     # Optional: extra hostnames that should also be considered valid canonical
     # resource URIs (in case the deployment lives behind multiple DNS names).
     extra_resource_hostnames: list[str] = field(default_factory=list)
+    # Exact redirect URIs (https or custom scheme) that dynamically registered
+    # clients may use. Loopback http(s) URIs are always accepted separately.
+    allowed_redirect_uris: list[str] = field(default_factory=list)
 
 
 def load() -> OAuthConfig:
@@ -137,6 +140,7 @@ def load() -> OAuthConfig:
         dev_test_token=os.getenv("OAUTH_DEV_TEST_TOKEN") or None,
         dev_test_merchant_id=os.getenv("OAUTH_DEV_TEST_MERCHANT_ID", "TEST_MERCHANT"),
         extra_resource_hostnames=_env_list("OAUTH_EXTRA_RESOURCE_HOSTNAMES", []),
+        allowed_redirect_uris=_env_list("OAUTH_ALLOWED_REDIRECT_URIS", []),
     )
 
     if cfg.enabled:

@@ -134,6 +134,17 @@ For clients that don't support remote HTTP transport, use the Docker image via S
 }
 ```
 
+### Registering a Custom OAuth Client
+
+OAuth client registration only accepts local redirect URIs (`http://localhost`, `http://127.0.0.1` or `http://[::1]`, on any port) and redirect URIs of well-known clients such as Claude, Cursor, VS Code and Codex. Any other redirect URI is rejected.
+
+If you are building your own client or agent and need its redirect URI approved, email [support@juspay.in](mailto:support@juspay.in) with:
+
+- Client name
+- Exact redirect URI(s), which must be `https` or localhost
+- Contact person
+- Merchant ID
+
 ---
 
 ## Table of Contents
@@ -325,7 +336,6 @@ The Q API provides powerful analytics capabilities. Use these tools in sequence:
 
 | Tool Name | Description |
 |-----------|-------------|
-| `create_api_key` | Generates a new API key for the merchant. Returns the plaintext key ONCE - it cannot be retrieved later. Requires immediate secure storage. |
 
 ### Surcharge Rules
 
