@@ -136,13 +136,15 @@ def parse_doc_sources(text: str) -> list[dict]:
 
 # ---- HTTP fetch with retries ---------------------------------------------------
 
-async def fetch_root_llms_txt(client: httpx.AsyncClient) -> str:
+async def fetch_root_llms_txt(
+    client: httpx.AsyncClient, root_llms_url: str = ROOT_LLMS_URL
+) -> str:
     """Fetch the root llms.txt with exponential backoff retries."""
     delay = 1.0
     last_exc: Optional[Exception] = None
     for attempt in range(1, ROOT_FETCH_RETRIES + 1):
         try:
-            resp = await client.get(ROOT_LLMS_URL, timeout=HTTP_TIMEOUT)
+            resp = await client.get(root_llms_url, timeout=HTTP_TIMEOUT)
             resp.raise_for_status()
             return resp.text
         except (httpx.HTTPError, httpx.TimeoutException) as e:
@@ -161,7 +163,7 @@ async def fetch_root_llms_txt(client: httpx.AsyncClient) -> str:
                 logger.error(
                     "Root llms.txt fetch failed after %d attempts: %s", attempt, e
                 )
-    raise RuntimeError(f"Failed to fetch {ROOT_LLMS_URL}") from last_exc
+    raise RuntimeError(f"Failed to fetch {root_llms_url}") from last_exc
 
 
 # ---- Real-vs-stub validation ---------------------------------------------------
@@ -235,15 +237,16 @@ def load_snapshot() -> list[dict]:
 
 # ---- Orchestrator --------------------------------------------------------------
 
-async def _discover_async() -> list[dict]:
+async def discover_sources(root_llms_url: str = ROOT_LLMS_URL) -> list[dict]:
+    """Discover and validate the product sources listed by one docs root's llms.txt."""
     async with httpx.AsyncClient(
         follow_redirects=True,
         headers={"User-Agent": "juspay-docs-mcp"},
     ) as client:
-        text = await fetch_root_llms_txt(client)
+        text = await fetch_root_llms_txt(client, root_llms_url)
         parsed = parse_doc_sources(text)
         logger.info(
-            "Parsed %d candidate sources from %s", len(parsed), ROOT_LLMS_URL
+            "Parsed %d candidate sources from %s", len(parsed), root_llms_url
         )
         validated = await filter_real_sources(client, parsed)
         logger.info(
@@ -270,7 +273,7 @@ def load_snapshot_sources() -> list[dict]:
 
 async def refresh_and_save() -> list[dict]:
     """Run live discovery and persist the result. Raises if discovery fails."""
-    sources = await _discover_async()
+    sources = await discover_sources()
     if not sources:
         raise RuntimeError("Live discovery returned 0 sources")
     save_snapshot(sources)
