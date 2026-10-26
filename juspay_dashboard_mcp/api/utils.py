@@ -9,6 +9,7 @@ import httpx
 import logging
 from juspay_dashboard_mcp.config import get_common_headers, JUSPAY_BASE_URL
 from datetime import datetime, timedelta
+from juspay_mcp.log_safe import safe_exc, safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +21,18 @@ async def call(api_url: str, additional_headers: dict = None, meta_info: dict = 
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with headers: {headers}")
+            logger.info(f"Calling Juspay API: GET {safe_url(api_url)}")
             response = await client.get(api_url, headers=headers)
             response.raise_for_status()
             response_data = response.json()
-            logger.info(f"API Response Data: {response_data}")
+            logger.info(f"Juspay API response: {safe_url(api_url)} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
+            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} calling {safe_url(api_url)}")
             raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
         except Exception as e:
-            logger.error(f"Error during Juspay API call: {e}")
+            logger.error(f"Error during Juspay API call: {safe_exc(e)}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
 async def post(api_url: str, payload: dict,additional_headers: dict = None, meta_info: dict= None) -> dict:
@@ -44,18 +45,18 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Calling Juspay API at: {api_url} with body: {clean_payload} and headers: {headers}")
+            logger.info(f"Calling Juspay API: POST {safe_url(api_url)}")
             response = await client.post(api_url, headers=headers, json=clean_payload)
             response.raise_for_status()
             response_data = response.json()
-            logger.info(f"API Response Data: {response_data}")
+            logger.info(f"Juspay API response: {safe_url(api_url)} -> {response.status_code}")
             return response_data
         except httpx.HTTPStatusError as e:
             error_content = e.response.text if e.response else "Unknown error"
-            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} - {error_content}")
+            logger.error(f"HTTP error: {e.response.status_code if e.response else 'No response'} calling {safe_url(api_url)}")
             raise Exception(f"Juspay API HTTPError ({e.response.status_code if e.response else 'Unknown status'}): {error_content}") from e
         except Exception as e:
-            logger.error(f"Error during Juspay API call: {e}")
+            logger.error(f"Error during Juspay API call: {safe_exc(e)}")
             raise Exception(f"Failed to call Juspay API: {e}") from e
 
 async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta_info: dict = None) -> str:
@@ -65,7 +66,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
     If auth_type is 'oauth' in token_response, calls OAuth authorize API but returns https://portal.juspay.in.
     """
     token_to_use = token or (meta_info.get("x-web-logintoken") if meta_info else None) or os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
-    logger.info(f"Using token for validation: {token_to_use}")  
+    logger.info("Validating Juspay token")
     if not token_to_use:
         raise Exception("Juspay token not provided.")
 
@@ -84,8 +85,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                 "Authorization": token_to_use,
             }
 
-            logger.info(f"OAuth authorization - Request URL: GET {url}")
-            logger.info(f"OAuth authorization - Request Headers: {oauth_headers}")
+            logger.info(f"OAuth authorization - Request URL: GET {safe_url(url)}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, headers=oauth_headers)
@@ -116,7 +116,7 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                     valid_host = f"https://{valid_host}"
                 return valid_host
     except Exception as e:
-        logger.error(f"Token validation failed: {e}")
+        logger.error(f"Token validation failed: {safe_exc(e)}")
         raise
 
 async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dict = None) -> tuple[str, bool]:
@@ -149,8 +149,7 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
                 "Authorization": token_to_use,
             }
 
-            logger.info(f"OAuth authorization (admin) - Request URL: GET {url}")
-            logger.info(f"OAuth authorization (admin) - Request Headers: {oauth_headers}")
+            logger.info(f"OAuth authorization (admin) - Request URL: GET {safe_url(url)}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, headers=oauth_headers)
@@ -191,7 +190,7 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
                 
                 return valid_host, isadmin
     except Exception as e:
-        logger.error(f"Token validation failed: {e}")
+        logger.error(f"Token validation failed: {safe_exc(e)}")
         raise
     
 def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
@@ -220,7 +219,7 @@ def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
 
         return utc_time.strftime(format)
     except Exception as e:
-        logging.error(f"Error converting ist to utc: {str(e)}")
+        logging.error(f"Error converting ist to utc: {safe_exc(e)}")
         # If it's already a datetime, try to return a formatted string
         if isinstance(ist_time_string, datetime):
             return ist_time_string.strftime(format)
@@ -240,7 +239,7 @@ def utc_to_ist(utc_time_string: str) -> str:
         ist_time = utc_time + ist_offset
         return ist_time.strftime("%Y-%m-%dT%H:%M:%SZ")
     except Exception as e:
-        logging.error(f"Error converting utc to ist: {str(e)}")
+        logging.error(f"Error converting utc to ist: {safe_exc(e)}")
         return utc_time_string
 
 # Placeholder values that LLM may send instead of actual merchantId
@@ -270,7 +269,7 @@ def sanitize_merchant_id(merchant_id_from_payload: str, mid_from_meta: str) -> s
     """
     # Check if payload merchantId is a placeholder value
     if merchant_id_from_payload in MERCHANT_ID_PLACEHOLDERS:
-        logger.info(f"merchantId from payload '{merchant_id_from_payload}' is a placeholder, using meta_info value: {mid_from_meta}")
+        logger.info("merchantId from payload is a placeholder, using meta_info value")
         return mid_from_meta
     return merchant_id_from_payload or mid_from_meta
 

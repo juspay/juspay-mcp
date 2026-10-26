@@ -68,12 +68,12 @@ def main(host: str, port: int, mode: str):
     
     async def handle_sse_connection(request):
         """Handles a single client SSE connection and runs the MCP session."""
-        logging.info(f"New SSE connection from: {request.client} - {request.method} {request.url.path}")
+        logging.info(f"New SSE connection: {request.method} {request.url.path}")
         
         async with sse_transport_handler.connect_sse(
             request.scope, request.receive, request._send
         ) as streams:
-            logging.info(f"MCP Session starting for {request.client}")
+            logging.info("MCP Session starting")
             try:
                 await app.run(
                     streams[0],
@@ -81,14 +81,14 @@ def main(host: str, port: int, mode: str):
                     app.create_initialization_options()
                 )
             except Exception as e:
-                logging.error(f"Error during MCP session for {request.client}: {e}")
+                logging.error(f"Error during MCP session: {type(e).__name__}")
             finally:
-                logging.info(f"MCP Session ended for {request.client}")
+                logging.info("MCP Session ended")
 
     async def handle_streamable_http(request):
         """Handles StreamableHTTP requests."""
         
-        logging.info(f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}")
+        logging.info(f"New StreamableHTTP request: {request.method} {request.url.path}")
 
         await streamable_session_manager.handle_request(
             request.scope, request.receive, request._send

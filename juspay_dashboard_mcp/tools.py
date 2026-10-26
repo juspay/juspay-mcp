@@ -17,6 +17,7 @@ from juspay_dashboard_mcp.api import *
 from juspay_dashboard_mcp.config import JUSPAY_DASHBOARD_IGNORE_TOOL
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
+from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
 
@@ -919,7 +920,7 @@ async def list_my_tools() -> list[types.Tool]:
 async def handle_tool_calls(
     name: str, arguments: dict, meta_info: dict = None
 ) -> list[types.TextContent]:
-    logger.info(f"Tool called: {name} with arguments: {arguments} and meta_info: {meta_info}")
+    logger.info(f"Tool called: {name}")
     try:
         current_meta_info = arguments.get("juspay_meta_info", meta_info or {})
 
@@ -967,5 +968,5 @@ async def handle_tool_calls(
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
-        logger.error(f"Error in tool execution: {e}")
+        logger.error(f"Error in tool execution: {safe_exc(e)}")
         return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]

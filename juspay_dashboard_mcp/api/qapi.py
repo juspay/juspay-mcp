@@ -23,6 +23,7 @@ from juspay_dashboard_mcp.api_schema.qapi import (
     QApiErrorResponse,
     QApiPayload,
 )
+from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
 
         return utc_time.strftime(format)
     except Exception as e:
-        logging.error(f"Error converting ist to utc: {str(e)}")
+        logging.error(f"Error converting ist to utc: {safe_exc(e)}")
         # If it's already a datetime, try to return a formatted string
         if isinstance(ist_time_string, datetime):
             return ist_time_string.strftime(format)
@@ -89,7 +90,7 @@ def utc_to_ist(utc_time_string: str) -> str:
         ist_time = utc_time + ist_offset
         return ist_time.strftime("%Y-%m-%dT%H:%M:%SZ")
     except Exception as e:
-        logging.error(f"Error converting utc to ist: {str(e)}")
+        logging.error(f"Error converting utc to ist: {safe_exc(e)}")
         return utc_time_string
 
 
@@ -115,7 +116,7 @@ def convert_utc_to_ist_in_qapi_response(
                 )
         return response_json
     except Exception as e:
-        logging.error(f"Error converting {time_field} in JSON response: {str(e)}")
+        logging.error(f"Error converting {time_field} in JSON response: {safe_exc(e)}")
         return response_json
 
 
@@ -169,7 +170,6 @@ def call_query_api(payload: QApiPayload) -> dict:
             )
 
         # Call the internal analytics API
-        logging.debug(f"QAPI Call: Sending payload: {serialized_payload}")
         web_login_token = os.getenv("JUSPAY_WEB_LOGIN_TOKEN")
         response = requests.post(
             "https://portal.juspay.in/api/q/query",
@@ -179,7 +179,7 @@ def call_query_api(payload: QApiPayload) -> dict:
                 "Content-Type": "application/json",
             },
         )
-        logging.info(f"QAPI Response Raw (IST expected): {response.text}")
+        logging.info(f"QAPI Response: status={response.status_code} bytes={len(response.content)}")
         response.raise_for_status()  # Raise exception for HTTP errors
 
         # Parse JSONL response
@@ -190,7 +190,7 @@ def call_query_api(payload: QApiPayload) -> dict:
         )
         return validated_response.dict()
     except Exception as e:
-        logging.error(f"Error calling query API: {str(e)}")
+        logging.error(f"Error calling query API: {safe_exc(e)}")
         return QApiErrorResponse(
             error=f"Failed to execute query: {str(e)}",
             payload_attempted=(
@@ -237,6 +237,5 @@ async def q_api(payload: dict) -> QApiResponse:
     )
 
     # Log the payload for debugging
-    logging.debug(f"QAPI Tool: Creating payload: {json.dumps(q_api_payload.model_dump())}")
 
     return await asyncio.to_thread(call_query_api, q_api_payload)

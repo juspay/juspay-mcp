@@ -9,6 +9,7 @@ import logging
 import os
 import json
 from datetime import datetime, timedelta
+from juspay_mcp.log_safe import safe_exc
 
 def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
     """Convert IST time to UTC time.
@@ -41,7 +42,7 @@ def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
 
         return utc_time.strftime(format)
     except Exception as e:
-        logging.error(f"Error converting ist to utc: {str(e)}")
+        logging.error(f"Error converting ist to utc: {safe_exc(e)}")
         # If it's already a datetime, try to return a formatted string
         if isinstance(ist_time_string, datetime):
             return ist_time_string.strftime(format)
@@ -66,7 +67,7 @@ def utc_to_ist(utc_time_string: str) -> str:
         ist_time_string = ist_time.strftime("%Y-%m-%dT%H:%M:%S")
         return ist_time_string
     except Exception as e:
-        logging.error(f"Error converting utc to ist: {str(e)}")
+        logging.error(f"Error converting utc to ist: {safe_exc(e)}")
         return utc_time_string.rstrip("Z")
     
     
@@ -135,8 +136,6 @@ async def list_outages(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/outage/list"
     
-    logging.info(f"[list_outages] Original (IST): startTime={start_time}, endTime={end_time}")
-    logging.info(f"[list_outages] Payload (UTC): {json.dumps(request_data)}")
     
     response =await post(api_url,request_data, None, meta_info)
     

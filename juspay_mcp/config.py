@@ -84,7 +84,7 @@ def get_common_headers_with_meta_info(routing_id: str | None = None, meta_info: 
     merchant_id = None
     
     if meta_info:
-        logger.info(f"Using meta_info for authentication: {meta_info}")
+        logger.info("Using meta_info for authentication")
         # Extract from meta_info if available
         api_key = meta_info.get("juspay_api_key")
         merchant_id = meta_info.get("juspay_merchant_id")
