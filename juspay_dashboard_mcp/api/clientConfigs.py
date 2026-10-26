@@ -6,6 +6,7 @@
 
 import logging
 from juspay_dashboard_mcp.api.utils import call, get_admin_host, sanitize_merchant_id
+from juspay_mcp.log_safe import safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -82,14 +83,13 @@ async def get_client_config(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/ec/v1/clientConfiguration/merchant/{merchant_id}?detailed=true"
 
-    logger.info(f"Fetching client config for merchant_id={merchant_id}, url={api_url}")
+    logger.info(f"Fetching client config from {safe_url(api_url)}")
 
     response = await call(api_url, None, meta_info)
 
     # API returns a list of client config objects
     if isinstance(response, list):
         filtered = [_filter_client_config(item) for item in response]
-        logger.info(f"Filtered client config response: {filtered}")
         return filtered
 
     # Fallback: single object

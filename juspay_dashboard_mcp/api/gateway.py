@@ -153,23 +153,17 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
         Exception: If the API call fails.
     """
     # DEBUG: Log incoming payload and meta_info
-    logger.info(f"[DEBUG] get_gateway_details - Incoming payload: {payload}")
-    logger.info(f"[DEBUG] get_gateway_details - Incoming meta_info: {meta_info}")
     
     host, isadmin = await get_admin_host(meta_info=meta_info)
-    logger.info(f"[DEBUG] get_gateway_details - host: {host}, isadmin: {isadmin}")
     
     mga_id = payload.pop("mga_id", None)
     merchant_id_from_payload = payload.get("merchantId")
-    logger.info(f"[DEBUG] get_gateway_details - merchantId from payload: {merchant_id_from_payload}")
     
     # Get merchantId from meta_info for authorization check
     mid_from_meta = None
     if meta_info:
         token_response = meta_info.get("token_response", {})
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    logger.info(f"[DEBUG] get_gateway_details - merchantId from meta_info: {mid_from_meta}")
-    logger.info(f"[DEBUG] get_gateway_details - token_response: {meta_info.get('token_response', {}) if meta_info else 'None'}")
     
     # Authorization check - non-admin can't query other merchants
     if not isadmin and merchant_id_from_payload and mid_from_meta and merchant_id_from_payload != mid_from_meta:
@@ -177,14 +171,12 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     
     # Use sanitize_merchant_id to filter out placeholder values
     merchant_id = sanitize_merchant_id(merchant_id_from_payload, mid_from_meta)
-    logger.info(f"[DEBUG] get_gateway_details - Final merchantId: {merchant_id}")
         
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
     
     # Build request data with merchantId
     request_data = {"merchantId": merchant_id}
-    logger.info(f"[DEBUG] get_gateway_details - Final request_data: {request_data}")
     
     # Conditional URL based on admin status
     if isadmin:
@@ -192,7 +184,6 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/gateway/{mga_id}"
     
-    logger.info(f"[DEBUG] get_gateway_details - Final api_url: {api_url}")
 
     return await post(api_url, request_data, None, meta_info)
 

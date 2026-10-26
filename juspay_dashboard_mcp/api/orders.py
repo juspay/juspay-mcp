@@ -14,6 +14,7 @@ import os
 import dotenv
 import re
 import logging
+from juspay_mcp.log_safe import safe_exc
 
 dotenv.load_dotenv()
 
@@ -49,7 +50,7 @@ def _apply_aliases(data: Dict[str, Any]) -> Dict[str, Any]:
                         if orig in item:
                             value = item.pop(orig)  # Remove original
                             item[alias] = value     # Add with new name
-                            logger.info(f"[FIELD_ALIAS] Replaced: {key}.{orig} -> {alias} (value={value})")
+                            logger.info(f"[FIELD_ALIAS] Replaced: {key}.{orig} -> {alias}")
     return data
 
 
@@ -218,7 +219,7 @@ async def find_orders(payload: dict, meta_info: dict = None) -> dict:
                 domain = determine_domain_from_filters(flat_filters)
                 logging.info(f"Domain aliasing: 'findorders' resolved to '{domain}' based on filters")
             except Exception as e:
-                logging.warning(f"Failed to parse flatFilters for domain resolution: {e}")
+                logging.warning(f"Failed to parse flatFilters for domain resolution: {safe_exc(e)}")
                 domain = "txnsELS"  
         else:
             domain = "ordersELS"  
@@ -442,13 +443,13 @@ async def get_order_details(payload: dict, meta_info: dict) -> dict:
     
     # Attempt 1: Try original ID as-is
     try:
-        logging.info(f"[Attempt 1] Trying original ID: {order_id}")
+        logging.info("[Attempt 1] Trying original ID")
         result = await post(api_url, request_data, None, meta_info)
         return _apply_aliases(result)
     
     except Exception as e:
         error_str = str(e)
-        logging.warning(f"[Attempt 1] Failed with original ID: {error_str}")
+        logging.warning("[Attempt 1] Failed with original ID")
         
         # Only retry if it's a "not found" type error
         if "does not exist" in error_str or "invalid_request_error" in error_str:
@@ -460,28 +461,27 @@ async def get_order_details(payload: dict, meta_info: dict) -> dict:
                 logging.info("No extraction candidates generated, re-raising original error")
                 raise e
             
-            logging.info(f"Generated {len(candidates)} extraction candidates: {candidates}")
+            logging.info(f"Generated {len(candidates)} extraction candidates")
             
             # Try each candidate
             for idx, candidate in enumerate(candidates, start=2):
                 try:
-                    logging.info(f"[Attempt {idx}] Trying candidate: '{candidate}'")
+                    logging.info(f"[Attempt {idx}] Trying candidate")
                     if isadmin:
                         retry_url = f"{host}/ec/v1/admin/orders/{candidate}"
                     else:
                         retry_url = f"{host}/api/ec/v1/orders/{candidate}"
                     result = await post(retry_url, request_data, None, meta_info)
-                    logging.info(f"✓ SUCCESS with candidate: '{candidate}' (extracted from '{order_id}')")
+                    logging.info("✓ SUCCESS with extracted candidate")
                     return _apply_aliases(result)
                 
                 except Exception as retry_error:
                     retry_error_str = str(retry_error)
-                    logging.debug(f"[Attempt {idx}] Candidate '{candidate}' failed: {retry_error_str}")
+                    logging.debug(f"[Attempt {idx}] Candidate failed: {safe_exc(retry_error)}")
                     continue
             
             # All extraction attempts failed
-            logging.error(f"All {len(candidates) + 1} attempts failed for ID: {order_id}")
-            logging.error(f"Tried: ['{order_id}'] + {candidates}")
+            logging.error(f"All {len(candidates) + 1} attempts failed")
             raise e  # Re-raise original error
         
         else:

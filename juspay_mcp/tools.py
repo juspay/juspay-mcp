@@ -15,6 +15,7 @@ from juspay_mcp import response_schema
 from juspay_mcp.api import *
 import juspay_mcp.api_schema as api_schema
 import juspay_mcp.utils as util
+from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
 app = Server("juspay")
@@ -210,7 +211,7 @@ async def list_my_tools() -> list[types.Tool]:
 
 @app.call_tool()
 async def handle_tool_calls(name: str, arguments: dict, meta_info: dict = None) -> list[types.TextContent]:
-    logger.info(f"Calling tool: {name} with args: {arguments} and meta_info: {meta_info}")
+    logger.info(f"Calling tool: {name}")
     try:
         # Extract meta_info from arguments if present, or use provided meta_info
         current_meta_info = arguments.get("juspay_meta_info", meta_info or {})
@@ -261,5 +262,5 @@ async def handle_tool_calls(name: str, arguments: dict, meta_info: dict = None) 
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
-        logger.error(f"Error executing tool {name}: {e}")
+        logger.error(f"Error executing tool {name}: {safe_exc(e)}")
         return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]

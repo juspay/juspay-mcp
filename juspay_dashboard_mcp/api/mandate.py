@@ -6,6 +6,7 @@
 
 import logging
 from juspay_dashboard_mcp.api.utils import call, get_admin_host
+from juspay_mcp.log_safe import safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ async def get_mandate_details(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/mandateDetails/{mandate_id}"
 
-    logger.info(f"Fetching mandate details for mandate_id={mandate_id}, url={api_url}")
+    logger.info(f"Fetching mandate details from {safe_url(api_url)}")
 
     response = await call(api_url, None, meta_info)
 
@@ -77,7 +78,6 @@ async def get_mandate_details(payload: dict, meta_info: dict = None) -> dict:
     if isinstance(response, dict):
         details = response.get("mandateDetails", response)
         filtered = {k: v for k, v in details.items() if k in MANDATE_DETAIL_FIELDS}
-        logger.info(f"Filtered mandate response: {filtered}")
         return filtered
 
     return response
