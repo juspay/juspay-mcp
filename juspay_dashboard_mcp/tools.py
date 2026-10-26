@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 app = Server("juspay-dashboard")
 
 from contextvars import ContextVar
+from juspay_mcp.log_safe import safe_exc
 juspay_request_credentials: ContextVar[dict | None] = ContextVar('juspay_request_credentials', default=None)
 
 def set_juspay_request_credentials(credentials):
@@ -978,7 +979,7 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
-        logger.error(f"Error in tool execution: {e}")
+        logger.error(f"Error in tool execution: {safe_exc(e)}")
         await _safe_record_tool_call(
             tool=name,
             status="error",

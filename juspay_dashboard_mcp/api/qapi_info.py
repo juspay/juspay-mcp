@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+import ast
 import hashlib
 import json
 import logging
@@ -15,6 +16,7 @@ import httpx
 
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
 from juspay_dashboard_mcp.api.utils import get_juspay_credentials
+from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +176,7 @@ async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
             dimensions = raw.get("dimension", [])
             filters = raw.get("filter", [])
     except Exception as e:
-        logger.error(f"qapi_info: API call failed for domain={domain}: {e}")
+        logger.error(f"qapi_info: API call failed for domain={domain}: {safe_exc(e)}")
 
     metrics = DOMAIN_METRICS.get(domain, [])
     schema_signature = generate_schema_signature(domain, dimensions, metrics)
@@ -230,7 +232,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
             raw = resp.json()
             info_fields = set(raw.get("dimension", [])) | set(raw.get("filter", []))
     except Exception as e:
-        logger.error(f"qapi_field_value_discovery: failed to fetch info for domain={domain}: {e}")
+        logger.error(f"qapi_field_value_discovery: failed to fetch info for domain={domain}: {safe_exc(e)}")
 
     valid_metrics = set(DOMAIN_METRICS.get(domain, []))
     ts_col = DOMAIN_TIMESTAMP_COLUMNS.get(domain, DOMAIN_TIMESTAMP_COLUMNS["default"])
@@ -333,7 +335,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            logger.error(f"qapi_field_value_discovery: failed to fetch values for {dimension}: {e}")
+            logger.error(f"qapi_field_value_discovery: failed to fetch values for {dimension}: {safe_exc(e)}")
 
         if not candidates:
             dim_results = [[] for _ in (queries or [None])]
@@ -353,9 +355,9 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
                 for val in lst:
                     if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
                         try:
-                            parsed = eval(val)  # safe: known Q-API list format
+                            parsed = ast.literal_eval(val)  # literals only, never executes code
                             items = parsed if isinstance(parsed, list) else [val]
-                        except Exception:
+                        except (ValueError, SyntaxError):
                             items = [val]
                     else:
                         items = [val]

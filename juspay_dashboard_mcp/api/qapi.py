@@ -26,6 +26,7 @@ from juspay_dashboard_mcp.api_schema.qapi import (
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
 from juspay_dashboard_mcp.api.utils import get_juspay_credentials
 from juspay_dashboard_mcp.api.qapi_info import validate_schema_signature
+from juspay_mcp.log_safe import safe_exc, safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ async def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
         headers["Content-Type"] = "application/json"
 
         api_url = f"{JUSPAY_BASE_URL}/api/q/query"
-        logging.info(f"QAPI Call: url={api_url} payload={serialized_payload}")
+        logging.info(f"QAPI Call: url={safe_url(api_url)}")
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
@@ -93,15 +94,15 @@ async def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
                 content=json_dumps_with_datetime(serialized_payload),
                 headers=headers,
             )
-        logging.info(f"QAPI Response Raw: {response.text}")
+        logging.info(f"QAPI Response: status={response.status_code} bytes={len(response.content)}")
         response.raise_for_status()
 
         response_json = [json.loads(line) for line in response.text.splitlines()]
         validated_response = QApiSuccessResponse.model_validate(response_json)
-        logging.info(f"QAPI Return: Parsed response: {validated_response}")
+        logging.info(f"QAPI Return: parsed {len(response_json)} response line(s)")
         return validated_response.dict()
     except Exception as e:
-        logging.error(f"Error calling query API: {str(e)}")
+        logging.error(f"Error calling query API: {safe_exc(e)}")
         return QApiErrorResponse(
             error=f"Failed to execute query: {str(e)}",
             payload_attempted=serialized_payload or payload.model_dump(),
@@ -159,6 +160,5 @@ async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
     )
 
     # Log the payload for debugging
-    logging.debug(f"QAPI Tool: Creating payload: {json.dumps(q_api_payload.model_dump())}")
 
     return await call_query_api(q_api_payload, meta_info)

@@ -20,6 +20,7 @@ import httpx
 
 from .config import OAuthConfig
 from .context import PortalUserInfo
+from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class PortalClient:
                 headers={"Content-Type": "application/json"},
             )
         except httpx.HTTPError as e:
-            logger.error("portal token exchange failed: %s", e)
+            logger.error("portal token exchange failed: %s", safe_exc(e))
             return None
 
         if resp.status_code >= 400:
@@ -112,7 +113,7 @@ class PortalClient:
                 headers={"Content-Type": "application/json"},
             )
         except httpx.HTTPError as e:
-            logger.error("portal refresh failed: %s", e)
+            logger.error("portal refresh failed: %s", safe_exc(e))
             return None
 
         if resp.status_code >= 400:
@@ -156,7 +157,7 @@ class PortalClient:
                 "DELETE", url, json=body, headers=headers, timeout=10.0
             )
         except httpx.HTTPError as e:
-            logger.error("portal revoke failed: %s", e)
+            logger.error("portal revoke failed: %s", safe_exc(e))
             return False
         if resp.status_code >= 400:
             logger.warning(
@@ -180,7 +181,7 @@ class PortalClient:
                 headers={"Authorization": token},
             )
         except httpx.HTTPError as e:
-            logger.error("portal validate failed: %s", e)
+            logger.error("portal validate failed: %s", safe_exc(e))
             return None
 
         if resp.status_code >= 400:

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 app = Server("juspay")
 
 from contextvars import ContextVar
+from juspay_mcp.log_safe import safe_exc
 juspay_request_credentials: ContextVar[dict | None] = ContextVar('juspay_request_credentials', default=None)
 
 def set_juspay_request_credentials(credentials):
@@ -307,7 +308,7 @@ async def list_my_tools() -> list[types.Tool]:
 
 @app.call_tool()
 async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
-    logger.info(f"Calling tool: {name} with args: {arguments}")
+    logger.info(f"Calling tool: {name}")
     try:
         # Import here to avoid circular imports
         from juspay_mcp.api.utils import set_juspay_credentials
@@ -377,5 +378,5 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
-        logger.error(f"Error executing tool {name}: {e}")
+        logger.error(f"Error executing tool {name}: {safe_exc(e)}")
         return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]
