@@ -207,7 +207,10 @@ def main(host: str, port: int, mode: str):
                     from juspay_mcp.tools import set_juspay_request_credentials
                     juspay_creds = getattr(request.state, "juspay_credentials", None)
                     set_juspay_request_credentials(juspay_creds)
-                # docs: no credentials needed
+                elif active_app_key == "docs":
+                    # No credentials; the edge may name this tenant's docs site.
+                    from juspay_docs_mcp.server import set_docs_base_url
+                    set_docs_base_url(request.headers.get("x-docs-base-url"))
 
                 async with transport.connect_sse(
                     request.scope, request.receive, request._send
@@ -268,7 +271,10 @@ def main(host: str, port: int, mode: str):
                     from juspay_mcp.tools import set_juspay_request_credentials
                     juspay_creds = getattr(request.state, "juspay_credentials", None)
                     set_juspay_request_credentials(juspay_creds)
-                # docs: no credentials needed
+                elif active_app_key == "docs":
+                    # No credentials; the edge may name this tenant's docs site.
+                    from juspay_docs_mcp.server import set_docs_base_url
+                    set_docs_base_url(request.headers.get("x-docs-base-url"))
 
                 # session_manager writes the full HTTP response directly to send
                 await session_manager.handle_request(request.scope, request.receive, request._send)
