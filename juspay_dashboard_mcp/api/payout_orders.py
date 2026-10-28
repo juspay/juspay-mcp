@@ -13,6 +13,7 @@ import os
 import dotenv
 import re
 import logging
+from juspay_mcp.log_safe import safe_url
 
 dotenv.load_dotenv()
 
@@ -194,7 +195,7 @@ async def list_payout_orders(payload: dict, meta_info: dict = None) -> dict:
     query_string = urlencode(query_params)
     full_url = f"{api_url}?{query_string}"
 
-    logging.info(f"Calling payout orders API: {full_url}")
+    logging.info(f"Calling payout orders API: {safe_url(full_url)}")
     
     # Make GET request (no body needed)
     additional_headers = make_payout_additional_headers(meta_info)

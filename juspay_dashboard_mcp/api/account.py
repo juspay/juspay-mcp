@@ -14,6 +14,7 @@ from juspay_dashboard_mcp.api.utils import (
     get_juspay_credentials,
 )
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL
+from juspay_mcp.log_safe import safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ async def get_merchant_details(payload: dict = None, meta_info: dict = None) -> 
     headers = {"Authorization": token}
 
     async with httpx.AsyncClient(timeout=10.0) as client:
-        logger.info(f"GET {url}")
+        logger.info(f"GET {safe_url(url)}")
         resp = await client.get(url, headers=headers)
         resp.raise_for_status()
         data = resp.json()

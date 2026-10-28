@@ -16,6 +16,7 @@ from juspay_ai_studio_mcp import response_schema
 from juspay_ai_studio_mcp.api import *
 import juspay_ai_studio_mcp.api_schema as api_schema
 import juspay_ai_studio_mcp.utils as util
+from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
 
@@ -194,5 +195,5 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
         return [types.TextContent(type="text", text=json.dumps(response))]
 
     except Exception as e:
-        logger.error(f"Error in AI Studio tool execution: {e}")
+        logger.error(f"Error in AI Studio tool execution: {safe_exc(e)}")
         return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]

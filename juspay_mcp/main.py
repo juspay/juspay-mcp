@@ -212,7 +212,7 @@ def main(host: str, port: int, mode: str):
                 async with transport.connect_sse(
                     request.scope, request.receive, request._send
                 ) as streams:
-                    logging.info(f"MCP Session starting for {request.client}")
+                    logging.info("MCP Session starting")
                     try:
                         await active_app.run(
                             streams[0],
@@ -221,10 +221,10 @@ def main(host: str, port: int, mode: str):
                         )
                     except Exception as e:
                         logging.error(
-                            f"Error during MCP session for {request.client}: {e}"
+                            f"Error during MCP session: {type(e).__name__}"
                         )
                     finally:
-                        logging.info(f"MCP Session ended for {request.client}")
+                        logging.info("MCP Session ended")
             finally:
                 clear_analytics_context()
 
