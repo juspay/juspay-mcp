@@ -25,6 +25,19 @@ def get_tenant_account_id() -> str | None:
     """Get the resolved tenantAccountId from the current context."""
     return tenant_account_id.get()
 
+
+token_merchant_id: ContextVar[str | None] = ContextVar("token_merchant_id", default=None)
+
+
+def set_token_merchant_id(value: str | None):
+    """Set the merchantId the validated token belongs to, for the current context."""
+    token_merchant_id.set(value)
+
+
+def get_token_merchant_id() -> str | None:
+    """Get the merchantId the validated token belongs to, if known."""
+    return token_merchant_id.get()
+
 dotenv.load_dotenv()
 
 JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
@@ -58,6 +71,10 @@ def verify_dynamic_credentials(juspay_creds: dict):
 def get_base64_auth():
     """Returns the base64 encoded auth string."""
     pass
+
+
+# Header names a tool call must not be able to set; see get_common_headers.
+MODEL_BLOCKED_HEADER_KEYS = ("cookie", "tenant_id", "x-tenant-id", "x-source-id")
 
 
 def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict = None):
@@ -97,20 +114,13 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
     # for dict bodies — guard accordingly so list payloads no longer crash
     # with `'list' object has no attribute 'get'`.
     if isinstance(payload, dict):
-        if resolved_tenant_id:
-            default_headers["x-tenant-id"] = resolved_tenant_id
-            payload.pop("tenant_id", None)
-        elif payload.get("tenant_id"):
-            default_headers["x-tenant-id"] = payload.pop("tenant_id")
+        # Tool arguments never set these headers: drop them (so they don't leak
+        # into the request body either) and use only the trusted request context.
+        for key in MODEL_BLOCKED_HEADER_KEYS:
+            payload.pop(key, None)
 
-        if payload.get("cookie"):
-            default_headers["cookie"] = payload.pop("cookie")
-
-        if payload.get("x-source-id"):
-            default_headers["x-source-id"] = payload.pop("x-source-id")
-        else:
-            default_headers["x-source-id"] = "juspay-mcp"
-    else:
-        default_headers["x-source-id"] = "juspay-mcp"
+    if resolved_tenant_id:
+        default_headers["x-tenant-id"] = resolved_tenant_id
+    default_headers["x-source-id"] = "juspay-mcp"
 
     return default_headers

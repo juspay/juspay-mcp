@@ -18,6 +18,8 @@ import os
 
 from starlette.requests import Request
 
+from .request_guards import trusted_base_url
+
 AI_STUDIO_MCP_TYPES = {"PP_AI_STUDIO", "AI_STUDIO"}
 
 # Keys that represent an actual credential, as opposed to the edge-routing
@@ -51,7 +53,7 @@ def extract_header_credentials(request: Request) -> dict:
         or request.headers.get("JUSPAY_AI_STUDIO_TOKEN")
     )
 
-    base_url_override = request.headers.get("x-base-url")
+    base_url_override = trusted_base_url(request.headers.get("x-base-url"), "x-base-url")
     tenant_id_override = request.headers.get("x-tenant-id")
 
     creds: dict = {}

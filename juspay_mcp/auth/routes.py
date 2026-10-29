@@ -133,6 +133,25 @@ def _redirect_uri_allowed(cfg: OAuthConfig, uri: object) -> bool:
     return uri in cfg.allowed_redirect_uris
 
 
+def _state_cookie_name(cfg: OAuthConfig, state: str) -> tuple[str, bool]:
+    """Cookie that ties `state` to the browser that called /oauth/authorize.
+
+    One cookie per state so parallel logins in the same browser don't clobber
+    each other. `__Host-` needs Secure, so it is only used on https deployments.
+    """
+    secure = cfg.mcp_server_url.startswith("https://")
+    return f"{'__Host-' if secure else ''}oauth_state_{state[:16]}", secure
+
+
+def _granted_scope(cfg: OAuthConfig, requested: str | None) -> str:
+    """Requested scopes that this server supports; all supported scopes if none were requested."""
+    if requested:
+        granted = [sc for sc in requested.split() if sc in cfg.scopes_supported]
+        if granted:
+            return " ".join(granted)
+    return " ".join(cfg.scopes_supported)
+
+
 # ---- Handlers ----------------------------------------------------------------
 
 
@@ -269,8 +288,11 @@ def build_routes(
                 "invalid_request", "redirect_uri does not match a URI registered for this client"
             )
 
+        # Server-generated, so a client can't choose or collide with another
+        # flow's state. Bound to this browser by a cookie checked in /oauth/callback.
+        portal_state = secrets.token_urlsafe(32)
         await store.put_state(
-            state,
+            portal_state,
             StateData(
                 redirect_uri=redirect_uri,
                 client_id=client_id,
@@ -279,6 +301,7 @@ def build_routes(
                 code_challenge=code_challenge,
                 code_challenge_method=code_challenge_method,
                 created_at=time.time(),
+                client_state=state,
             ),
         )
 
@@ -290,13 +313,25 @@ def build_routes(
             "client_id": tcfg.upstream_client_id,
             "redirect_uri": f"{tcfg.mcp_server_url}/oauth/callback",
             "scope": "user_access",
-            "state": state,
+            "state": portal_state,
         }
         portal_url = f"{tcfg.portal_base_url}?{urlencode(portal_params)}"
-        return RedirectResponse(portal_url, status_code=302)
+        response = RedirectResponse(portal_url, status_code=302)
+        cookie_name, secure = _state_cookie_name(tcfg, portal_state)
+        response.set_cookie(
+            cookie_name,
+            portal_state,
+            max_age=tcfg.state_ttl_seconds,
+            path="/",
+            secure=secure,
+            httponly=True,
+            samesite="lax",
+        )
+        return response
 
     # ---------- /oauth/callback ----------------------------------------------
     async def callback(request: Request) -> Response:
+        tcfg = resolve_tenant(cfg, request)
         q = request.query_params
         code = q.get("code")
         state = q.get("state")
@@ -310,8 +345,18 @@ def build_routes(
         if state_data is None:
             return _bad_request("invalid_request", "Invalid or expired state")
 
+        # The browser finishing the login must be the one that started it.
+        cookie_name, _ = _state_cookie_name(tcfg, state)
+        cookie_value = request.cookies.get(cookie_name)
+        if not cookie_value or not secrets.compare_digest(cookie_value.encode(), state.encode()):
+            return _bad_request("invalid_request", "state does not match this browser session")
+        if state_data.callback_done:
+            return _bad_request("invalid_request", "state has already been used")
+
         target = state_data.redirect_uri
-        params: dict[str, str] = {"state": state}
+        params: dict[str, str] = {}
+        if state_data.client_state:
+            params["state"] = state_data.client_state
         if error:
             params["error"] = error
             if error_description:
@@ -319,12 +364,15 @@ def build_routes(
             await store.delete_state(state)
         elif code:
             params["code"] = code
+            state_data.callback_done = True
             await store.bind_code(code, state)
         else:
             return _bad_request("invalid_request", "Missing both code and error in callback")
 
         sep = "&" if "?" in target else "?"
-        return RedirectResponse(f"{target}{sep}{urlencode(params)}", status_code=302)
+        response = RedirectResponse(f"{target}{sep}{urlencode(params)}", status_code=302)
+        response.delete_cookie(cookie_name, path="/")
+        return response
 
     # ---------- /oauth/token --------------------------------------------------
     async def token(request: Request) -> Response:
@@ -358,6 +406,8 @@ def build_routes(
             state_data = await store.get_state(bound_state) if bound_state else None
             if state_data is None:
                 return _bad_request("invalid_grant", "Unknown or expired authorization code")
+            if client_id != state_data.client_id:
+                return _bad_request("invalid_grant", "authorization code was not issued to this client")
             if redirect_uri != state_data.redirect_uri:
                 return _bad_request("invalid_grant", "redirect_uri does not match the authorize request")
 
@@ -367,6 +417,13 @@ def build_routes(
                 code_verifier, state_data.code_challenge
             ):
                 return _bad_request("invalid_grant", "Invalid code_verifier")
+
+            # Single use: take the code before the (slow) Portal call so a parallel
+            # request with the same code is rejected instead of also reaching Portal.
+            consumed_state = await store.consume_code(code)
+            if consumed_state is None:
+                return _bad_request("invalid_grant", "Authorization code has already been used")
+            await store.delete_state(consumed_state)
 
             # Portal only recognizes our own real credential, not the per-client one.
             token_resp = await portal.exchange_code(
@@ -378,9 +435,11 @@ def build_routes(
             if token_resp is None:
                 return _bad_request("invalid_grant", "Portal token exchange failed")
 
-            if bound_state:
-                await store.delete_state(bound_state)
-                await store.delete_code(code)
+            granted_scope = _granted_scope(tcfg, state_data.scope)
+            if token_resp.refresh_token:
+                await client_store.bind_refresh_token(
+                    client_id, token_resp.refresh_token, granted_scope
+                )
 
             return JSONResponse(
                 {
@@ -388,7 +447,7 @@ def build_routes(
                     "refresh_token": token_resp.refresh_token,
                     "expires_in": token_resp.expires_in,
                     "token_type": "Bearer",
-                    "scope": " ".join(tcfg.scopes_supported),
+                    "scope": granted_scope,
                 }
             )
 
@@ -396,6 +455,10 @@ def build_routes(
             refresh_token = body.get("refresh_token")
             if not refresh_token:
                 return _bad_request("invalid_request", "Missing refresh_token")
+            # Only the client the token was issued to may use it.
+            granted_scope = await client_store.get_refresh_token_scope(client_id, refresh_token)
+            if granted_scope is None:
+                return _bad_request("invalid_grant", "refresh_token was not issued to this client")
             token_resp = await portal.refresh(
                 tcfg.upstream_client_id,
                 tcfg.upstream_client_secret,
@@ -404,13 +467,17 @@ def build_routes(
             )
             if token_resp is None:
                 return _bad_request("invalid_grant", "Portal refresh failed")
+            if token_resp.refresh_token:
+                await client_store.bind_refresh_token(
+                    client_id, token_resp.refresh_token, granted_scope
+                )
             return JSONResponse(
                 {
                     "access_token": token_resp.access_token,
                     "refresh_token": token_resp.refresh_token,
                     "expires_in": token_resp.expires_in,
                     "token_type": "Bearer",
-                    "scope": " ".join(tcfg.scopes_supported),
+                    "scope": granted_scope,
                 }
             )
 

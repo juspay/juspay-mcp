@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_admin_host, call, ist_to_utc, sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, get_admin_host, call, ist_to_utc, sanitize_merchant_id, assert_merchant_access
 from urllib.parse import urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
@@ -94,8 +94,7 @@ async def list_orders_v4(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access orders for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access orders for this merchantId")
     
     date_from_str = payload.get("dateFrom")
     date_to_str = payload.get("dateTo")
@@ -291,8 +290,7 @@ async def get_order_details(payload: dict, meta_info: dict) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access order details for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access order details for this merchantId")
     
     # Build request data
     request_data = {}

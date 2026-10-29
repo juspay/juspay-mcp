@@ -18,6 +18,7 @@ implementation later by matching this interface.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import time
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -30,12 +31,24 @@ class ClientData:
     client_name: str
     created_at: float
     last_used_at: float
+    # sha256(refresh_token) -> scope granted with it. Only hashes are kept, and
+    # only for tokens this server issued to this client.
+    refresh_tokens: dict[str, str] = field(default_factory=dict)
+
+
+_MAX_REFRESH_TOKENS_PER_CLIENT = 50
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 class ClientStore(Protocol):
     async def put_client(self, client_id: str, data: ClientData) -> None: ...
     async def get_client(self, client_id: str) -> ClientData | None: ...
     async def touch_client(self, client_id: str) -> None: ...
+    async def bind_refresh_token(self, client_id: str, refresh_token: str, scope: str) -> None: ...
+    async def get_refresh_token_scope(self, client_id: str, refresh_token: str) -> str | None: ...
 
 
 class MemoryClientStore:
@@ -105,3 +118,20 @@ class MemoryClientStore:
             data = self._clients.get(client_id)
             if data is not None:
                 data.last_used_at = time.time()
+
+    async def bind_refresh_token(self, client_id: str, refresh_token: str, scope: str) -> None:
+        async with self._lock:
+            data = self._clients.get(client_id)
+            if data is None:
+                return
+            data.refresh_tokens[_hash_token(refresh_token)] = scope
+            while len(data.refresh_tokens) > _MAX_REFRESH_TOKENS_PER_CLIENT:
+                data.refresh_tokens.pop(next(iter(data.refresh_tokens)))
+
+    async def get_refresh_token_scope(self, client_id: str, refresh_token: str) -> str | None:
+        """Scope granted with `refresh_token`, or None if it wasn't issued to `client_id`."""
+        async with self._lock:
+            data = self._clients.get(client_id)
+            if data is None:
+                return None
+            return data.refresh_tokens.get(_hash_token(refresh_token))

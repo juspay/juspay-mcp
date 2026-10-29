@@ -6,9 +6,22 @@
 
 import json
 
-from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id, mask_fields, paginate_response
+from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id, assert_merchant_access, mask_fields, paginate_response
 
-GENERAL_SETTINGS_SECRET_KEYS = {"webhookpassword", "cardencodingkey", "paymentresponsehashkey"}
+# Substrings (matched case-insensitively against each key), see mask_fields.
+GENERAL_SETTINGS_SECRET_KEYS = {
+    "password",
+    "secret",
+    "token",
+    "apikey",
+    "api_key",
+    "hashkey",
+    "encodingkey",
+    "signaturekey",
+    "privatekey",
+    "webhookusername",
+    "authorization",
+}
 
 async def get_conflict_settings(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -42,8 +55,7 @@ async def get_conflict_settings(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access conflict settings for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access conflict settings for this merchantId")
     
     # Build request data
     request_data = {}
@@ -92,8 +104,7 @@ async def get_general_settings(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access general settings for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access general settings for this merchantId")
     
     # Build request data
     request_data = {}
@@ -146,8 +157,7 @@ async def get_mandate_settings(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access mandate settings for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access mandate settings for this merchantId")
     
     # Build request data
     request_data = {}
@@ -203,8 +213,7 @@ async def get_priority_logic_settings(payload: dict, meta_info: dict = None) -> 
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access priority logic settings for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access priority logic settings for this merchantId")
     
     # Build request data
     request_data = {}
@@ -267,8 +276,7 @@ async def get_routing_settings(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access routing settings for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access routing settings for this merchantId")
     
     # Build request data
     request_data = {}
@@ -317,8 +325,7 @@ async def get_webhook_settings(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access webhook settings for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access webhook settings for this merchantId")
     
     # Build request data
     request_data = {}
@@ -333,7 +340,8 @@ async def get_webhook_settings(payload: dict, meta_info: dict = None) -> dict:
     else:
         api_url = f"{host}/api/ec/v1/webhook"
 
-    return await post(api_url, request_data, None, meta_info)
+    response = await post(api_url, request_data, None, meta_info)
+    return mask_fields(response, GENERAL_SETTINGS_SECRET_KEYS)
 
 
 async def update_general_settings(payload: dict, meta_info: dict = None):

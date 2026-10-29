@@ -38,6 +38,7 @@ from .config import OAuthConfig
 from .context import OAuthRequestContext, PortalUserInfo, clear_current, set_current
 from .header_creds import extract_header_credentials, has_credential
 from .portal_client import PortalClient
+from .request_guards import trusted_base_url
 from .tenant import BASE_URL_HEADER, resolve as resolve_tenant
 
 logger = logging.getLogger(__name__)
@@ -88,20 +89,6 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
     async def _validate_with_cache(
         self, token: str, cfg: OAuthConfig
     ) -> PortalUserInfo | None:
-        # Dev bypass: useful for curl-driven smoke tests so we don't need a
-        # real Portal token. The token value is configured via env and never
-        # rotates, so it must NEVER be set in production.
-        if cfg.dev_test_token and token == cfg.dev_test_token:
-            return PortalUserInfo(
-                merchant_id=cfg.dev_test_merchant_id,
-                user_id="dev-user",
-                email="dev@example.com",
-                context="MERCHANT",
-                username="dev",
-                tenant_account_id=None,
-                valid_host=None,
-            )
-
         # Keyed by portal too: the same token string must not be treated as
         # validated for a tenant it was never presented to.
         cache_key = f"{cfg.portal_base_url}\n{token}"
@@ -216,7 +203,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
             # juspay_dashboard_mcp/api/utils.py:get_juspay_host_from_api.
             "auth_type": "oauth",
         }
-        base_url_override = request.headers.get(BASE_URL_HEADER)
+        base_url_override = trusted_base_url(request.headers.get(BASE_URL_HEADER), BASE_URL_HEADER)
         tenant_id_override = request.headers.get("x-tenant-id")
         if base_url_override:
             request.state.juspay_credentials["base_url"] = base_url_override

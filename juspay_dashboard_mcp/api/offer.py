@@ -8,7 +8,7 @@ from juspay_dashboard_mcp.api.utils import (
     post,
     call,
     get_admin_host,
-    sanitize_merchant_id
+    sanitize_merchant_id, assert_merchant_access
 )
 
 
@@ -53,8 +53,7 @@ async def get_offer_details(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchant_id") and mid_from_meta and payload.get("merchant_id") != mid_from_meta:
-        raise ValueError("You are not authorized to access offer details for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchant_id"), mid_from_meta, "You are not authorized to access offer details for this merchantId")
     
     # Apply sanitize logic for admin users
     if isadmin:
@@ -118,8 +117,7 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchant_id") and mid_from_meta and payload.get("merchant_id") != mid_from_meta:
-        raise ValueError("You are not authorized to access offers for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchant_id"), mid_from_meta, "You are not authorized to access offers for this merchantId")
     
     # Apply sanitize logic for admin users
     if isadmin:

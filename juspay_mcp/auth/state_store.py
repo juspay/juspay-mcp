@@ -26,6 +26,10 @@ class StateData:
     code_challenge: str | None
     code_challenge_method: str | None
     created_at: float
+    # The `state` the MCP client sent; echoed back to it. The key this row is
+    # stored under is a server-generated value that only goes to Portal.
+    client_state: str | None = None
+    callback_done: bool = False
 
 
 class StateStore(Protocol):
@@ -35,6 +39,7 @@ class StateStore(Protocol):
     async def bind_code(self, code: str, state: str) -> None: ...
     async def lookup_state_by_code(self, code: str) -> str | None: ...
     async def delete_code(self, code: str) -> None: ...
+    async def consume_code(self, code: str) -> str | None: ...
 
 
 class MemoryStateStore:
@@ -107,3 +112,8 @@ class MemoryStateStore:
     async def delete_code(self, code: str) -> None:
         async with self._lock:
             self._code_to_state.pop(code, None)
+
+    async def consume_code(self, code: str) -> str | None:
+        """Atomically remove `code` and return its state; None if already used."""
+        async with self._lock:
+            return self._code_to_state.pop(code, None)
