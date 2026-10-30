@@ -9,6 +9,7 @@ import mcp.types as types
 import inspect
 import logging
 from mcp.server.lowlevel import Server
+from mcp.server.context import ServerRequestContext
 from mcp.server.sse import SseServerTransport
 
 from juspay_mcp import response_schema
@@ -18,7 +19,6 @@ import juspay_mcp.utils as util
 from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
-app = Server("juspay")
 
 AVAILABLE_TOOLS = [
     util.make_api_config(
@@ -198,23 +198,32 @@ AVAILABLE_TOOLS = [
     ),
 ]
 
-@app.list_tools()
-async def list_my_tools() -> list[types.Tool]:
-    return [
-        types.Tool(
-            name=tool["name"],
-            description=tool["description"],
-            inputSchema=tool["schema"],
-        )
-        for tool in AVAILABLE_TOOLS
-    ]
+async def list_my_tools(
+    context: ServerRequestContext,
+    params: types.PaginatedRequestParams | None,
+) -> types.ListToolsResult:
+    return types.ListToolsResult(
+        tools=[
+            types.Tool(
+                name=tool["name"],
+                description=tool["description"],
+                inputSchema=tool["schema"],
+            )
+            for tool in AVAILABLE_TOOLS
+        ]
+    )
 
-@app.call_tool()
-async def handle_tool_calls(name: str, arguments: dict, meta_info: dict = None) -> list[types.TextContent]:
+
+async def handle_tool_calls(
+    context: ServerRequestContext,
+    params: types.CallToolRequestParams,
+) -> types.CallToolResult:
+    name = params.name
+    arguments = dict(params.arguments or {})
     logger.info(f"Calling tool: {name}")
     try:
         # Extract meta_info from arguments if present, or use provided meta_info
-        current_meta_info = arguments.get("juspay_meta_info", meta_info or {})
+        current_meta_info = arguments.get("juspay_meta_info", params.meta or {})
         
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name), None)
         if not tool_entry:
@@ -259,8 +268,24 @@ async def handle_tool_calls(name: str, arguments: dict, meta_info: dict = None) 
         else:
             raise ValueError(f"Unsupported number of parameters in tool handler: {param_count}")
             
-        return [types.TextContent(type="text", text=json.dumps(response))]
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(response))]
+        )
 
     except Exception as e:
         logger.error(f"Error executing tool {name}: {safe_exc(e)}")
-        return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {str(e)}")]
+        return types.CallToolResult(
+            content=[
+                types.TextContent(
+                    type="text", text=f"ERROR: Tool execution failed: {str(e)}"
+                )
+            ],
+            isError=True,
+        )
+
+
+app = Server(
+    "juspay",
+    on_list_tools=list_my_tools,
+    on_call_tool=handle_tool_calls,
+)
