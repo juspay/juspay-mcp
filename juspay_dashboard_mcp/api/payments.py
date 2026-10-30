@@ -4,11 +4,11 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, mask_fields
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, assert_merchant_access, mask_fields
 
 PAYMENT_LINK_PII_KEYS = {"customeremail", "customerphone"}
 
-import random
+import secrets
 import string
 import time
 
@@ -115,8 +115,7 @@ async def list_payment_links_v1(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access payment links for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access payment links for this merchantId")
 
     request_payload = {}
     
@@ -169,7 +168,8 @@ def generate_order_id() -> str:
         str: Generated order ID
     """
     timestamp = str(int(time.time()))[-8:]
-    random_chars = "".join(random.choices(string.ascii_uppercase + string.digits, k=12))
+    alphabet = string.ascii_uppercase + string.digits
+    random_chars = "".join(secrets.choice(alphabet) for _ in range(12))
     order_id = f"{timestamp}{random_chars}"
 
     if len(order_id) >= 21:

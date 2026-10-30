@@ -27,11 +27,8 @@ def _headers_payload(payload: dict | None) -> dict:
     return {
         key: payload[key]
         for key in (
-            "tenant_id",
             "tenant_host",
-            "x-tenant-id",
             "x-tenant-host",
-            "x-source-id",
         )
         if payload.get(key)
     }

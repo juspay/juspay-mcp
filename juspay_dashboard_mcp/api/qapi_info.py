@@ -8,6 +8,7 @@ import ast
 import hashlib
 import json
 import logging
+import secrets
 import time
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
@@ -112,6 +113,47 @@ def _get_headers(meta_info: dict = None) -> dict:
     return get_common_headers({}, meta_info, juspay_creds)
 
 
+# Per-token, per-domain cache of the dimension list, so q_api can recompute the
+# expected schema_signature without calling the info endpoint on every query.
+_SCHEMA_CACHE_TTL_SECONDS = 300
+_SCHEMA_CACHE_MAX_ENTRIES = 256
+_schema_cache: dict[tuple[str, str, str], tuple[list, float]] = {}
+
+
+def _schema_cache_key(headers: dict, domain: str) -> tuple[str, str, str]:
+    token = headers.get("x-web-logintoken") or ""
+    return (hashlib.sha256(token.encode()).hexdigest()[:16], headers.get("x-tenant-id") or "", domain)
+
+
+def _cache_dimensions(key: tuple[str, str, str], dimensions: list) -> None:
+    now = time.time()
+    if len(_schema_cache) >= _SCHEMA_CACHE_MAX_ENTRIES:
+        for stale in [k for k, (_, expiry) in _schema_cache.items() if expiry <= now]:
+            _schema_cache.pop(stale, None)
+        while len(_schema_cache) >= _SCHEMA_CACHE_MAX_ENTRIES:
+            _schema_cache.pop(next(iter(_schema_cache)))
+    _schema_cache[key] = (list(dimensions), now + _SCHEMA_CACHE_TTL_SECONDS)
+
+
+async def _get_domain_dimensions(domain: str, meta_info: dict = None) -> list | None:
+    """Dimension list for `domain`, from cache or the info endpoint; None if unavailable."""
+    headers = _get_headers(meta_info)
+    key = _schema_cache_key(headers, domain)
+    cached = _schema_cache.get(key)
+    if cached is not None and cached[1] > time.time():
+        return cached[0]
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(f"{JUSPAY_BASE_URL}/api/q/{domain}/info", headers=headers)
+            resp.raise_for_status()
+            dimensions = resp.json().get("dimension", [])
+    except Exception as e:
+        logger.error(f"schema signature check: failed to load info for domain={domain}: {safe_exc(e)}")
+        return None
+    _cache_dimensions(key, dimensions)
+    return dimensions
+
+
 def generate_schema_signature(domain: str, dimensions: list, metrics: list) -> str:
     """
     Generate a schema signature for a domain based on its dimensions and metrics.
@@ -123,10 +165,15 @@ def generate_schema_signature(domain: str, dimensions: list, metrics: list) -> s
     return f"sig_{domain}_{hash_value}"
 
 
-def validate_schema_signature(schema_signature: str, expected_domain: str) -> tuple[bool, str]:
+async def validate_schema_signature(
+    schema_signature: str, expected_domain: str, meta_info: dict = None
+) -> tuple[bool, str]:
     """
     Validate a schema signature.
     Returns (is_valid, error_message).
+
+    The signature must equal the one qapi_info issues for the domain's current
+    schema, which proves qapi_info was called and its result was used.
     """
     if not schema_signature:
         return False, (
@@ -151,7 +198,23 @@ def validate_schema_signature(schema_signature: str, expected_domain: str) -> tu
             f"(starting with '{expected_prefix}'), but received '{schema_signature}'. "
             f"Call qapi_info(domain='{expected_domain}') to get the correct signature."
         )
-    
+
+    dimensions = await _get_domain_dimensions(expected_domain, meta_info)
+    if dimensions is None:
+        return False, (
+            f"SIGNATURE_UNVERIFIABLE: could not load the schema for domain '{expected_domain}' "
+            f"to verify schema_signature. Call qapi_info(domain='{expected_domain}') and retry."
+        )
+    expected = generate_schema_signature(
+        expected_domain, dimensions, DOMAIN_METRICS.get(expected_domain, [])
+    )
+    if not secrets.compare_digest(schema_signature.encode(), expected.encode()):
+        return False, (
+            f"INVALID_SIGNATURE: schema_signature does not match the current schema "
+            f"for domain '{expected_domain}'. "
+            f"Call qapi_info(domain='{expected_domain}') to get a valid signature."
+        )
+
     return True, ""
 
 
@@ -175,6 +238,7 @@ async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
             raw = resp.json()
             dimensions = raw.get("dimension", [])
             filters = raw.get("filter", [])
+        _cache_dimensions(_schema_cache_key(headers, domain), dimensions)
     except Exception as e:
         logger.error(f"qapi_info: API call failed for domain={domain}: {safe_exc(e)}")
 
@@ -207,7 +271,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
     default_limit = payload.get("default_limit", 10)
 
     # Validate schema_signature
-    is_valid, error_msg = validate_schema_signature(schema_signature, domain)
+    is_valid, error_msg = await validate_schema_signature(schema_signature, domain, meta_info)
     if not is_valid:
         return {
             "error": error_msg,

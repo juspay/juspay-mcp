@@ -13,25 +13,37 @@ from urllib.parse import urlparse
 from juspay_dashboard_mcp.config import (
     get_common_headers,
     set_tenant_account_id,
+    set_token_merchant_id,
+    get_token_merchant_id,
     JUSPAY_BASE_URL,
 )
 from datetime import datetime, timedelta
-from juspay_mcp.log_safe import safe_exc, safe_url
+from juspay_mcp.log_safe import safe_exc, safe_upstream_error, safe_url
 
 logger = logging.getLogger(__name__)
 
 def mask_fields(value, sensitive_keys: set):
-    """Recursively mask dict values whose key (case-insensitive) is in `sensitive_keys`.
+    """Recursively mask dict values whose key contains any of `sensitive_keys`.
+
+    Matching is case-insensitive and by substring, so `paymentResponseHashKeyV2`
+    is caught by `paymentresponsehashkey`. Only scalar values are masked; a
+    matching key holding a dict/list is searched inside instead, and booleans are
+    left alone so flags like `enableTokenization` stay readable.
 
     Also detects JSON-encoded strings (fields like `merchant_payload` that
     carry a nested object as escaped text rather than a real dict) and masks
     inside those too, re-encoding only if something actually changed.
     """
     if isinstance(value, dict):
-        return {
-            k: ("***MASKED***" if str(k).lower() in sensitive_keys else mask_fields(v, sensitive_keys))
-            for k, v in value.items()
-        }
+        masked = {}
+        for k, v in value.items():
+            lowered = str(k).lower()
+            is_secret = any(part in lowered for part in sensitive_keys)
+            if is_secret and v is not None and not isinstance(v, (bool, dict, list)):
+                masked[k] = "***MASKED***"
+            else:
+                masked[k] = mask_fields(v, sensitive_keys)
+        return masked
     if isinstance(value, list):
         return [mask_fields(item, sensitive_keys) for item in value]
     if isinstance(value, str):
@@ -165,7 +177,7 @@ async def call(api_url: str, additional_headers: dict = None, meta_info: dict = 
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response else "No response"
             logger.error(f"HTTP error: {status} calling GET {safe_url(api_url)}")
-            error_content = e.response.text if e.response else "Unknown error"
+            error_content = safe_upstream_error(e.response)
             raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {safe_exc(e)}")
@@ -193,7 +205,7 @@ async def post(api_url: str, payload: dict,additional_headers: dict = None, meta
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response else "No response"
             logger.error(f"HTTP error: {status} calling POST {safe_url(api_url)}")
-            error_content = e.response.text if e.response else "Unknown error"
+            error_content = safe_upstream_error(e.response)
             raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {safe_exc(e)}")
@@ -230,7 +242,7 @@ async def put(api_url: str, payload: dict, additional_headers: dict = None, meta
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response else "No response"
             logger.error(f"HTTP error: {status} calling PUT {safe_url(api_url)}")
-            error_content = e.response.text if e.response else "Unknown error"
+            error_content = safe_upstream_error(e.response)
             raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay PUT call: {safe_exc(e)}")
@@ -361,6 +373,7 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
                 resp.raise_for_status()
                 data = resp.json()
                 bind_tenant_from_auth_response(data, juspay_creds)
+                set_token_merchant_id(data.get("merchantId"))
                 context = data.get("context")
                 # Check if context is JUSPAY
                 isadmin = context == "JUSPAY"
@@ -383,6 +396,7 @@ async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dic
                 resp.raise_for_status()
                 data = resp.json()
                 bind_tenant_from_auth_response(data, juspay_creds)
+                set_token_merchant_id(data.get("merchantId"))
                 context = data.get("context")
                 # Check if context is JUSPAY
                 isadmin = context == "JUSPAY"
@@ -495,3 +509,31 @@ def make_payout_additional_headers(meta_info: dict = None) -> dict:
         raise ValueError("Authorization token not found in request context, meta_info, or environment variables.")
 
     return {"Authorization": token, "X-Token-Type": "Euler"}
+
+
+def assert_merchant_access(isadmin: bool, requested_merchant_id, mid_from_meta, message: str) -> None:
+    """Non-admin tokens may only act on their own merchant. Admins are not restricted.
+
+    The token's merchant comes from the validated token (validate/authorize
+    response, or the OAuth login), never from the tool call. `mid_from_meta`
+    (client-supplied meta_info) is only a fallback when neither is available.
+    If a merchant is requested and the token's merchant can't be determined, the
+    request is refused rather than allowed.
+    """
+    if isadmin or requested_merchant_id in MERCHANT_ID_PLACEHOLDERS:
+        return
+
+    token_mid = get_token_merchant_id()
+    if not token_mid:
+        creds = get_juspay_credentials() or {}
+        if creds.get("auth_type") == "oauth":
+            token_mid = creds.get("merchant_id")
+    token_mid = token_mid or mid_from_meta
+
+    if not token_mid:
+        raise ValueError(
+            "Cannot verify which merchant this token belongs to. "
+            "Omit merchantId to use the token's own merchant."
+        )
+    if str(requested_merchant_id).strip() != str(token_mid).strip():
+        raise ValueError(message)

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import secrets
 
 
 def compute_s256_challenge(verifier: str) -> str:
@@ -23,4 +24,4 @@ def compute_s256_challenge(verifier: str) -> str:
 
 
 def validate_s256(verifier: str, challenge: str) -> bool:
-    return compute_s256_challenge(verifier) == challenge
+    return secrets.compare_digest(compute_s256_challenge(verifier).encode(), challenge.encode())

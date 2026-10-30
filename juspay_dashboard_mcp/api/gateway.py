@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import logging
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, paginate_response, paginate_dict_keys
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, assert_merchant_access, paginate_response, paginate_dict_keys
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,7 @@ async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dic
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access gateway list for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway list for this merchantId")
     
     # Build request data
     request_data = dict(payload)
@@ -107,8 +106,7 @@ async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access gateway scheme for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway scheme for this merchantId")
     
     # Build request data - merchantId is required for both admin and non-admin
     merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
@@ -166,8 +164,7 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and merchant_id_from_payload and mid_from_meta and merchant_id_from_payload != mid_from_meta:
-        raise ValueError("You are not authorized to access gateway details for this merchantId")
+    assert_merchant_access(isadmin, merchant_id_from_payload, mid_from_meta, "You are not authorized to access gateway details for this merchantId")
     
     # Use sanitize_merchant_id to filter out placeholder values
     merchant_id = sanitize_merchant_id(merchant_id_from_payload, mid_from_meta)
@@ -220,8 +217,7 @@ async def list_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access gateway scheme list for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway scheme list for this merchantId")
     
     # Build request data
     request_data = {}
@@ -266,8 +262,7 @@ async def get_merchant_gateways_pm_details(payload: dict, meta_info: dict = None
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access gateway payment methods for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway payment methods for this merchantId")
     
     # Build request data
     request_data = {}

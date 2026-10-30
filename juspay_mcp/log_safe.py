@@ -6,6 +6,7 @@
 
 """Helpers for writing log lines that never carry tokens, IDs or PII."""
 
+import json
 import re
 from urllib.parse import urlparse
 
@@ -42,3 +43,81 @@ def safe_exc(exc: BaseException) -> str:
     if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
         return f"{type(exc).__name__}(status={exc.response.status_code})"
     return type(exc).__name__
+
+
+# Upstream error bodies are shown to the model (and stored in analytics), and
+# they often echo the request. Keep them useful for self-correction, but strip
+# secrets and cap the size.
+_SECRET_KEY_PARTS = (
+    "password",
+    "secret",
+    "token",
+    "apikey",
+    "api_key",
+    "authorization",
+    "cookie",
+    "cvv",
+    "cardnumber",
+    "card_number",
+    "email",
+    "phone",
+    "mobile",
+    "vpa",
+)
+_SECRET_HEADERS = ("authorization", "x-web-logintoken", "cookie", "x-api-key", "juspay_token")
+_MAX_ERROR_CHARS = 500
+_REDACTED = "[REDACTED]"
+
+
+def _redact_error_body(value):
+    if isinstance(value, dict):
+        return {
+            k: (
+                _REDACTED
+                if any(p in str(k).lower() for p in _SECRET_KEY_PARTS)
+                and v is not None
+                and not isinstance(v, (dict, list))
+                else _redact_error_body(v)
+            )
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_error_body(v) for v in value]
+    return value
+
+
+def safe_upstream_error(response) -> str:
+    """Upstream error body that is safe to put in an exception message.
+
+    Secret-looking JSON fields and any credential the request carried are
+    replaced with ``[REDACTED]``, and the result is truncated.
+    """
+    if response is None:
+        return "Unknown error"
+    try:
+        text = response.text
+    except Exception:
+        return "Unknown error"
+
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        parsed = None
+    if isinstance(parsed, (dict, list)):
+        redacted = _redact_error_body(parsed)
+        if redacted != parsed:
+            text = json.dumps(redacted, ensure_ascii=False)
+
+    try:
+        for name, value in response.request.headers.items():
+            if name.lower() not in _SECRET_HEADERS:
+                continue
+            for candidate in {value, value.rsplit(" ", 1)[-1]}:
+                if len(candidate) >= 8:
+                    text = text.replace(candidate, _REDACTED)
+    except Exception:
+        pass
+
+    if len(text) > _MAX_ERROR_CHARS:
+        text = text[:_MAX_ERROR_CHARS] + "...[truncated]"
+    return text

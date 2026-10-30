@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, paginate_response
+from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, assert_merchant_access, paginate_response
 
 async def get_user(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -45,8 +45,7 @@ async def get_user(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access user details for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access user details for this merchantId")
     
     # Build URL with query params
     url_params = f"userId={payload['userId']}"
@@ -99,8 +98,7 @@ async def list_users_v2(payload: dict, meta_info: dict = None) -> dict:
         mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
     # Authorization check - non-admin can't query other merchants
-    if not isadmin and payload.get("merchantId") and mid_from_meta and payload.get("merchantId") != mid_from_meta:
-        raise ValueError("You are not authorized to access users for this merchantId")
+    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access users for this merchantId")
     
     request_data = {
         "offset": payload.get("offset", 0)

@@ -8,7 +8,7 @@ import httpx
 from juspay_mcp.config import build_api_url, get_json_headers
 import logging 
 from contextvars import ContextVar
-from juspay_mcp.log_safe import safe_exc, safe_url
+from juspay_mcp.log_safe import safe_exc, safe_upstream_error, safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ async def call(api_url: str, customer_id: str | None = None, additional_headers:
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response else "No response"
             logger.error(f"HTTP error: {status} calling GET {safe_url(api_url)}")
-            error_content = e.response.text if e.response else "Unknown error"
+            error_content = safe_upstream_error(e.response)
             raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {safe_exc(e)}")
@@ -67,7 +67,7 @@ async def post(api_url: str, payload: dict, routing_id: str | None = None) -> di
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response else "No response"
             logger.error(f"HTTP error: {status} calling POST {safe_url(api_url)}")
-            error_content = e.response.text if e.response else "Unknown error"
+            error_content = safe_upstream_error(e.response)
             raise Exception(f"Juspay API HTTPError ({status}): {error_content}") from e
         except Exception as e:
             logger.error(f"Error during Juspay API call: {safe_exc(e)}")

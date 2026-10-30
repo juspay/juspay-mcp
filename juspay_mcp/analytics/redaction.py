@@ -12,10 +12,14 @@ SENSITIVE_KEY_PARTS = (
     "card",
     "cookie",
     "cvv",
+    "email",
+    "mobile",
     "pan",
     "password",
+    "phone",
     "secret",
     "token",
+    "vpa",
 )
 
 REDACTED = "[REDACTED]"

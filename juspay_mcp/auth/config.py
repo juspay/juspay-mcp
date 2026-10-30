@@ -109,12 +109,6 @@ class OAuthConfig:
     scopes_supported: list[str]
     state_ttl_seconds: int
     validation_cache_ttl_seconds: int
-    # Dev-only: when set, any incoming bearer equal to this value is treated as
-    # an authenticated request bound to a synthetic PortalUserInfo. Lets us
-    # smoke-test the middleware + tool dispatch path without burning a real
-    # Portal token. NEVER set this in production.
-    dev_test_token: str | None = None
-    dev_test_merchant_id: str = "TEST_MERCHANT"
     # Optional: extra hostnames that should also be considered valid canonical
     # resource URIs (in case the deployment lives behind multiple DNS names).
     extra_resource_hostnames: list[str] = field(default_factory=list)
@@ -137,19 +131,16 @@ def load() -> OAuthConfig:
         validation_cache_ttl_seconds=int(
             os.getenv("OAUTH_VALIDATION_CACHE_TTL_SECONDS", "300")
         ),
-        dev_test_token=os.getenv("OAUTH_DEV_TEST_TOKEN") or None,
-        dev_test_merchant_id=os.getenv("OAUTH_DEV_TEST_MERCHANT_ID", "TEST_MERCHANT"),
         extra_resource_hostnames=_env_list("OAUTH_EXTRA_RESOURCE_HOSTNAMES", []),
         allowed_redirect_uris=_env_list("OAUTH_ALLOWED_REDIRECT_URIS", []),
     )
 
     if cfg.enabled:
         logger.info(
-            "OAuth enabled — issuer=%s portal=%s scopes=%s dev_test_token=%s",
+            "OAuth enabled — issuer=%s portal=%s scopes=%s",
             cfg.mcp_server_url,
             cfg.portal_base_url,
             cfg.scopes_supported,
-            "set" if cfg.dev_test_token else "unset",
         )
         if cfg.allow_header_credentials:
             logger.info(

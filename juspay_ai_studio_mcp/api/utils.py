@@ -11,7 +11,7 @@ from contextvars import ContextVar
 import httpx
 
 from juspay_ai_studio_mcp.config import JUSPAY_BASE_URL, PP_AI_STUDIO_BASE_URL, get_common_headers
-from juspay_mcp.log_safe import safe_exc, safe_url
+from juspay_mcp.log_safe import safe_exc, safe_upstream_error, safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ async def request(
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response else "No response"
             logger.error(f"HTTP error: {status} calling {method} {safe_url(url)}")
-            error_content = e.response.text if e.response else "Unknown error"
+            error_content = safe_upstream_error(e.response)
             raise Exception(
                 f"PP Studio AI API HTTPError ({status}): {error_content}"
             ) from e

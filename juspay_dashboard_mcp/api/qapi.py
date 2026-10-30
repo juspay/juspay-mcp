@@ -136,7 +136,7 @@ async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
     sortedOn = payload.get("sortedOn")
 
     # Validate schema_signature FIRST - this ensures qapi_info was called
-    is_valid, error_msg = validate_schema_signature(schema_signature, domain)
+    is_valid, error_msg = await validate_schema_signature(schema_signature, domain, meta_info)
     if not is_valid:
         return {
             "error": error_msg,

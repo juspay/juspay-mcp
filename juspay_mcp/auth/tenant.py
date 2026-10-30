@@ -14,6 +14,7 @@ import dataclasses
 from starlette.requests import Request
 
 from .config import OAuthConfig
+from .request_guards import trusted_base_url
 
 BASE_URL_HEADER = "x-base-url"
 MCP_SERVER_URL_HEADER = "x-mcp-server-url"
@@ -22,8 +23,13 @@ TENANT_ID_HEADER = "x-tenant-id"
 
 def resolve(cfg: OAuthConfig, request: Request) -> OAuthConfig:
     """Specialise `cfg` to the tenant identified by the request's edge headers."""
-    base_url = (request.headers.get(BASE_URL_HEADER) or "").strip().rstrip("/")
-    mcp_server_url = (request.headers.get(MCP_SERVER_URL_HEADER) or "").strip().rstrip("/")
+    base_url = trusted_base_url(
+        (request.headers.get(BASE_URL_HEADER) or "").strip().rstrip("/"), BASE_URL_HEADER
+    ) or ""
+    mcp_server_url = trusted_base_url(
+        (request.headers.get(MCP_SERVER_URL_HEADER) or "").strip().rstrip("/"),
+        MCP_SERVER_URL_HEADER,
+    ) or ""
     tenant_id = (request.headers.get(TENANT_ID_HEADER) or "").strip()
     if not base_url and not mcp_server_url and not tenant_id:
         return cfg
