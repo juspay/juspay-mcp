@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-13T12:54:56.154955Z",
+  "fetched_at": "2026-10-13T13:08:45.507046Z",
   "sources": [
     {
       "name": "Name: Juspay Billing\n\nEnd to end Mandate lifecycle. By using Billing, you treat Mandates as a configuration, not a codebase",
@@ -66,20 +66,20 @@
       "id": "jusbiz"
     },
     {
-      "name": "Name: UPI TPAP SDK\n\nTurn your App into a TPAP like Gpay, PayTM and start processing P2P/P2M payments",
-      "llms_txt": "https://juspay.io/in/docs/upi-tpap-sdk/llms.txt",
-      "description": "Turn your App into a TPAP like Gpay, PayTM and start processing P2P/P2M payments",
-      "category": "UPI  SOLUTIONS",
-      "title": "UPI TPAP SDK",
-      "id": "upi-tpap-sdk"
-    },
-    {
       "name": "Name: HyperUPI\n\nEnable 1-Click In-App UPI payments on your checkout page with our pre built, customizable UI",
       "llms_txt": "https://juspay.io/in/docs/upi-plugin-sdk/llms.txt",
       "description": "Enable 1-Click In-App UPI payments on your checkout page with our pre built, customizable UI",
       "category": "UPI  SOLUTIONS",
       "title": "HyperUPI",
       "id": "upi-plugin-sdk"
+    },
+    {
+      "name": "Name: Apple Pay\n\nFrictionless checkouts with Apple Pay",
+      "llms_txt": "https://juspay.io/in/docs/digital-wallets/llms.txt",
+      "description": "Frictionless checkouts with Apple Pay",
+      "category": "DIGITAL WALLETS",
+      "title": "Apple Pay",
+      "id": "digital-wallets"
     },
     {
       "name": "Name: Payment Links\n\nAlign payment process with your brand & manage off-sync payments",
@@ -104,14 +104,6 @@
       "category": "EXPAND YOUR PAYMENT LANDSCAPE",
       "title": "Merchant's in-house Wallet",
       "id": "merchant-container"
-    },
-    {
-      "name": "Name: Part Payment\n\nBreak your orders into multiple parts as per your convenience",
-      "llms_txt": "https://juspay.io/in/docs/part-payments/llms.txt",
-      "description": "Break your orders into multiple parts as per your convenience",
-      "category": "EXPAND YOUR PAYMENT LANDSCAPE",
-      "title": "Part Payment",
-      "id": "part-payments"
     },
     {
       "name": "Name: Offers Engine\n\nCreate tailored campaigns, track performance & enhanced payments",
@@ -162,12 +154,12 @@
       "id": "nfc"
     },
     {
-      "name": "Name: C2P with Passkeys\n\nA passkey secured card authentication payment solution for online checkout experience",
-      "llms_txt": "https://juspay.io/in/docs/clicktopay/llms.txt",
-      "description": "A passkey secured card authentication payment solution for online checkout experience",
+      "name": "Name: CRED Saved Cards\n\nOne-click payments with cards already saved on CRED",
+      "llms_txt": "https://juspay.io/in/docs/cred-saved-cards/llms.txt",
+      "description": "One-click payments with cards already saved on CRED",
       "category": "NEXT GEN CARDS EXPERIENCE",
-      "title": "C2P with Passkeys",
-      "id": "clicktopay"
+      "title": "CRED Saved Cards",
+      "id": "cred-saved-cards"
     },
     {
       "name": "Name: Product Summary\n\nConcise & informative overview of the order during payments",
@@ -208,14 +200,6 @@
       "category": "PAYMENT SUITE V2",
       "title": "Outages",
       "id": "outages"
-    },
-    {
-      "name": "Name: CRED Pay\n\nPayment experience, cashback & offers- powered by CRED!",
-      "llms_txt": "https://juspay.io/in/docs/cred-pay/llms.txt",
-      "description": "Payment experience, cashback & offers- powered by CRED!",
-      "category": "PAYMENT SUITE V2",
-      "title": "CRED Pay",
-      "id": "cred-pay"
     },
     {
       "name": "Name: Surcharge\n\nManage collection of additional fee effortlessly!",
@@ -360,6 +344,14 @@
       "category": "MISCELLANEOUS",
       "title": "Test Resources",
       "id": "resources"
+    },
+    {
+      "name": "Name: Integration CLI\n\nIntegration CLI is a developer tool that enables AI-assisted integration of Juspay Checkout products - making integrations faster, simpler, and more streamlined.",
+      "llms_txt": "https://juspay.io/in/docs/integration-cli/llms.txt",
+      "description": "Integration CLI is a developer tool that enables AI-assisted integration of Juspay Checkout products - making integrations faster, simpler, and more streamlined.",
+      "category": "MISCELLANEOUS",
+      "title": "Integration CLI",
+      "id": "integration-cli"
     },
     {
       "name": "Name: Payment Forms\n\nStreamline your payment process, enhance the customer experience, and boost your business's success.",

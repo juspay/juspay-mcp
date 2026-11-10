@@ -25,9 +25,11 @@ Tools (call them in this order):
   - list_products(category?)  Browse the product catalog. Use this first
                               when you don't know which product is
                               relevant. Optional category filter (e.g.
-                              CHECKOUT, BILLING, DASHBOARD, UPI SOLUTIONS).
+                              CHECKOUT, DASHBOARD). The catalog differs by
+                              docs region, so take categories and slugs
+                              from its output.
   - explore_product(product)  Fetch the llms.txt index for one product by
-                              slug (e.g. "hyper-checkout"). The index
+                              the slug list_products returned. The index
                               contains .md page links.
   - doc_fetch_tool(url)       Fetch any allowed Juspay docs URL. Returns
                               markdown. Use this after explore_product to

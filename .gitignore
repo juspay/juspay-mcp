@@ -18,3 +18,4 @@ wheels/
 
 # DOCS
 /.planning
+/nginx/*
