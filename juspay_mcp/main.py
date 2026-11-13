@@ -81,28 +81,67 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+if JUSPAY_MCP_TYPE == "DASHBOARD":
+    REQUIRED_HEADER_CREDENTIALS = {"dashboard_token": "JUSPAY_WEB_LOGIN_TOKEN"}
+elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
+    REQUIRED_HEADER_CREDENTIALS = {
+        "pp_ai_studio_api_key": "PP_AI_STUDIO_API_KEY",
+        "pp_ai_studio_token": "PP_AI_STUDIO_TOKEN",
+        "dashboard_token": "JUSPAY_WEB_LOGIN_TOKEN",
+        "api_key": "JUSPAY_API_KEY",
+    }
+else:
+    REQUIRED_HEADER_CREDENTIALS = {"api_key": "JUSPAY_API_KEY"}
+
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+ALLOW_ENV_CREDENTIALS_ENV = "JUSPAY_MCP_ALLOW_ENV_CREDENTIALS"
+
+
 class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to extract Juspay credentials from headers.
-    Supports partial credentials - tools will fallback to environment variables for missing values.
-    """
+    """Rejects HTTP requests that don't carry their own Juspay credential."""
+
+    def __init__(
+        self,
+        app,
+        skip_path_prefixes: tuple[str, ...] = (),
+        allow_env_credentials: bool = False,
+    ) -> None:
+        super().__init__(app)
+        self._skip_path_prefixes = skip_path_prefixes
+        self._allow_env_credentials = allow_env_credentials
+
+    def _is_unauthenticated_path(self, path: str) -> bool:
+        if path in ("/health", "/health/ready"):
+            return True
+        return any(path == p or path.startswith(p + "/") for p in self._skip_path_prefixes)
 
     async def dispatch(self, request: Request, call_next):
         juspay_credentials = extract_header_credentials(request)
-
-        if juspay_credentials:
-            credential_summary = ", ".join(juspay_credentials.keys())
-            logger.debug(f"Setting partial Juspay credentials from headers: {credential_summary}")
-        else:
-            logger.debug("No Juspay credentials in headers, using environment variables")
-        
         request.state.juspay_credentials = juspay_credentials
-            
-        response = await call_next(request)
-        return response
+
+        if (
+            self._allow_env_credentials
+            or self._is_unauthenticated_path(request.url.path)
+            or any(juspay_credentials.get(key) for key in REQUIRED_HEADER_CREDENTIALS)
+        ):
+            return await call_next(request)
+
+        expected = " or ".join(REQUIRED_HEADER_CREDENTIALS.values())
+        logger.warning("Rejected unauthenticated request to %s", request.url.path)
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {
+                    "code": -32001,
+                    "message": f"Unauthorized: send the {expected} header",
+                },
+            },
+            status_code=401,
+        )
 
 @click.command()
-@click.option("--host", default="0.0.0.0", help="Host to bind the server to.")
+@click.option("--host", default="127.0.0.1", help="Host to bind the server to. Use 0.0.0.0 to accept connections from other machines.")
 @click.option("--port", default=8080, type=int, help="Port to listen on for SSE.")
 @click.option("--mode", default="http", type=click.Choice(['http', 'stdio']), 
               help="Server mode: 'http' for HTTP/SSE server or 'stdio' for stdio server.")
@@ -163,7 +202,9 @@ def main(host: str, port: int, mode: str):
         logger.info("Running with OAuth bearer authentication")
     else:
         logger.info("Running with header-based authentication")
-        logger.info("Expected headers: JUSPAY_API_KEY, JUSPAY_MERCHANT_ID, JUSPAY_WEB_LOGIN_TOKEN")
+        logger.info(
+            "Required header (one of): %s", ", ".join(REQUIRED_HEADER_CREDENTIALS.values())
+        )
 
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         sse_transport_handler = SseServerTransport(dashboard_message_path)
@@ -539,8 +580,25 @@ def main(host: str, port: int, mode: str):
             ),
         ]
     else:
+        allow_env_credentials = os.getenv(ALLOW_ENV_CREDENTIALS_ENV, "").lower() == "true"
+        if allow_env_credentials and host not in LOOPBACK_HOSTS:
+            raise click.UsageError(
+                f"{ALLOW_ENV_CREDENTIALS_ENV}=true lends the server's own Juspay credentials "
+                f"to every caller, so it is only allowed when bound to loopback "
+                f"(got --host {host})."
+            )
+        if allow_env_credentials:
+            logger.warning(
+                "%s=true: requests without credential headers will use the environment's "
+                "Juspay credentials. Local use only.",
+                ALLOW_ENV_CREDENTIALS_ENV,
+            )
         middleware = [
-            Middleware(JuspayHeaderAuthMiddleware),
+            Middleware(
+                JuspayHeaderAuthMiddleware,
+                skip_path_prefixes=docs_skip_prefixes,
+                allow_env_credentials=allow_env_credentials,
+            ),
         ]
 
     starlette_app = Starlette(
@@ -582,6 +640,13 @@ def main(host: str, port: int, mode: str):
             "accepted when no bearer is present"
             if oauth_cfg.allow_header_credentials
             else "rejected (bearer only)",
+        )
+        allowed_hosts = os.getenv("ALLOWED_BASE_URL_HOSTS", "").strip()
+        logger.info(
+            "  Routing headers (x-base-url):  %s",
+            f"honoured for {allowed_hosts}"
+            if allowed_hosts
+            else "ignored (ALLOWED_BASE_URL_HOSTS not set)",
         )
 
     uvicorn.run(starlette_app, host=host, port=port, lifespan="on")

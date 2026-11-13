@@ -16,6 +16,7 @@
       sse = default // {
         name = "juspay-mcp-sse";
         config = default.config // {
+          Entrypoint = default.config.Entrypoint ++ [ "--host" "0.0.0.0" ];
           ExposedPorts = {
             "8080/tcp" = { };
           };
@@ -34,7 +35,7 @@
           ExposedPorts = {
             "8080/tcp" = { };
           };
-          Entrypoint = [ (lib.getExe' self'.packages.default "juspay-mcp") ];
+          Entrypoint = [ (lib.getExe' self'.packages.default "juspay-mcp") "--host" "0.0.0.0" ];
         };
       };
     in

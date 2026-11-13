@@ -17,6 +17,10 @@ with the `JUSPAY_WEB_LOGIN_TOKEN` / `JUSPAY_API_KEY` headers, so the redirect
 flow and directly-supplied tokens coexist on one deployment. A bearer that is
 *present but invalid* is always rejected — it never falls through to the
 header path. Set to false to accept bearer tokens only.
+
+`ALLOWED_BASE_URL_HOSTS` (see request_guards.py) — comma-separated hosts
+(`dashboard.example.com`, `*.example.com`) that the `x-base-url` / `x-mcp-server-url`
+routing headers may point at. Unset means those headers are ignored.
 """
 
 from __future__ import annotations

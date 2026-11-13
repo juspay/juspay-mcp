@@ -23,6 +23,7 @@ from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
+from juspay_mcp.tool_annotations import apply_annotations
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL
 
 logger = logging.getLogger(__name__)
@@ -893,6 +894,26 @@ Use this tool to analyze product integration patterns, identify the most activel
     ),
 ]
 
+READ_ONLY_TOOLS = {
+    "get_merchant_details", "list_configured_gateway", "get_gateway_scheme",
+    "get_gateway_details", "list_gateway_scheme", "get_merchant_gateways_pm_details",
+    "report_details", "list_report", "get_offer_details", "list_offers", "get_user",
+    "list_users_v2", "get_conflict_settings", "get_general_settings",
+    "get_mandate_settings", "get_priority_logic_settings", "get_routing_settings",
+    "get_webhook_settings", "alert_details", "list_alerts", "list_orders_v4",
+    "get_order_details", "list_payment_links_v1", "list_surcharge_rules", "q_api",
+    "list_outages", "get_payout_approval_link", "list_payout_orders",
+    "get_payout_order_details", "list_configured_payout_gateways",
+    "get_payout_gateways", "get_payout_gateway_details", "get_active_payout_gateways",
+    "get_payout_priority_logics", "get_payout_weblabs", "get_payout_balance",
+    "get_payout_configs", "get_payout_encryption_or_ssl_keys",
+    "list_beneficiaries_per_customer_id", "get_beneficiary_details",
+    "get_payout_outages", "qapi_info", "qapi_field_value_discovery", "rag_tool",
+    "integration_monitoring_status", "x_mid_monitoring",
+    "integration_platform_metrics", "integration_product_count_metrics",
+}
+apply_annotations(AVAILABLE_TOOLS, READ_ONLY_TOOLS)
+
 @app.list_tools()
 async def list_my_tools() -> list[types.Tool]:
     return [
@@ -900,6 +921,7 @@ async def list_my_tools() -> list[types.Tool]:
             name=tool["name"],
             description=tool["description"],
             inputSchema=tool["schema"],
+            annotations=tool.get("annotations"),
         )
         for tool in AVAILABLE_TOOLS
     ]
