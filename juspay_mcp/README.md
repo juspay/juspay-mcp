@@ -77,6 +77,26 @@ python ./juspay_mcp/main.py
 python ./juspay_mcp/stdio.py
 ```
 
+**HTTP mode authentication.** The HTTP server binds `127.0.0.1` by default (pass
+`--host 0.0.0.0` to accept other machines). Every request must send its own
+`JUSPAY_API_KEY` header (plus `JUSPAY_MERCHANT_ID`); requests without one get a
+401. The `JUSPAY_API_KEY` environment variable is only used by STDIO mode, or by
+HTTP mode on a loopback bind when you set `JUSPAY_MCP_ALLOW_ENV_CREDENTIALS=true`.
+
+```json
+{
+  "mcpServers": {
+    "juspay-mcp": {
+      "url": "http://127.0.0.1:8080/juspay-stream",
+      "headers": {
+        "JUSPAY_API_KEY": "your_juspay_api_key",
+        "JUSPAY_MERCHANT_ID": "your_juspay_merchant_id"
+      }
+    }
+  }
+}
+```
+
 ## Usage with Claude and AI Assistants
 
 Add the following to your `claude_desktop_config.json`:
