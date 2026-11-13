@@ -641,6 +641,13 @@ def main(host: str, port: int, mode: str):
             if oauth_cfg.allow_header_credentials
             else "rejected (bearer only)",
         )
+        allowed_hosts = os.getenv("ALLOWED_BASE_URL_HOSTS", "").strip()
+        logger.info(
+            "  Routing headers (x-base-url):  %s",
+            f"honoured for {allowed_hosts}"
+            if allowed_hosts
+            else "ignored (ALLOWED_BASE_URL_HOSTS not set)",
+        )
 
     uvicorn.run(starlette_app, host=host, port=port, lifespan="on")
 

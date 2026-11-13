@@ -6,10 +6,11 @@
 """
 Guard for request-supplied routing hints.
 
-`x-base-url` / `x-mcp-server-url` decide where credentials get sent, so when
-`ALLOWED_BASE_URL_HOSTS` is set they are only honoured for listed hosts. When it
-is unset the headers are trusted as before (the edge proxy is expected to own
-them).
+`x-base-url` / `x-mcp-server-url` decide where credentials get sent (the OAuth
+upstream client secret, a caller's dashboard token), so they are only honoured
+for hosts listed in `ALLOWED_BASE_URL_HOSTS`. When it is unset the headers are
+ignored and the configured defaults are used: an unlisted host must never
+receive credentials just because a request asked for it.
 """
 
 from __future__ import annotations
@@ -29,12 +30,13 @@ def _allowed_hosts() -> list[str]:
 def is_allowed_base_url(url: str) -> bool:
     """True when `url` may be used as an outbound or advertised base URL.
 
+    False for every URL when ALLOWED_BASE_URL_HOSTS is unset (fail closed).
     Entries are exact hostnames (`dashboard.example.com`) or `*.example.com`,
     which matches subdomains but not the bare domain.
     """
     allowed = _allowed_hosts()
     if not allowed:
-        return True
+        return False
     try:
         parsed = urlparse(url)
         host = (parsed.hostname or "").lower()
@@ -59,5 +61,11 @@ def trusted_base_url(url: str | None, header: str) -> str | None:
         return None
     if is_allowed_base_url(url):
         return url
-    logger.warning("Ignoring %s header: host is not in ALLOWED_BASE_URL_HOSTS", header)
+    if not _allowed_hosts():
+        logger.warning(
+            "Ignoring %s header: ALLOWED_BASE_URL_HOSTS is not set, so no routing "
+            "override is trusted", header,
+        )
+    else:
+        logger.warning("Ignoring %s header: host is not in ALLOWED_BASE_URL_HOSTS", header)
     return None
