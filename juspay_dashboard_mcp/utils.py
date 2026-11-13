@@ -7,7 +7,7 @@
 import json
 import os
 
-def make_api_config(name, description, model, handler, response_schema=None):
+def make_api_config(name, description, model, handler, response_schema=None, annotations=None):
     desc = description.strip()
     INCLUDE_RESPONSE_SCHEMA = os.getenv("INCLUDE_RESPONSE_SCHEMA")
     if INCLUDE_RESPONSE_SCHEMA == "true" and response_schema:
@@ -18,4 +18,5 @@ def make_api_config(name, description, model, handler, response_schema=None):
         "model": model,
         "schema": model.model_json_schema(),
         "handler": handler,
+        "annotations": annotations,
     }

@@ -16,6 +16,7 @@ from juspay_mcp import response_schema
 from juspay_mcp.api import *
 import juspay_mcp.api_schema as api_schema
 import juspay_mcp.utils as util
+from juspay_mcp.tool_annotations import apply_annotations
 from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
@@ -198,6 +199,20 @@ AVAILABLE_TOOLS = [
     ),
 ]
 
+READ_ONLY_TOOLS = {
+    "order_status_api_juspay",
+    "get_customer_juspay",
+    "list_cards_juspay",
+    "get_card_info_juspay",
+    "get_bin_list_juspay",
+    "get_saved_payment_methods",
+    "verify_vpa",
+    "list_offers_juspay",
+    "get_offer_order_status_juspay",
+    "list_wallets",
+}
+apply_annotations(AVAILABLE_TOOLS, READ_ONLY_TOOLS)
+
 async def list_my_tools(
     context: ServerRequestContext,
     params: types.PaginatedRequestParams | None,
@@ -208,6 +223,7 @@ async def list_my_tools(
                 name=tool["name"],
                 description=tool["description"],
                 inputSchema=tool["schema"],
+                annotations=tool.get("annotations"),
             )
             for tool in AVAILABLE_TOOLS
         ]
