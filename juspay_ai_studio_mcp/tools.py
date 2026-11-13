@@ -16,6 +16,7 @@ from juspay_ai_studio_mcp import response_schema
 from juspay_ai_studio_mcp.api import *
 import juspay_ai_studio_mcp.api_schema as api_schema
 import juspay_ai_studio_mcp.utils as util
+from juspay_mcp.tool_annotations import apply_annotations
 from juspay_mcp.log_safe import safe_exc
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,15 @@ Use this when the user wants to download generated payment-page config files aft
     ),
 ]
 
+READ_ONLY_TOOLS = {
+    "get_merchant_details_ai_studio",
+    "list_session",
+    "get_session",
+    "payment_page_link",
+    "download_configs",
+}
+apply_annotations(AVAILABLE_TOOLS, READ_ONLY_TOOLS)
+
 
 @app.list_tools()
 async def list_my_tools() -> list[types.Tool]:
@@ -133,6 +143,7 @@ async def list_my_tools() -> list[types.Tool]:
             name=tool["name"],
             description=tool["description"],
             inputSchema=tool["schema"],
+            annotations=tool.get("annotations"),
         )
         for tool in AVAILABLE_TOOLS
     ]

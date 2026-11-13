@@ -15,6 +15,7 @@ from juspay_mcp import response_schema
 from juspay_mcp.api import *
 import juspay_mcp.api_schema as api_schema
 import juspay_mcp.utils as util
+from juspay_mcp.tool_annotations import apply_annotations
 
 logger = logging.getLogger(__name__)
 app = Server("juspay")
@@ -295,6 +296,20 @@ Use this tool to display available wallet payment options, check wallet balances
     ),
 ]
 
+READ_ONLY_TOOLS = {
+    "session_preflight_check_juspay",
+    "order_status_api_juspay",
+    "get_customer_juspay",
+    "list_cards_juspay",
+    "get_card_info_juspay",
+    "get_bin_list_juspay",
+    "get_saved_payment_methods",
+    "verify_vpa",
+    "list_offers_juspay",
+    "list_wallets",
+}
+apply_annotations(AVAILABLE_TOOLS, READ_ONLY_TOOLS)
+
 @app.list_tools()
 async def list_my_tools() -> list[types.Tool]:
     return [
@@ -302,6 +317,7 @@ async def list_my_tools() -> list[types.Tool]:
             name=tool["name"],
             description=tool["description"],
             inputSchema=tool["schema"],
+            annotations=tool.get("annotations"),
         )
         for tool in AVAILABLE_TOOLS
     ]
