@@ -248,7 +248,7 @@ https://github.com/user-attachments/assets/c8d38149-f3d1-46dc-984c-68f7b4d0ef88
 
 | Tool Name | Description |
 |-----------|-------------|
-| `get_merchant_details` | Returns merchant and user session details for the authenticated caller. Includes merchantId, userId, email, username, tenantAccountId, and caller context. Takes no input - all info is derived from active session. |
+| `get_merchant_details` | Returns merchant and user session details for the authenticated caller. Includes merchantId, userId, email, username, and caller context. Takes no input - all info is derived from active session. |
 
 ### Gateway Management
 

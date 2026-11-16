@@ -70,7 +70,7 @@ def verify_dynamic_credentials(juspay_creds: dict):
 
 
 # Header names a tool call must not be able to set; see get_common_headers.
-MODEL_BLOCKED_HEADER_KEYS = ("cookie", "tenant_id", "x-tenant-id", "x-source-id")
+MODEL_BLOCKED_HEADER_KEYS = ("cookie", "x-source-id")
 
 
 def get_common_headers(payload: dict | None = None, meta_info: dict = None, juspay_creds: dict = None):
@@ -112,19 +112,10 @@ def get_common_headers(payload: dict | None = None, meta_info: dict = None, jusp
 
     if isinstance(payload, dict):
         # Tool arguments never set these headers: drop them and use only the
-        # trusted request context. tenant_host is still taken from the payload.
+        # trusted request context.
         for key in MODEL_BLOCKED_HEADER_KEYS:
             payload.pop(key, None)
 
-        if payload.get("tenant_host"):
-            default_headers["x-tenant-host"] = payload.pop("tenant_host")
-
-        if payload.get("x-tenant-host"):
-            default_headers["x-tenant-host"] = payload.pop("x-tenant-host")
-
-    tenant_id = (juspay_creds or {}).get("tenant_id")
-    if tenant_id:
-        default_headers["x-tenant-id"] = tenant_id
     default_headers["x-source-id"] = "juspay-ai-studio-mcp"
 
     return default_headers

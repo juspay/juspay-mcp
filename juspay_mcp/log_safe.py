@@ -45,7 +45,7 @@ def safe_exc(exc: BaseException) -> str:
     return type(exc).__name__
 
 
-# Upstream error bodies are shown to the model (and stored in analytics), and
+# Upstream error bodies are shown to the model, and
 # they often echo the request. Keep them useful for self-correction, but strip
 # secrets and cap the size.
 _SECRET_KEY_PARTS = (

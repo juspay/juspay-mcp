@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 import logging
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, assert_merchant_access, paginate_response, paginate_dict_keys
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, sanitize_merchant_id, assert_merchant_access, paginate_response, paginate_dict_keys
 
 logger = logging.getLogger(__name__)
 
@@ -16,50 +16,34 @@ async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dic
     and configured payment methods (PMs). Note: Payment Method Types (PMTs) are not included.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/gateway/list (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/gateway/list (for admin users)
+        https://portal.juspay.in/api/ec/v1/gateway/list
 
     The call uses JSON data containing:
         - merchantId (e.g., "paypal")
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
         payload (dict): A dictionary with the following key:
-            - merchantId: Merchant identifier (optional for non-admin, recommended for admin).
+            - merchantId: Merchant identifier (optional; must match the token's merchant).
 
     Returns:
         dict: The parsed JSON response from the Juspay List Configured Gateways API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
+        ValueError: If a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway list for this merchantId")
+    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access gateway list for this merchantId")
     
     # Build request data
     request_data = dict(payload)
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/gateway/list"
-    else:
-        api_url = f"{host}/api/ec/v1/gateway/list"
+    api_url = f"{host}/api/ec/v1/gateway/list"
 
     response = await post(api_url, request_data, None, meta_info)
     return paginate_response(response, payload.get("limit", 20), payload.get("offset", 0))
@@ -71,14 +55,12 @@ async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     2. Supported payment methods and payment flows.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v2/gateway/scheme/{gateway} (for non-admin users)
-        https://portal.juspay.in/ec/v2/admin/gateway/scheme/{gateway} (for admin users)
+        https://portal.juspay.in/api/ec/v2/gateway/scheme/{gateway}
 
     The call uses JSON data containing:
         - merchantId (optional, but recommended)
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
@@ -90,37 +72,26 @@ async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
         dict: The parsed JSON response from the Juspay Get Gateway Scheme API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
+        ValueError: If a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
     gateway = payload.pop("gateway", None)
     if not gateway:
         raise ValueError("The payload must include 'gateway'.")
 
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway scheme for this merchantId")
+    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access gateway scheme for this merchantId")
     
-    # Build request data - merchantId is required for both admin and non-admin
-    merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+    merchant_id = sanitize_merchant_id(payload.get("merchantId"))
     if not merchant_id:
         raise ValueError("The payload must include 'merchantId'.")
     
     request_data = dict(payload)
     request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v2/admin/gateway/scheme/{gateway}"
-    else:
-        api_url = f"{host}/api/ec/v2/gateway/scheme/{gateway}"
+    api_url = f"{host}/api/ec/v2/gateway/scheme/{gateway}"
 
     return await post(api_url, request_data, None, meta_info)
 
@@ -129,45 +100,37 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     Returns detailed information about a specific gateway configured by the merchant.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/gateway/{mga_id} (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/gateway/{mga_id} (for admin users)
+        https://portal.juspay.in/api/ec/v1/gateway/{mga_id}
 
     The call uses JSON data containing:
         - merchantId (e.g., "paypal")
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
         payload (dict): A dictionary with the following required keys:
             - mga_id: MGA ID of the gateway.
-            - merchantId: Merchant identifier (required for admin, auto-detected for non-admin).
+            - merchantId: Merchant identifier (optional; must match the token's merchant).
 
     Returns:
         dict: The parsed JSON response from the Juspay Get Gateway Details API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
+        ValueError: If a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
     
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     mga_id = payload.pop("mga_id", None)
     merchant_id_from_payload = payload.get("merchantId")
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, merchant_id_from_payload, mid_from_meta, "You are not authorized to access gateway details for this merchantId")
+    assert_merchant_access(merchant_id_from_payload, "You are not authorized to access gateway details for this merchantId")
     
     # Use sanitize_merchant_id to filter out placeholder values
-    merchant_id = sanitize_merchant_id(merchant_id_from_payload, mid_from_meta)
+    merchant_id = sanitize_merchant_id(merchant_id_from_payload)
         
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
@@ -175,11 +138,7 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     # Build request data with merchantId
     request_data = {"merchantId": merchant_id}
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/gateway/{mga_id}"
-    else:
-        api_url = f"{host}/api/ec/v1/gateway/{mga_id}"
+    api_url = f"{host}/api/ec/v1/gateway/{mga_id}"
     
 
     return await post(api_url, request_data, None, meta_info)
@@ -190,47 +149,26 @@ async def list_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     Useful for checking support for specific gateways (e.g., "Does Juspay support Gateway X?").
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v2/gateway/scheme/list (for non-admin users)
-        https://portal.juspay.in/ec/v2/admin/gateway/scheme/list (for admin users)
+        https://portal.juspay.in/api/ec/v2/gateway/scheme/list
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         list: The parsed JSON response from the Juspay List Gateway Scheme API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway scheme list for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v2/admin/gateway/scheme/list"
-    else:
-        api_url = f"{host}/api/ec/v2/gateway/scheme/list"
+    api_url = f"{host}/api/ec/v2/gateway/scheme/list"
     
     return await post(api_url, request_data, None, meta_info)
 
@@ -239,43 +177,23 @@ async def get_merchant_gateways_pm_details(payload: dict, meta_info: dict = None
     Fetches all gateways and their supported payment methods for the merchant.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/gateway/paymentMethods (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/gateway/paymentMethods (for admin users)
+        https://portal.juspay.in/api/ec/v1/gateway/paymentMethods
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response from the Juspay Gateway Payment Methods API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access gateway payment methods for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/gateway/paymentMethods"
-    else:
-        api_url = f"{host}/api/ec/v1/gateway/paymentMethods"
+    api_url = f"{host}/api/ec/v1/gateway/paymentMethods"
 
     response = await post(api_url, request_data, None, meta_info)
     return paginate_dict_keys(response, payload.get("limit", 20), payload.get("offset", 0))

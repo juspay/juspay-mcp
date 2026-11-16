@@ -10,6 +10,6 @@ from pydantic import BaseModel
 class WithHeaders(BaseModel):
     """Tool payload with no arguments of its own.
 
-    tenant_id / cookie / x-source-id are set from the request context, never by
+    cookie / x-source-id are set from the request context, never by
     the tool call (see get_common_headers).
     """

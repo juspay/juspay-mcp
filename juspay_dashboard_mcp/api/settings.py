@@ -6,7 +6,7 @@
 
 import json
 
-from juspay_dashboard_mcp.api.utils import post, put, get_admin_host, get_juspay_host_from_api, sanitize_merchant_id, assert_merchant_access, mask_fields, paginate_response
+from juspay_dashboard_mcp.api.utils import post, put, get_juspay_host_from_api, sanitize_merchant_id, assert_merchant_access, mask_fields, paginate_response
 
 # Substrings (matched case-insensitively against each key), see mask_fields.
 GENERAL_SETTINGS_SECRET_KEYS = {
@@ -28,47 +28,26 @@ async def get_conflict_settings(payload: dict, meta_info: dict = None) -> dict:
     Retrieves conflict settings configuration.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/conflict (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/conflict (for admin users)
+        https://portal.juspay.in/api/ec/v1/conflict
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response containing conflict settings.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access conflict settings for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/conflict"
-    else:
-        api_url = f"{host}/api/ec/v1/conflict"
+    api_url = f"{host}/api/ec/v1/conflict"
     
     return await post(api_url, request_data, None, meta_info)
 
@@ -77,47 +56,26 @@ async def get_general_settings(payload: dict, meta_info: dict = None) -> dict:
     Retrieves general configuration settings.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/general (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/general (for admin users)
+        https://portal.juspay.in/api/ec/v1/general
 
     Headers include:
-        - x-tenant-id from payload     
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response containing general merchant settings.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access general settings for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/general"
-    else:
-        api_url = f"{host}/api/ec/v1/general"
+    api_url = f"{host}/api/ec/v1/general"
     
     response = await post(api_url, request_data, None, meta_info)
     return mask_fields(response, GENERAL_SETTINGS_SECRET_KEYS)
@@ -127,52 +85,35 @@ async def get_mandate_settings(payload: dict, meta_info: dict = None) -> dict:
     Retrieves mandate-related settings.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/mandate (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/mandate (for admin users)
+        https://portal.juspay.in/api/ec/v1/mandate
 
     The call can include optional JSON data:
         - merchantId: Optional merchant ID
 
     Headers include:
-        - x-tenant-id from payload       
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID to retrieve mandate settings for (admin only).
 
     Returns:
         dict: The parsed JSON response containing mandate settings.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
+        ValueError: If a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access mandate settings for this merchantId")
+    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access mandate settings for this merchantId")
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
-    elif payload.get("merchantId"):
-        request_data["merchantId"] = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+    if payload.get("merchantId"):
+        request_data["merchantId"] = sanitize_merchant_id(payload.get("merchantId"))
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/mandate"
-    else:
-        api_url = f"{host}/api/ec/v1/mandate"
+    api_url = f"{host}/api/ec/v1/mandate"
         
     return await post(api_url, request_data, None, meta_info)
 
@@ -183,50 +124,29 @@ async def get_priority_logic_settings(payload: dict, meta_info: dict = None) -> 
     overwhelming the context.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/priorityLogic (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/priorityLogic (for admin users)
+        https://portal.juspay.in/api/ec/v1/priorityLogic
 
     The call uses an empty request body.
 
     Headers include:
-        - x-tenant-id from payload    
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response from the Juspay Priority Logic Settings API
               with only the latest 2 logics included (or fewer if less than 2 exist).
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access priority logic settings for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/priorityLogic"
-    else:
-        api_url = f"{host}/api/ec/v1/priorityLogic"
+    api_url = f"{host}/api/ec/v1/priorityLogic"
     
     response = await post(api_url, request_data, None, meta_info)
 
@@ -249,47 +169,26 @@ async def get_routing_settings(payload: dict, meta_info: dict = None) -> dict:
     including enablement status and downtime-based switching thresholds.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/routing (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/routing (for admin users)
+        https://portal.juspay.in/api/ec/v1/routing
 
     Headers include:
-        - x-tenant-id from payload        
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response from the Juspay Routing Settings API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access routing settings for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/routing"
-    else:
-        api_url = f"{host}/api/ec/v1/routing"
+    api_url = f"{host}/api/ec/v1/routing"
     
     return await post(api_url, request_data, None, meta_info)
 
@@ -298,47 +197,26 @@ async def get_webhook_settings(payload: dict, meta_info: dict = None) -> dict:
     Retrieves webhook configuration settings.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/webhook (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/webhook (for admin users)
+        https://portal.juspay.in/api/ec/v1/webhook
 
     Headers include:
-        - x-tenant-id from payload     
         - content-type: application/json
 
     Args:
         payload (dict): May include:
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response containing webhook settings.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access webhook settings for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build request data
     request_data = {}
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_data["merchantId"] = merchant_id
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/webhook"
-    else:
-        api_url = f"{host}/api/ec/v1/webhook"
+    api_url = f"{host}/api/ec/v1/webhook"
 
     response = await post(api_url, request_data, None, meta_info)
     return mask_fields(response, GENERAL_SETTINGS_SECRET_KEYS)

@@ -122,7 +122,7 @@ _schema_cache: dict[tuple[str, str, str], tuple[list, float]] = {}
 
 def _schema_cache_key(headers: dict, domain: str) -> tuple[str, str, str]:
     token = headers.get("x-web-logintoken") or ""
-    return (hashlib.sha256(token.encode()).hexdigest()[:16], headers.get("x-tenant-id") or "", domain)
+    return (hashlib.sha256(token.encode()).hexdigest()[:16], domain)
 
 
 def _cache_dimensions(key: tuple[str, str, str], dimensions: list) -> None:

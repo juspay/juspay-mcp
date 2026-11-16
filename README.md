@@ -9,7 +9,7 @@ MCP (Model Context Protocol) servers that let AI assistants interact with Juspay
 | | [Payments MCP](./juspay_mcp/README.md) | [Dashboard MCP](./juspay_dashboard_mcp/README.md) |
 |---|---|---|
 | **Use when you want to…** | Process payments, manage orders, handle refunds, work with customers and cards | Configure gateways, query analytics, manage users, view reports, create payment links |
-| **Credential required** | API Key + Merchant ID | Dashboard login (OAuth) |
+| **Credential required** | API Key + Merchant ID | Dashboard login token (`JUSPAY_WEB_LOGIN_TOKEN`) |
 | **Docker image** | `juspaydotin/juspay-mcp:latest` | `juspaydotin/juspay-dashboard-mcp:latest` |
 | **Tools include** | `create_order`, `create_txn`, `create_refund`, `upi_collect`, `list_wallets`, … | `q_api`, `list_configured_gateway`, `create_payment_link`, `list_orders_v4`, … |
 | **Full docs** | [juspay_mcp/README.md](./juspay_mcp/README.md) | [juspay_dashboard_mcp/README.md](./juspay_dashboard_mcp/README.md) |

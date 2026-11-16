@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import call, post, get_admin_host,sanitize_merchant_id, assert_merchant_access
+from juspay_dashboard_mcp.api.utils import call, post, get_juspay_host_from_api,sanitize_merchant_id, assert_merchant_access
 
 async def report_details(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -12,28 +12,25 @@ async def report_details(payload: dict, meta_info: dict = None) -> dict:
     metrics, dimensions, and filters.
 
     The API endpoint is:
-        https://portal.juspay.in/api/monitoring/task (for non-admin users)
-        https://portal.juspay.in/monitoring/task (for admin users)
+        https://portal.juspay.in/api/monitoring/task
 
     The call uses URL parameters:
         - task_uid: Unique identifier for the report/task
         - user_name: Name of the user requesting the report
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
         payload (dict): A dictionary with the following required keys:
             - task_uid: Unique identifier for the report/task.
             - user_name: Name of the user requesting the report.
-            - merchantId: Optional merchant ID (admin only).
 
     Returns:
         dict: The parsed JSON response from the Juspay Report Details API.
 
     Raises:
-        ValueError: If required parameters are missing or non-admin tries to access another merchant's data.
+        ValueError: If required parameters are missing or a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
     task_uid = payload.get("task_uid")
@@ -42,29 +39,12 @@ async def report_details(payload: dict, meta_info: dict = None) -> dict:
     if not task_uid or not user_name:
         raise ValueError("The payload must include 'task_uid' and 'user_name'.")
 
-    host, isadmin = await get_admin_host(meta_info=meta_info)
-    
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access report details for this merchantId")
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build URL with query params
     url_params = f"task_uid={task_uid}&user_name={user_name}"
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            url_params += f"&merchantId={merchant_id}"
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/monitoring/task?{url_params}"
-    else:
-        api_url = f"{host}/api/monitoring/task?{url_params}"
+    api_url = f"{host}/api/monitoring/task?{url_params}"
     
     # Empty body since parameters are in URL
     return await call(api_url, None, meta_info)
@@ -75,8 +55,7 @@ async def list_report(payload: dict, meta_info: dict = None) -> dict:
     thresholds, and monitoring intervals.
 
     The API endpoint is:
-        https://portal.juspay.in/api/monitoring/task/list (for non-admin users)
-        https://portal.juspay.in/monitoring/task/list (for admin users)
+        https://portal.juspay.in/api/monitoring/task/list
 
     The call uses JSON data containing:
         - merchantId: Merchant identifier
@@ -84,7 +63,6 @@ async def list_report(payload: dict, meta_info: dict = None) -> dict:
         - std_report: Optional boolean flag
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
@@ -97,25 +75,18 @@ async def list_report(payload: dict, meta_info: dict = None) -> dict:
         dict: The parsed JSON response from the Juspay List Report API.
 
     Raises:
-        ValueError: If required parameters are missing or non-admin tries to access another merchant's data.
+        ValueError: If required parameters are missing or a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
     if payload.get("task_type") != "report":
         raise ValueError("Payload must contain 'task_type' set to 'report'.")
     
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access reports for this merchantId")
+    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access reports for this merchantId")
     
-    # Build request data - use merchantId from payload or meta_info for admin
-    merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
+    merchant_id = sanitize_merchant_id(payload.get("merchantId"))
     if not merchant_id:
         raise ValueError("Payload must contain 'merchantId'.")
     
@@ -124,10 +95,6 @@ async def list_report(payload: dict, meta_info: dict = None) -> dict:
         "task_type": payload.get("task_type")
     }
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/monitoring/task/list"
-    else:
-        api_url = f"{host}/api/monitoring/task/list"
+    api_url = f"{host}/api/monitoring/task/list"
     
     return await post(api_url, request_data, None, meta_info)

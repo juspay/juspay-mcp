@@ -13,7 +13,7 @@ import os
 import dotenv
 import re
 import logging
-from juspay_mcp.log_safe import safe_url
+from juspay_mcp.log_safe import safe_exc, safe_url
 
 dotenv.load_dotenv()
 
@@ -35,7 +35,6 @@ COMMON_CREATE_PAYOUT_ORDER_FIELDS = {
     "fulfillmentCurrency",
     "sourceCurrency",
     "idempotencyKey",
-    "tenant_id",
     "juspay_meta_info",
 }
 
@@ -267,28 +266,26 @@ async def get_payout_order_details(payload: dict, meta_info: dict) -> dict:
     api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{order_id}?expand=fulfillment"
 
     try:
-        logging.info(f"Attempting to get order details for order_id: {order_id}")
+        logging.info("Attempting to get order details")
         return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
     except Exception as e:
         error_str = str(e)
-        logging.warning(f"First attempt failed: {error_str}")
+        logging.warning("First attempt failed: %s", safe_exc(e))
 
         if "Could not find" in error_str:
 
             extracted_order_id = extract_order_id_from_txn_id_or_fulfillment_id(order_id)
 
             if extracted_order_id != order_id:
-                logging.info(f"Retrying with extracted order_id: {extracted_order_id}")
+                logging.info("Retrying with extracted order_id")
                 try:
                     retry_api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{extracted_order_id}?expand=fulfillment"
                     result = await call(retry_api_url, additional_headers=additional_headers, meta_info=meta_info)
-                    logging.info(
-                        f"Success with extracted order_id: {extracted_order_id}"
-                    )
+                    logging.info("Success with extracted order_id")
                     return result
                 except Exception as retry_error:
-                    logging.error(f"Retry also failed: {str(retry_error)}")
+                    logging.error("Retry also failed: %s", safe_exc(retry_error))
                     raise e
             else:
                 logging.info("Extracted order_id same as original, not retrying")

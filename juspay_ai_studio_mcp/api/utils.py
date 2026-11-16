@@ -104,12 +104,7 @@ async def get_ai_studio_host(token: str = None, headers: dict = None, meta_info:
     if not token_to_use:
         raise Exception("Juspay AI Studio token not provided.")
 
-    token_response = (meta_info or {}).get("token_response") or {}
-    auth_type = token_response.get("auth_type")
-    if not auth_type and juspay_creds:
-        auth_type = juspay_creds.get("auth_type")
-
-    if auth_type == "oauth":
+    if token_to_use.startswith("auth_"): 
         resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
         url = f"{JUSPAY_BASE_URL}/ec/v2/authorize?resource={resource_param}"
         async with httpx.AsyncClient(timeout=10.0) as client:

@@ -12,7 +12,7 @@ import asyncio
 import logging
 import contextlib
 
-# Load .env BEFORE any os.getenv() so JUSPAY_MCP_TYPE / OAUTH_ENABLED etc.
+# Load .env BEFORE any os.getenv() so JUSPAY_MCP_TYPE etc.
 # from the env file participate in the import-time branching below.
 dotenv.load_dotenv()
 
@@ -26,20 +26,7 @@ from starlette.requests import Request
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
-from juspay_mcp.auth import config as auth_config
-from juspay_mcp.auth.client_store import MemoryClientStore
 from juspay_mcp.auth.header_creds import extract_header_credentials
-from juspay_mcp.auth.middleware import BearerAuthMiddleware
-from juspay_mcp.auth.portal_client import PortalClient
-from juspay_mcp.auth.routes import build_routes as build_oauth_routes
-from juspay_mcp.auth.state_store import MemoryStateStore
-from juspay_mcp.analytics.context import (
-    clear_current_context as clear_analytics_context,
-    from_request as analytics_context_from_request,
-    set_current_context as set_analytics_context,
-)
-from juspay_mcp.analytics.client import shutdown as shutdown_analytics
-from juspay_mcp.analytics.config import warm as warm_analytics
 
 # Determine which MCP app to use based on JUSPAY_MCP_TYPE
 JUSPAY_MCP_TYPE = os.getenv("JUSPAY_MCP_TYPE", "").upper()
@@ -78,6 +65,10 @@ logging.basicConfig(
     level=logging.INFO, 
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
+# Upstream URLs carry IDs (user, order, merchant), so keep the HTTP client's per-request INFO lines out of the logs.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +146,6 @@ def main(host: str, port: int, mode: str):
         return
     
     # Run in HTTP/SSE mode (default)
-    warm_analytics()  # resolve (and KMS-decrypt if configured) the analytics token once, at startup
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
         sse_dashboard_endpoint_path = "/juspay-dashboard"
@@ -182,29 +172,10 @@ def main(host: str, port: int, mode: str):
         streamable_endpoint_path = "/juspay-stream"
         message_endpoint_path = "/messages/"
     
-    oauth_cfg = auth_config.load()
-    portal_client = None
-    oauth_state_store = None
-    oauth_client_store = None
-    oauth_routes_list: list = []
-    oauth_validation_cache: dict = {}
-    if oauth_cfg.enabled:
-        portal_client = PortalClient(oauth_cfg)
-        oauth_state_store = MemoryStateStore(ttl_seconds=oauth_cfg.state_ttl_seconds)
-        oauth_client_store = MemoryClientStore()
-        oauth_routes_list = build_oauth_routes(
-            oauth_cfg,
-            portal_client,
-            oauth_state_store,
-            oauth_client_store,
-            validation_cache=oauth_validation_cache,
-        )
-        logger.info("Running with OAuth bearer authentication")
-    else:
-        logger.info("Running with header-based authentication")
-        logger.info(
-            "Required header (one of): %s", ", ".join(REQUIRED_HEADER_CREDENTIALS.values())
-        )
+    logger.info("Running with header-based authentication")
+    logger.info(
+        "Required header (one of): %s", ", ".join(REQUIRED_HEADER_CREDENTIALS.values())
+    )
 
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         sse_transport_handler = SseServerTransport(dashboard_message_path)
@@ -229,45 +200,39 @@ def main(host: str, port: int, mode: str):
 
         async def handler(request: Request):
             logging.info(
-                f"New SSE connection from: {request.client} - {request.method} {request.url.path}"
+                f"New SSE connection: {request.method} {request.url.path}"
             )
 
-            if JUSPAY_MCP_TYPE == "DASHBOARD" and active_app_key in ("dashboard", "docs"):
-                set_analytics_context(analytics_context_from_request(request, active_app_key))
+            if active_app_key == "dashboard":
+                from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "ai_studio":
+                from juspay_ai_studio_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "default":
+                from juspay_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            # docs: no credentials needed
 
-            try:
-                if active_app_key == "dashboard":
-                    from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-                    juspay_creds = getattr(request.state, "juspay_credentials", None)
-                    set_juspay_request_credentials(juspay_creds)
-                elif active_app_key == "ai_studio":
-                    from juspay_ai_studio_mcp.tools import set_juspay_request_credentials
-                    juspay_creds = getattr(request.state, "juspay_credentials", None)
-                    set_juspay_request_credentials(juspay_creds)
-                elif active_app_key == "default":
-                    from juspay_mcp.tools import set_juspay_request_credentials
-                    juspay_creds = getattr(request.state, "juspay_credentials", None)
-                    set_juspay_request_credentials(juspay_creds)
-                # docs: no credentials needed
-
-                async with transport.connect_sse(
-                    request.scope, request.receive, request._send
-                ) as streams:
-                    logging.info("MCP Session starting")
-                    try:
-                        await active_app.run(
-                            streams[0],
-                            streams[1],
-                            active_app.create_initialization_options(),
-                        )
-                    except Exception as e:
-                        logging.error(
-                            f"Error during MCP session: {type(e).__name__}"
-                        )
-                    finally:
-                        logging.info("MCP Session ended")
-            finally:
-                clear_analytics_context()
+            async with transport.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                logging.info("MCP Session starting")
+                try:
+                    await active_app.run(
+                        streams[0],
+                        streams[1],
+                        active_app.create_initialization_options(),
+                    )
+                except Exception as e:
+                    logging.error(
+                        f"Error during MCP session: {type(e).__name__}"
+                    )
+                finally:
+                    logging.info("MCP Session ended")
 
             return _AlreadySentResponse()
 
@@ -290,31 +255,25 @@ def main(host: str, port: int, mode: str):
         async def handle_streamable_http(request: Request):
             """Route-compatible endpoint for StreamableHTTP that handles credential injection."""
             logging.info(
-                f"New StreamableHTTP request from: {request.client} - {request.method} {request.url.path}"
+                f"New StreamableHTTP request: {request.method} {request.url.path}"
             )
 
-            if JUSPAY_MCP_TYPE == "DASHBOARD" and active_app_key in ("dashboard", "docs"):
-                set_analytics_context(analytics_context_from_request(request, active_app_key))
+            if active_app_key == "dashboard":
+                from juspay_dashboard_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "ai_studio":
+                from juspay_ai_studio_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            elif active_app_key == "default":
+                from juspay_mcp.tools import set_juspay_request_credentials
+                juspay_creds = getattr(request.state, "juspay_credentials", None)
+                set_juspay_request_credentials(juspay_creds)
+            # docs: no credentials needed
 
-            try:
-                if active_app_key == "dashboard":
-                    from juspay_dashboard_mcp.tools import set_juspay_request_credentials
-                    juspay_creds = getattr(request.state, "juspay_credentials", None)
-                    set_juspay_request_credentials(juspay_creds)
-                elif active_app_key == "ai_studio":
-                    from juspay_ai_studio_mcp.tools import set_juspay_request_credentials
-                    juspay_creds = getattr(request.state, "juspay_credentials", None)
-                    set_juspay_request_credentials(juspay_creds)
-                elif active_app_key == "default":
-                    from juspay_mcp.tools import set_juspay_request_credentials
-                    juspay_creds = getattr(request.state, "juspay_credentials", None)
-                    set_juspay_request_credentials(juspay_creds)
-                # docs: no credentials needed
-
-                # session_manager writes the full HTTP response directly to send
-                await session_manager.handle_request(request.scope, request.receive, request._send)
-            finally:
-                clear_analytics_context()
+            # session_manager writes the full HTTP response directly to send
+            await session_manager.handle_request(request.scope, request.receive, request._send)
             return _AlreadySentResponse()
 
         return handle_streamable_http, session_manager
@@ -339,60 +298,6 @@ def main(host: str, port: int, mode: str):
             Route("/health/ready", endpoint=health_check, methods=["GET"]),
             Mount(message_endpoint_path, app=sse_transport_handler.handle_post_message),
         ]
-
-    # Prepend OAuth discovery + /oauth/* routes before the MCP transport
-    # routes so they win the longest-prefix match.
-    if oauth_routes_list:
-        routes = oauth_routes_list + routes
-
-    # In DASHBOARD mode the docs endpoints are public. Prepend literal
-    # well-known routes for docs mounts AFTER the OAuth list so they sit
-    # first in the final route table and beat the OAuth per-mount template
-    # route (/{mount}/.well-known/oauth-protected-resource).
-    if JUSPAY_MCP_TYPE == "DASHBOARD":
-        _WELL_KNOWN_METHODS = ["GET", "OPTIONS"]
-        docs_public_routes: list = []
-        for _docs_mount_path in (sse_docs_endpoint_path, streamable_docs_endpoint_path):
-            _mount = _docs_mount_path.lstrip("/")
-            _resource_url = (
-                f"{oauth_cfg.mcp_server_url}/{_mount}"
-                if oauth_cfg.enabled
-                else f"http://{host}:{port}/{_mount}"
-            )
-
-            async def _docs_prm(request: Request, _url: str = _resource_url) -> Response:
-                return JSONResponse({"resource": _url})
-
-            docs_public_routes.append(
-                Route(
-                    f"/{_mount}/.well-known/oauth-protected-resource",
-                    endpoint=_docs_prm,
-                    methods=_WELL_KNOWN_METHODS,
-                )
-            )
-        routes = docs_public_routes + routes
-    elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
-        _WELL_KNOWN_METHODS = ["GET", "OPTIONS"]
-        docs_public_routes: list = []
-        for _docs_mount_path in (sse_docs_endpoint_path, streamable_docs_endpoint_path):
-            _mount = _docs_mount_path.lstrip("/")
-            _resource_url = (
-                f"{oauth_cfg.mcp_server_url}/{_mount}"
-                if oauth_cfg.enabled
-                else f"http://{host}:{port}/{_mount}"
-            )
-
-            async def _docs_prm(request: Request, _url: str = _resource_url) -> Response:
-                return JSONResponse({"resource": _url})
-
-            docs_public_routes.append(
-                Route(
-                    f"/{_mount}/.well-known/oauth-protected-resource",
-                    endpoint=_docs_prm,
-                    methods=_WELL_KNOWN_METHODS,
-                )
-            )
-        routes = docs_public_routes + routes
 
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         # Dashboard MCP
@@ -433,12 +338,6 @@ def main(host: str, port: int, mode: str):
                     await stack.enter_async_context(docs_session_mgr.run())
                     logger.info("Docs StreamableHTTP session manager started")
                     logger.info("All StreamableHTTP session managers started successfully")
-                    if oauth_state_store is not None:
-                        await oauth_state_store.start()
-                        logger.info("OAuth state store sweeper started")
-                    if oauth_client_store is not None:
-                        await oauth_client_store.start()
-                        logger.info("OAuth client store sweeper started")
                     docs_refresh = asyncio.create_task(refresh_catalog())
                     yield
             finally:
@@ -446,13 +345,6 @@ def main(host: str, port: int, mode: str):
                     docs_refresh.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await docs_refresh
-                if oauth_state_store is not None:
-                    await oauth_state_store.stop()
-                if oauth_client_store is not None:
-                    await oauth_client_store.stop()
-                if portal_client is not None:
-                    await portal_client.aclose()
-                await shutdown_analytics()
             logger.info("StreamableHTTP session managers stopped")
     elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
         ai_studio_sse_handler = make_sse_handler("ai_studio", sse_transport_handler)
@@ -492,12 +384,6 @@ def main(host: str, port: int, mode: str):
                     await stack.enter_async_context(docs_session_mgr.run())
                     logger.info("Docs StreamableHTTP session manager started")
                     logger.info("All StreamableHTTP session managers started successfully")
-                    if oauth_state_store is not None:
-                        await oauth_state_store.start()
-                        logger.info("OAuth state store sweeper started")
-                    if oauth_client_store is not None:
-                        await oauth_client_store.start()
-                        logger.info("OAuth client store sweeper started")
                     docs_refresh = asyncio.create_task(refresh_catalog())
                     yield
             finally:
@@ -505,12 +391,6 @@ def main(host: str, port: int, mode: str):
                     docs_refresh.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await docs_refresh
-                if oauth_state_store is not None:
-                    await oauth_state_store.stop()
-                if oauth_client_store is not None:
-                    await oauth_client_store.stop()
-                if portal_client is not None:
-                    await portal_client.aclose()
             logger.info("StreamableHTTP session managers stopped")
 
     else:
@@ -533,27 +413,12 @@ def main(host: str, port: int, mode: str):
             """Application lifespan context manager for single MCP app."""
             async with default_session_mgr.run():
                 logger.info("StreamableHTTP session manager started successfully")
-                if oauth_state_store is not None:
-                    await oauth_state_store.start()
-                    logger.info("OAuth state store sweeper started")
-                if oauth_client_store is not None:
-                    await oauth_client_store.start()
-                    logger.info("OAuth client store sweeper started")
-                try:
-                    yield
-                finally:
-                    if oauth_state_store is not None:
-                        await oauth_state_store.stop()
-                    if oauth_client_store is not None:
-                        await oauth_client_store.stop()
-                    if portal_client is not None:
-                        await portal_client.aclose()
+                yield
             logger.info("StreamableHTTP session manager stopped")
 
-    # Authentication middleware. With OAuth enabled the bearer middleware also
-    # accepts header credentials on requests that carry no bearer at all (see
-    # AUTH_ALLOW_HEADER_CREDENTIALS); without OAuth it's the header path only.
-    # In DASHBOARD mode the docs endpoints are public (no auth required).
+    # Authentication middleware: every request must carry its own Juspay
+    # credential header (JUSPAY_WEB_LOGIN_TOKEN, API key, ...).
+    # In DASHBOARD / AI Studio modes the docs endpoints are public (no auth required).
     docs_skip_prefixes: tuple[str, ...] = ()
     if JUSPAY_MCP_TYPE == "DASHBOARD":
         docs_skip_prefixes = (
@@ -568,38 +433,26 @@ def main(host: str, port: int, mode: str):
             docs_message_path,
         )
 
-    if oauth_cfg.enabled and portal_client is not None:
-        middleware = [
-            Middleware(
-                BearerAuthMiddleware,
-                cfg=oauth_cfg,
-                portal=portal_client,
-                validation_cache=oauth_validation_cache,
-                skip_path_prefixes=docs_skip_prefixes,
-                allow_header_credentials=oauth_cfg.allow_header_credentials,
-            ),
-        ]
-    else:
-        allow_env_credentials = os.getenv(ALLOW_ENV_CREDENTIALS_ENV, "").lower() == "true"
-        if allow_env_credentials and host not in LOOPBACK_HOSTS:
-            raise click.UsageError(
-                f"{ALLOW_ENV_CREDENTIALS_ENV}=true lends the server's own Juspay credentials "
-                f"to every caller, so it is only allowed when bound to loopback "
-                f"(got --host {host})."
-            )
-        if allow_env_credentials:
-            logger.warning(
-                "%s=true: requests without credential headers will use the environment's "
-                "Juspay credentials. Local use only.",
-                ALLOW_ENV_CREDENTIALS_ENV,
-            )
-        middleware = [
-            Middleware(
-                JuspayHeaderAuthMiddleware,
-                skip_path_prefixes=docs_skip_prefixes,
-                allow_env_credentials=allow_env_credentials,
-            ),
-        ]
+    allow_env_credentials = os.getenv(ALLOW_ENV_CREDENTIALS_ENV, "").lower() == "true"
+    if allow_env_credentials and host not in LOOPBACK_HOSTS:
+        raise click.UsageError(
+            f"{ALLOW_ENV_CREDENTIALS_ENV}=true lends the server's own Juspay credentials "
+            f"to every caller, so it is only allowed when bound to loopback "
+            f"(got --host {host})."
+        )
+    if allow_env_credentials:
+        logger.warning(
+            "%s=true: requests without credential headers will use the environment's "
+            "Juspay credentials. Local use only.",
+            ALLOW_ENV_CREDENTIALS_ENV,
+        )
+    middleware = [
+        Middleware(
+            JuspayHeaderAuthMiddleware,
+            skip_path_prefixes=docs_skip_prefixes,
+            allow_env_credentials=allow_env_credentials,
+        ),
+    ]
 
     starlette_app = Starlette(
         debug=False,
@@ -626,30 +479,7 @@ def main(host: str, port: int, mode: str):
         logger.info(f"  SSE endpoint:                  http://{host}:{port}{sse_endpoint_path}")
         logger.info(f"  StreamableHTTP endpoint:       http://{host}:{port}{streamable_endpoint_path}")
 
-    if oauth_cfg.enabled:
-        logger.info("OAuth discovery + endpoints:")
-        logger.info(f"  Issuer (MCP_SERVER_URL):       {oauth_cfg.mcp_server_url}")
-        logger.info(f"  Protected-resource metadata:   {oauth_cfg.mcp_server_url}/.well-known/oauth-protected-resource")
-        logger.info(f"  Authorization-server metadata: {oauth_cfg.mcp_server_url}/.well-known/oauth-authorization-server")
-        logger.info(f"  Dynamic client registration:   {oauth_cfg.mcp_server_url}/oauth/register")
-        logger.info(f"  Authorize:                     {oauth_cfg.mcp_server_url}/oauth/authorize")
-        logger.info(f"  Token:                         {oauth_cfg.mcp_server_url}/oauth/token")
-        logger.info(f"  Portal IdP:                    {oauth_cfg.portal_base_url}")
-        logger.info(
-            "  Header credentials:            %s",
-            "accepted when no bearer is present"
-            if oauth_cfg.allow_header_credentials
-            else "rejected (bearer only)",
-        )
-        allowed_hosts = os.getenv("ALLOWED_BASE_URL_HOSTS", "").strip()
-        logger.info(
-            "  Routing headers (x-base-url):  %s",
-            f"honoured for {allowed_hosts}"
-            if allowed_hosts
-            else "ignored (ALLOWED_BASE_URL_HOSTS not set)",
-        )
-
-    uvicorn.run(starlette_app, host=host, port=port, lifespan="on")
+    uvicorn.run(starlette_app, host=host, port=port, lifespan="on", access_log=False)
 
 
 if __name__ == "__main__":
