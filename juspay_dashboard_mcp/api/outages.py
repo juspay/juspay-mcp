@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, assert_merchant_access
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resolve_merchant_id
 import logging
     
     
@@ -51,7 +51,7 @@ async def list_outages(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchantId"), "You are not authorized to view outages for this merchantId")
+    resolve_merchant_id(payload.get("merchantId"), "You are not authorized to view outages for this merchantId")
     
     api_url = f"{host}/api/ec/v1/outage/list"
     

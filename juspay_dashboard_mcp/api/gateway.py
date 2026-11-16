@@ -4,8 +4,9 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote
 import logging
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, sanitize_merchant_id, assert_merchant_access, paginate_response, paginate_dict_keys
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resolve_merchant_id, paginate_response, paginate_dict_keys
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dic
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access gateway list for this merchantId")
+    resolve_merchant_id(payload.get("merchantId"), "You are not authorized to access gateway list for this merchantId")
     
     # Build request data
     request_data = dict(payload)
@@ -82,16 +83,15 @@ async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access gateway scheme for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchantId"), "You are not authorized to access gateway scheme for this merchantId")
     
-    merchant_id = sanitize_merchant_id(payload.get("merchantId"))
     if not merchant_id:
         raise ValueError("The payload must include 'merchantId'.")
     
     request_data = dict(payload)
     request_data["merchantId"] = merchant_id
     
-    api_url = f"{host}/api/ec/v2/gateway/scheme/{gateway}"
+    api_url = f"{host}/api/ec/v2/gateway/scheme/{quote(str(gateway), safe='')}"
 
     return await post(api_url, request_data, None, meta_info)
 
@@ -127,10 +127,8 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     merchant_id_from_payload = payload.get("merchantId")
     
     
-    assert_merchant_access(merchant_id_from_payload, "You are not authorized to access gateway details for this merchantId")
+    merchant_id = resolve_merchant_id(merchant_id_from_payload, "You are not authorized to access gateway details for this merchantId")
     
-    # Use sanitize_merchant_id to filter out placeholder values
-    merchant_id = sanitize_merchant_id(merchant_id_from_payload)
         
     if not mga_id or not merchant_id:
         raise ValueError("The payload must include 'mga_id' and 'merchantId'.")
@@ -138,7 +136,7 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     # Build request data with merchantId
     request_data = {"merchantId": merchant_id}
     
-    api_url = f"{host}/api/ec/v1/gateway/{mga_id}"
+    api_url = f"{host}/api/ec/v1/gateway/{quote(str(mga_id), safe='')}"
     
 
     return await post(api_url, request_data, None, meta_info)

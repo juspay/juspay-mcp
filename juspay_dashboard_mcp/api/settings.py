@@ -6,7 +6,7 @@
 
 import json
 
-from juspay_dashboard_mcp.api.utils import post, put, get_juspay_host_from_api, sanitize_merchant_id, assert_merchant_access, mask_fields, paginate_response
+from juspay_dashboard_mcp.api.utils import post, put, get_juspay_host_from_api, resolve_merchant_id, mask_fields, paginate_response
 
 # Substrings (matched case-insensitively against each key), see mask_fields.
 GENERAL_SETTINGS_SECRET_KEYS = {
@@ -106,12 +106,12 @@ async def get_mandate_settings(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access mandate settings for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchantId"), "You are not authorized to access mandate settings for this merchantId")
     
     # Build request data
     request_data = {}
     if payload.get("merchantId"):
-        request_data["merchantId"] = sanitize_merchant_id(payload.get("merchantId"))
+        request_data["merchantId"] = merchant_id
     
     api_url = f"{host}/api/ec/v1/mandate"
         

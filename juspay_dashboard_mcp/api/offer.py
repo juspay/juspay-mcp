@@ -4,12 +4,12 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote
 from juspay_dashboard_mcp.api.utils import (
     post,
     call,
     get_juspay_host_from_api,
-    sanitize_merchant_id,
-    assert_merchant_access
+    resolve_merchant_id
 )
 
 
@@ -46,15 +46,14 @@ async def get_offer_details(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchant_id"), "You are not authorized to access offer details for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access offer details for this merchantId")
     
     
     # Get merchant_id from payload or meta_info
-    merchant_id = sanitize_merchant_id(payload.get("merchant_id"))
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 
-    api_url = f"{host}/api/offers/dashboard/detail?merchant_id={merchant_id}"
+    api_url = f"{host}/api/offers/dashboard/detail?merchant_id={quote(str(merchant_id), safe='')}"
     
     return await post(api_url, payload, None, meta_info)
 
@@ -96,11 +95,10 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchant_id"), "You are not authorized to access offers for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access offers for this merchantId")
     
     
     # Get merchant_id from payload or meta_info
-    merchant_id = sanitize_merchant_id(payload.get("merchant_id"))
     if not merchant_id:
         raise ValueError("Payload must contain 'merchant_id'.")
 
@@ -118,6 +116,6 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
         "sort_offers": payload.get("sort_offers") or {"field": "CREATED_AT", "order": "DESCENDING"},
     }
 
-    api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
+    api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={quote(str(merchant_id), safe='')}"
 
     return await post(api_url, payload_updated, None, meta_info)

@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote, urlencode
 from juspay_dashboard_mcp.api.utils import post, call, get_juspay_host_from_api, paginate_response
 
 async def get_user(payload: dict, meta_info: dict = None) -> dict:
@@ -36,7 +37,7 @@ async def get_user(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build URL with query params
-    url_params = f"userId={payload['userId']}"
+    url_params = urlencode({"userId": payload["userId"]})
     
     api_url = f"{host}/api/ec/v1/user?{url_params}"
     

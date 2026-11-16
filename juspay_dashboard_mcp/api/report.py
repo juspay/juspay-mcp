@@ -4,7 +4,8 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import call, post, get_juspay_host_from_api,sanitize_merchant_id, assert_merchant_access
+from urllib.parse import quote, urlencode
+from juspay_dashboard_mcp.api.utils import call, post, get_juspay_host_from_api,resolve_merchant_id
 
 async def report_details(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -42,7 +43,7 @@ async def report_details(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     # Build URL with query params
-    url_params = f"task_uid={task_uid}&user_name={user_name}"
+    url_params = urlencode({"task_uid": task_uid, "user_name": user_name})
     
     api_url = f"{host}/api/monitoring/task?{url_params}"
     
@@ -84,9 +85,8 @@ async def list_report(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access reports for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchantId"), "You are not authorized to access reports for this merchantId")
     
-    merchant_id = sanitize_merchant_id(payload.get("merchantId"))
     if not merchant_id:
         raise ValueError("Payload must contain 'merchantId'.")
     

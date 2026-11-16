@@ -377,7 +377,7 @@ MERCHANT_ID_PLACEHOLDERS = [
     None
 ]    
 
-def sanitize_merchant_id(merchant_id_from_payload: str | None) -> str | None:
+def _sanitize_merchant_id(merchant_id_from_payload: str | None) -> str | None:
     """Return the merchantId to use for a request.
 
     If the model sent a placeholder (or nothing), use the merchant from the
@@ -408,7 +408,7 @@ def make_payout_additional_headers(meta_info: dict = None) -> dict:
     return {"Authorization": token, "X-Token-Type": "Euler"}
 
 
-def assert_merchant_access(requested_merchant_id, message: str) -> None:
+def _assert_merchant_access(requested_merchant_id, message: str) -> None:
     """A token may only act on its own merchant.
 
     The token's merchant comes from the validated token (validate/authorize
@@ -426,3 +426,15 @@ def assert_merchant_access(requested_merchant_id, message: str) -> None:
         )
     if str(requested_merchant_id).strip() != str(token_mid).strip():
         raise ValueError(message)
+
+
+def resolve_merchant_id(requested_merchant_id, message: str) -> str | None:
+    """Validate a model-supplied merchant ID against the token and return the one to use.
+
+    Raises ValueError if a different merchant than the token's is requested.
+    A placeholder or missing value resolves to the token's own merchant.
+    This is the only way tools should handle a merchant ID: the check and the
+    fallback cannot be done separately.
+    """
+    _assert_merchant_access(requested_merchant_id, message)
+    return _sanitize_merchant_id(requested_merchant_id)

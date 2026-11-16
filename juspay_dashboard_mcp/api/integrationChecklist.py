@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 import os
 import dotenv
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, assert_merchant_access, sanitize_merchant_id
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resolve_merchant_id
 
 dotenv.load_dotenv()
 
@@ -28,8 +28,7 @@ async def get_integration_monitoring_status(payload: dict, meta_info: dict = Non
         dict: Integration monitoring status data
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    assert_merchant_access(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
-    merchant_id = sanitize_merchant_id(payload.get("merchant_id"))
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 
@@ -77,8 +76,7 @@ async def get_x_mid_monitoring(payload: dict, meta_info: dict = None) -> dict:
         dict: Contains validation status for each API endpoint
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    assert_merchant_access(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
-    merchant_id = sanitize_merchant_id(payload.get("merchant_id"))
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 
@@ -118,8 +116,7 @@ async def get_integration_platform_metrics(payload: dict, meta_info: dict = None
         dict: Platform-grouped product integration data with queryString, queryData, and metaData
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    assert_merchant_access(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
-    merchant_id = sanitize_merchant_id(payload.get("merchant_id"))
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 
@@ -170,8 +167,7 @@ async def get_integration_product_count_metrics(payload: dict, meta_info: dict =
         dict: Product-grouped integration count data with queryString, queryData, and metaData
     """
     host = await get_juspay_host_from_api(meta_info=meta_info)
-    assert_merchant_access(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
-    merchant_id = sanitize_merchant_id(payload.get("merchant_id"))
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 

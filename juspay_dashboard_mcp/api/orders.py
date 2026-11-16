@@ -5,8 +5,8 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
 from datetime import datetime, timezone
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc, assert_merchant_access
-from urllib.parse import urlencode
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, call, ist_to_utc, resolve_merchant_id
+from urllib.parse import quote, urlencode
 from juspay_dashboard_mcp.config import get_common_headers
 from juspay_dashboard_mcp.api_schema.orders import FlatFilter, Clause
 from typing import Dict, Any
@@ -87,7 +87,7 @@ async def list_orders_v4(payload: dict, meta_info: dict = None) -> dict:
     host = await get_juspay_host_from_api(meta_info=meta_info)
     
     
-    assert_merchant_access(payload.get("merchantId"), "You are not authorized to access orders for this merchantId")
+    resolve_merchant_id(payload.get("merchantId"), "You are not authorized to access orders for this merchantId")
     
     date_from_str = payload.get("dateFrom")
     date_to_str = payload.get("dateTo")
@@ -267,7 +267,7 @@ async def get_order_details(payload: dict, meta_info: dict) -> dict:
     # Build request data
     request_data = {}
 
-    api_url = f"{host}/api/ec/v1/orders/{order_id}"
+    api_url = f"{host}/api/ec/v1/orders/{quote(str(order_id), safe='')}"
 
     try:
         logging.info("Attempting to get order details")
@@ -284,7 +284,7 @@ async def get_order_details(payload: dict, meta_info: dict) -> dict:
             if extracted_order_id != order_id:
                 logging.info("Retrying with extracted order_id")
                 try:
-                    retry_api_url = f"{host}/api/ec/v1/orders/{extracted_order_id}"
+                    retry_api_url = f"{host}/api/ec/v1/orders/{quote(str(extracted_order_id), safe='')}"
                     result = await post(retry_api_url, request_data, None, meta_info)
                     logging.info("Success with extracted order_id")
                     return result

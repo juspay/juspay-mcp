@@ -263,7 +263,7 @@ async def get_payout_order_details(payload: dict, meta_info: dict) -> dict:
 
     additional_headers = make_payout_additional_headers(meta_info)
 
-    api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{order_id}?expand=fulfillment"
+    api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{quote(str(order_id), safe='')}?expand=fulfillment"
 
     try:
         logging.info("Attempting to get order details")
@@ -280,7 +280,7 @@ async def get_payout_order_details(payload: dict, meta_info: dict) -> dict:
             if extracted_order_id != order_id:
                 logging.info("Retrying with extracted order_id")
                 try:
-                    retry_api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{extracted_order_id}?expand=fulfillment"
+                    retry_api_url = f"{host}/api/payout/batch/dashboard/v1/orders/{quote(str(extracted_order_id), safe='')}?expand=fulfillment"
                     result = await call(retry_api_url, additional_headers=additional_headers, meta_info=meta_info)
                     logging.info("Success with extracted order_id")
                     return result
