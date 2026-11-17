@@ -11,6 +11,7 @@ import dotenv
 import asyncio
 import logging
 import contextlib
+from urllib.parse import urlparse
 
 # Load .env BEFORE any os.getenv() so JUSPAY_MCP_TYPE etc.
 # from the env file participate in the import-time branching below.
@@ -101,6 +102,13 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
         self._skip_path_prefixes = skip_path_prefixes
         self._allow_env_credentials = allow_env_credentials
 
+    @staticmethod
+    def _is_loopback_name(value) -> bool:
+        try:
+            return (urlparse(value).hostname or "") in LOOPBACK_HOSTS
+        except ValueError:
+            return False
+
     def _is_unauthenticated_path(self, path: str) -> bool:
         if path in ("/health", "/health/ready"):
             return True
@@ -110,15 +118,32 @@ class JuspayHeaderAuthMiddleware(BaseHTTPMiddleware):
         juspay_credentials = extract_header_credentials(request)
         request.state.juspay_credentials = juspay_credentials
 
+        # Use the raw ASGI path, not request.url.path, which is derived from the Host header.
+        path = request.scope.get("path", "")
+        has_credential = any(juspay_credentials.get(key) for key in REQUIRED_HEADER_CREDENTIALS)
+
+        if self._allow_env_credentials and not has_credential:
+            # The server's own credentials are in use: only loopback callers may reach it.
+            # A web page on another site sends its own Host/Origin, so it is refused here.
+            origin = request.headers.get("origin")
+            if not self._is_loopback_name("//" + request.headers.get("host", "")) or (
+                origin and not self._is_loopback_name(origin)
+            ):
+                logger.warning("Rejected non-loopback Host/Origin in env-credentials mode")
+                return JSONResponse(
+                    {"jsonrpc": "2.0", "id": None, "error": {"code": -32001, "message": "Forbidden host or origin"}},
+                    status_code=403,
+                )
+
         if (
             self._allow_env_credentials
-            or self._is_unauthenticated_path(request.url.path)
-            or any(juspay_credentials.get(key) for key in REQUIRED_HEADER_CREDENTIALS)
+            or self._is_unauthenticated_path(path)
+            or has_credential
         ):
             return await call_next(request)
 
         expected = " or ".join(REQUIRED_HEADER_CREDENTIALS.values())
-        logger.warning("Rejected unauthenticated request to %s", request.url.path)
+        logger.warning("Rejected unauthenticated request to %s", path)
         return JSONResponse(
             {
                 "jsonrpc": "2.0",

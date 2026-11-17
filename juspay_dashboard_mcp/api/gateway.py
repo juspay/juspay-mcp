@@ -6,9 +6,23 @@
 
 from urllib.parse import quote
 import logging
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resolve_merchant_id, paginate_response, paginate_dict_keys
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resolve_merchant_id, paginate_response, paginate_dict_keys, mask_fields
 
 logger = logging.getLogger(__name__)
+
+# Substrings (matched case-insensitively against each key), see mask_fields.
+# Gateway account details carry per-gateway credentials such as checkoutSecretKey,
+# payuSalt, payuMerchantKey, authToken, accessToken, refreshToken, razorpaySecret,
+# hashKey, phonepeKey1 and forwardingEntityPassword inside a JSON-encoded string.
+GATEWAY_SECRET_KEYS = {
+    "secret",
+    "password",
+    "salt",
+    "token",
+    "key",
+    "certcontent",
+    "accesscode",
+}
 
 async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -46,7 +60,7 @@ async def list_configured_gateways(payload: dict, meta_info: dict = None) -> dic
     
     api_url = f"{host}/api/ec/v1/gateway/list"
 
-    response = await post(api_url, request_data, None, meta_info)
+    response = mask_fields(await post(api_url, request_data, None, meta_info), GATEWAY_SECRET_KEYS)
     return paginate_response(response, payload.get("limit", 20), payload.get("offset", 0))
 
 async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
@@ -93,7 +107,7 @@ async def get_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     
     api_url = f"{host}/api/ec/v2/gateway/scheme/{quote(str(gateway), safe='')}"
 
-    return await post(api_url, request_data, None, meta_info)
+    return mask_fields(await post(api_url, request_data, None, meta_info), GATEWAY_SECRET_KEYS)
 
 async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -139,7 +153,7 @@ async def get_gateway_details(payload: dict, meta_info: dict = None) -> dict:
     api_url = f"{host}/api/ec/v1/gateway/{quote(str(mga_id), safe='')}"
     
 
-    return await post(api_url, request_data, None, meta_info)
+    return mask_fields(await post(api_url, request_data, None, meta_info), GATEWAY_SECRET_KEYS)
 
 async def list_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -168,7 +182,7 @@ async def list_gateway_scheme(payload: dict, meta_info: dict = None) -> dict:
     
     api_url = f"{host}/api/ec/v2/gateway/scheme/list"
     
-    return await post(api_url, request_data, None, meta_info)
+    return mask_fields(await post(api_url, request_data, None, meta_info), GATEWAY_SECRET_KEYS)
 
 async def get_merchant_gateways_pm_details(payload: dict, meta_info: dict = None) -> dict:
     """
