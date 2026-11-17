@@ -118,7 +118,7 @@ def _get_headers(meta_info: dict = None) -> dict:
 # expected schema_signature without calling the info endpoint on every query.
 _SCHEMA_CACHE_TTL_SECONDS = 300
 _SCHEMA_CACHE_MAX_ENTRIES = 256
-_schema_cache: dict[tuple[str, str, str], tuple[list, float]] = {}
+_schema_cache: dict[tuple[str, str, str], tuple[list, float, list]] = {}
 
 
 def _schema_cache_key(headers: dict, domain: str) -> tuple[str, str, str]:
@@ -126,14 +126,14 @@ def _schema_cache_key(headers: dict, domain: str) -> tuple[str, str, str]:
     return (hashlib.sha256(token.encode()).hexdigest()[:16], domain)
 
 
-def _cache_dimensions(key: tuple[str, str, str], dimensions: list) -> None:
+def _cache_dimensions(key: tuple[str, str, str], dimensions: list, filters: list | None = None) -> None:
     now = time.time()
     if len(_schema_cache) >= _SCHEMA_CACHE_MAX_ENTRIES:
-        for stale in [k for k, (_, expiry) in _schema_cache.items() if expiry <= now]:
+        for stale in [k for k, (_, expiry, _f) in _schema_cache.items() if expiry <= now]:
             _schema_cache.pop(stale, None)
         while len(_schema_cache) >= _SCHEMA_CACHE_MAX_ENTRIES:
             _schema_cache.pop(next(iter(_schema_cache)))
-    _schema_cache[key] = (list(dimensions), now + _SCHEMA_CACHE_TTL_SECONDS)
+    _schema_cache[key] = (list(dimensions), now + _SCHEMA_CACHE_TTL_SECONDS, list(filters or []))
 
 
 async def _get_domain_dimensions(domain: str, meta_info: dict = None) -> list | None:
@@ -147,12 +147,35 @@ async def _get_domain_dimensions(domain: str, meta_info: dict = None) -> list | 
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(f"{JUSPAY_BASE_URL}/api/q/{quote(str(domain), safe='')}/info", headers=headers)
             resp.raise_for_status()
-            dimensions = resp.json().get("dimension", [])
+            info = resp.json()
+            dimensions = info.get("dimension", [])
+            filter_fields = info.get("filter", [])
     except Exception as e:
         logger.error(f"schema signature check: failed to load info for domain={domain}: {safe_exc(e)}")
         return None
-    _cache_dimensions(key, dimensions)
+    _cache_dimensions(key, dimensions, filter_fields)
     return dimensions
+
+
+def _field_names(items) -> set[str]:
+    """Names from a qapi_info list whose entries are strings or {"name": ...} objects."""
+    names: set[str] = set()
+    for item in items or []:
+        if isinstance(item, str):
+            names.add(item)
+        elif isinstance(item, dict) and isinstance(item.get("name"), str):
+            names.add(item["name"])
+    return names
+
+
+async def get_domain_fields(domain: str, meta_info: dict = None) -> tuple[set[str], set[str]] | None:
+    """(dimension names, filter-field names) qapi_info offers for `domain`; None if unavailable."""
+    dimensions = await _get_domain_dimensions(domain, meta_info)
+    if dimensions is None:
+        return None
+    cached = _schema_cache.get(_schema_cache_key(_get_headers(meta_info), domain))
+    filters = cached[2] if cached else []
+    return _field_names(dimensions), _field_names(filters)
 
 
 def generate_schema_signature(domain: str, dimensions: list, metrics: list) -> str:
@@ -239,7 +262,7 @@ async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
             raw = resp.json()
             dimensions = raw.get("dimension", [])
             filters = raw.get("filter", [])
-        _cache_dimensions(_schema_cache_key(headers, domain), dimensions)
+        _cache_dimensions(_schema_cache_key(headers, domain), dimensions, filters)
     except Exception as e:
         logger.error(f"qapi_info: API call failed for domain={domain}: {safe_exc(e)}")
 

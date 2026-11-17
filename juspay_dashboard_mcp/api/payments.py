@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, mask_fields
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, mask_fields, resolve_merchant_id, get_token_merchant_id
 
 PAYMENT_LINK_PII_KEYS = {"customeremail", "customerphone"}
 
@@ -198,8 +198,8 @@ async def create_payment_link(payload: dict, meta_info: dict = None) -> dict:
 
     if "payment_page_client_id" in payload:
         request_data["payment_page_client_id"] = payload["payment_page_client_id"]
-    elif meta_info and "token_response" in meta_info and "merchantId" in meta_info["token_response"]:
-        request_data["payment_page_client_id"] = meta_info["token_response"]["merchantId"]
+    elif get_token_merchant_id():
+        request_data["payment_page_client_id"] = get_token_merchant_id()
     else:
         raise Exception("The payment page client id is missing. Can you please provide it?")
 
@@ -291,6 +291,11 @@ async def create_payment_link(payload: dict, meta_info: dict = None) -> dict:
         if field in payload:
             request_data[field] = payload[field]
 
+    if "merchant_id" in payload:
+        request_data["merchant_id"] = resolve_merchant_id(
+            payload["merchant_id"], "You are not authorized to create payment links for this merchant_id"
+        )
+
     if "metaData" in payload:
         request_data["metaData"] = payload["metaData"]
 
@@ -379,8 +384,8 @@ async def create_autopay_link(payload: dict, meta_info: dict = None) -> dict:
     """
     if "payment_page_client_id" in payload:
         payment_page_client_id = payload["payment_page_client_id"]
-    elif meta_info and "token_response" in meta_info and "merchantId" in meta_info["token_response"]:
-        payment_page_client_id = meta_info["token_response"]["merchantId"]
+    elif get_token_merchant_id():
+        payment_page_client_id = get_token_merchant_id()
     else:
         raise Exception("The payment page client id is missing. Can you please provide it?")
     required_autopay_fields = [
@@ -513,6 +518,11 @@ async def create_autopay_link(payload: dict, meta_info: dict = None) -> dict:
     for field in OPTIONAL_PAYMENT_FIELDS:
         if field in payload:
             request_data[field] = payload[field]
+
+    if "merchant_id" in payload:
+        request_data["merchant_id"] = resolve_merchant_id(
+            payload["merchant_id"], "You are not authorized to create payment links for this merchant_id"
+        )
 
 
     if "metaData" in payload:

@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote, urlencode
 import httpx
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
@@ -45,7 +46,7 @@ async def create_refund_juspay(payload: dict) -> dict:
     
     routing_id = payload.get("routing_id")
 
-    api_url = ENDPOINTS["refund"].format(order_id=order_id)
+    api_url = ENDPOINTS["refund"].format(order_id=quote(str(order_id), safe=''))
     
     refund_data = {
         "unique_request_id": unique_request_id,

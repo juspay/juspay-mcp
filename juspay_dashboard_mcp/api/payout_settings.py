@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers
+from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers, mask_fields, PAYOUT_SECRET_KEYS
 
 async def get_payout_configs(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -57,7 +57,8 @@ async def get_payout_encryption_or_ssl_keys(payload: dict, meta_info: dict = Non
     additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/keys"
 
-    return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
+    response = await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
+    return mask_fields(response, PAYOUT_SECRET_KEYS)
 
 async def get_payout_outages(payload: dict, meta_info: dict = None) -> dict:
     """

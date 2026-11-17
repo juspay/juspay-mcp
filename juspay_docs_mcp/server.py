@@ -14,9 +14,12 @@ Tools:
 Discovery runs once at module import; results are persisted to snapshot.json.
 """
 
+import asyncio
+import ipaddress
 import logging
+import socket
 from typing import Annotated, Optional
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -48,6 +51,30 @@ def _url_allowed(url: str) -> bool:
     if host in _ALLOWED_EXACT:
         return True
     return any(host.endswith(s) for s in _ALLOWED_SUFFIXES)
+
+
+async def _resolves_to_public_ip(url: str) -> bool:
+    """True only if every address the host resolves to is a public IP.
+
+    Blocks loopback, private, link-local (e.g. 169.254.169.254 cloud metadata),
+    multicast, reserved and unspecified addresses.
+    """
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if not host:
+        return False
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        infos = await asyncio.get_running_loop().getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if not ip.is_global:
+            return False
+    return True
 
 
 # ----------------------------------------------------------------------------
@@ -140,8 +167,9 @@ logger.info(
 # HTTP client (shared across tools)
 # ----------------------------------------------------------------------------
 
+# Redirects are followed by hand in _fetch so every hop is re-validated.
 _HTTPX = httpx.AsyncClient(
-    follow_redirects=True,
+    follow_redirects=False,
     timeout=30.0,
     headers={"User-Agent": "juspay-docs-mcp"},
 )
@@ -154,12 +182,26 @@ _HTTPX = httpx.AsyncClient(
 
 
 
+_MAX_REDIRECTS = 5
+
+
 async def _fetch(url: str) -> str:
-    """Fetch URL and return the raw response text."""
+    """Fetch URL and return the raw response text.
+
+    The URL and every redirect target must be on the allowed domains and
+    resolve to public IP addresses only.
+    """
     try:
-        response = await _HTTPX.get(url)
-        response.raise_for_status()
-        return response.text
+        for _ in range(_MAX_REDIRECTS + 1):
+            if not _url_allowed(url) or not await _resolves_to_public_ip(url):
+                return "Error: URL not allowed."
+            response = await _HTTPX.get(url)
+            if response.is_redirect and response.headers.get("location"):
+                url = urljoin(url, response.headers["location"])
+                continue
+            response.raise_for_status()
+            return response.text
+        return "Error: too many redirects."
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         return f"Encountered an HTTP error: {e}"
 
@@ -194,15 +236,15 @@ async def juspay_genius_docs(
     """
     try:
         result = await ask_genius(query)
-    except httpx.TimeoutException as e:
-        logger.warning("Genius docs call timed out: %s", e)
+    except httpx.TimeoutException:
+        logger.warning("Genius docs call timed out")
         return (
             "The Genius docs assistant timed out. "
             "Use list_products / explore_product / doc_fetch_tool to navigate "
             "the docs directly, or retry shortly."
         )
-    except httpx.HTTPError as e:
-        logger.warning("Genius docs call failed: %s", e)
+    except httpx.HTTPError:
+        logger.warning("Genius docs call failed")
         return (
             "The Genius docs assistant is unavailable right now. "
             "Use list_products / explore_product / doc_fetch_tool to navigate "

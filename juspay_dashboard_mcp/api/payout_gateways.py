@@ -5,7 +5,7 @@ from urllib.parse import quote
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers, paginate_response
+from juspay_dashboard_mcp.api.utils import call, get_juspay_host_from_api, make_payout_additional_headers, paginate_response, mask_fields, PAYOUT_SECRET_KEYS
 
 async def list_configured__payout_gateways(payload: dict, meta_info: dict = None) -> dict:
     """
@@ -32,6 +32,7 @@ async def list_configured__payout_gateways(payload: dict, meta_info: dict = None
     additional_headers = make_payout_additional_headers(meta_info)
     api_url = f"{host}/api/payout/batch/dashboard/v1/gatewaycredential"
     response = await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
+    response = mask_fields(response, PAYOUT_SECRET_KEYS)
     payload = payload or {}
     return paginate_response(response, payload.get("limit", 20), payload.get("offset", 0))
 

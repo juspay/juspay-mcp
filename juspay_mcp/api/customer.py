@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote, urlencode
 import httpx
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
@@ -31,7 +32,7 @@ async def get_customer_juspay(payload: dict) -> dict:
     if not customer_id:
         raise ValueError("The payload must include 'customer_id'.")
 
-    api_url = ENDPOINTS["customer"].format(customer_id=customer_id)
+    api_url = ENDPOINTS["customer"].format(customer_id=quote(str(customer_id), safe=''))
     return await call(api_url, customer_id)
 
 async def create_customer_juspay(payload: dict) -> dict:
@@ -106,5 +107,5 @@ async def update_customer_juspay(payload: dict) -> dict:
     
     routing_id = payload.get("routing_id", customer_id)
     
-    api_url = ENDPOINTS["update_customer"].format(customer_id=customer_id)
+    api_url = ENDPOINTS["update_customer"].format(customer_id=quote(str(customer_id), safe=''))
     return await post(api_url, update_data, routing_id)

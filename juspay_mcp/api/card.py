@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote, urlencode
 import httpx
 from juspay_mcp.config import ENDPOINTS
 from juspay_mcp.api.utils import call, post
@@ -78,7 +79,7 @@ async def list_cards_juspay(payload: dict) -> dict:
         
     routing_id = payload.get("routing_id", customer_id)
     
-    api_url = f"{ENDPOINTS['cards']}?customer_id={customer_id}"
+    api_url = f"{ENDPOINTS['cards']}?{urlencode({'customer_id': customer_id})}"
     
     if payload.get("options.check_cvv_less_support"):
         api_url += "&options.check_cvv_less_support=true"
@@ -175,7 +176,7 @@ async def get_card_info_juspay(payload: dict) -> dict:
         
     routing_id = payload.get("routing_id")
     
-    api_url = f"{ENDPOINTS['card_info']}/{bin_number}"
+    api_url = f"{ENDPOINTS['card_info']}/{quote(str(bin_number), safe='')}"
     return await call(api_url, routing_id)
 
 async def get_bin_list_juspay(payload: dict) -> dict:
@@ -199,5 +200,5 @@ async def get_bin_list_juspay(payload: dict) -> dict:
     auth_type = payload.get("auth_type", "OTP")
     routing_id = payload.get("routing_id")
     
-    api_url = f"{ENDPOINTS['bin_list']}?auth_type={auth_type}"
+    api_url = f"{ENDPOINTS['bin_list']}?{urlencode({'auth_type': auth_type})}"
     return await call(api_url, routing_id)
