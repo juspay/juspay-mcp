@@ -3,13 +3,10 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
-"""Direct header-credential extraction.
+"""Direct header-credential extraction, used by `JuspayHeaderAuthMiddleware`.
 
-Shared by `JuspayHeaderAuthMiddleware` and by `BearerAuthMiddleware`'s
-no-bearer fallback, so both read exactly the same header set. The dict produced
-here deliberately carries NO `auth_type` key: its absence is what makes
-`juspay_dashboard_mcp/api/utils.py` validate the token at
-`/api/ec/v1/validate/token` rather than `/ec/v2/authorize`.
+The token is validated by the dashboard tool layer: static `auth_...` tokens
+at `/ec/v2/authorize`, other tokens at `/api/ec/v1/validate/token`.
 """
 
 from __future__ import annotations
@@ -21,16 +18,6 @@ from starlette.requests import Request
 from .request_guards import trusted_base_url
 
 AI_STUDIO_MCP_TYPES = {"PP_AI_STUDIO", "AI_STUDIO"}
-
-# Keys that represent an actual credential, as opposed to the edge-routing
-# hints (base_url / tenant_id) which may accompany any request.
-_CREDENTIAL_KEYS = (
-    "api_key",
-    "dashboard_token",
-    "pp_ai_studio_api_key",
-    "pp_ai_studio_token",
-)
-
 
 def _strip_bearer(value: str | None) -> str | None:
     if value and value[:7].lower() == "bearer ":
@@ -54,7 +41,6 @@ def extract_header_credentials(request: Request) -> dict:
     )
 
     base_url_override = trusted_base_url(request.headers.get("x-base-url"), "x-base-url")
-    tenant_id_override = request.headers.get("x-tenant-id")
 
     creds: dict = {}
     if api_key:
@@ -65,8 +51,6 @@ def extract_header_credentials(request: Request) -> dict:
         creds["dashboard_token"] = dashboard_token
     if base_url_override:
         creds["base_url"] = base_url_override
-    if tenant_id_override:
-        creds["tenant_id"] = tenant_id_override
     if os.getenv("JUSPAY_MCP_TYPE", "").upper() in AI_STUDIO_MCP_TYPES:
         if pp_ai_studio_api_key:
             creds["pp_ai_studio_api_key"] = pp_ai_studio_api_key
@@ -74,12 +58,3 @@ def extract_header_credentials(request: Request) -> dict:
             creds["pp_ai_studio_token"] = pp_ai_studio_token
 
     return creds
-
-
-def has_credential(creds: dict) -> bool:
-    """True when `creds` carries a real credential, not just routing hints.
-
-    `x-base-url` / `x-tenant-id` alone must never count as authentication —
-    otherwise any request through the edge would sail past the bearer check.
-    """
-    return any(creds.get(key) for key in _CREDENTIAL_KEYS)

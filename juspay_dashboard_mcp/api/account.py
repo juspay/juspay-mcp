@@ -10,7 +10,7 @@ import os
 import httpx
 
 from juspay_dashboard_mcp.api.utils import (
-    bind_tenant_from_auth_response,
+    verify_token_host,
     get_juspay_credentials,
 )
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL
@@ -19,7 +19,7 @@ from juspay_mcp.log_safe import safe_url
 logger = logging.getLogger(__name__)
 
 # Portal requires this byte-exact resource query string (literal `{` `}` and
-# `%20` for spaces) — same form used by the OAuth validation path.
+# `%20` for spaces).
 _AUTHORIZE_QUERY = "resource={%22COMMON%22%20%3A%20%22R%22}"
 
 
@@ -28,7 +28,7 @@ async def get_merchant_details(payload: dict = None, meta_info: dict = None) -> 
 
     Calls Portal's authorize endpoint and surfaces the full response so the
     LLM gets merchantId, userId, email, context (MERCHANT/TENANT/RESELLER/
-    JUSPAY), username, tenantAccountId, validHost, and any other fields
+    JUSPAY), username, validHost, and any other fields
     Portal exposes for the current session.
     """
     juspay_creds = get_juspay_credentials()
@@ -49,5 +49,5 @@ async def get_merchant_details(payload: dict = None, meta_info: dict = None) -> 
         resp = await client.get(url, headers=headers)
         resp.raise_for_status()
         data = resp.json()
-        bind_tenant_from_auth_response(data, juspay_creds)
+        verify_token_host(data, juspay_creds)
         return data

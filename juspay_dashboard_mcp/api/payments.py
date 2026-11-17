@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, get_admin_host, sanitize_merchant_id, assert_merchant_access, mask_fields
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, mask_fields
 
 PAYMENT_LINK_PII_KEYS = {"customeremail", "customerphone"}
 
@@ -88,8 +88,7 @@ async def list_payment_links_v1(payload: dict, meta_info: dict = None) -> dict:
     Calls the Juspay Portal API to retrieve a list of payment links within a specified time range.
 
     The API endpoint is:
-        https://portal.juspay.in/api/ec/v1/paymentLinks/list (for non-admin users)
-        https://portal.juspay.in/ec/v1/admin/paymentLinks/list (for admin users)
+        https://portal.juspay.in/api/ec/v1/paymentLinks/list
 
     Args:
         payload (dict): Should contain 'qFilters', 'date_from', and 'date_to' as required by the API.
@@ -97,33 +96,17 @@ async def list_payment_links_v1(payload: dict, meta_info: dict = None) -> dict:
             - date_from: Start date/time in ISO 8601 format (required)
             - date_to: End date/time in ISO 8601 format (required)
             - offset: Pagination offset (optional, default 0)
-            - merchantId: Merchant ID (admin only, optional)
 
     Returns:
         dict: The parsed JSON response from the List Payment Links API.
 
     Raises:
-        ValueError: If non-admin user tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
-    
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchantId"), mid_from_meta, "You are not authorized to access payment links for this merchantId")
-
     request_payload = {}
     
-    # Add merchantId for admin calls
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchantId"), mid_from_meta)
-        if merchant_id:
-            request_payload["merchantId"] = merchant_id
 
     if "qFilters" in payload:
         request_payload["qFilters"] = payload["qFilters"]
@@ -147,11 +130,7 @@ async def list_payment_links_v1(payload: dict, meta_info: dict = None) -> dict:
         "dateCreated": {"gte": date_from_str, "lte": date_to_str}
     }
     
-    # Conditional URL based on admin status
-    if isadmin:
-        api_url = f"{host}/ec/v1/admin/paymentLinks/list"
-    else:
-        api_url = f"{host}/api/ec/v1/paymentLinks/list"
+    api_url = f"{host}/api/ec/v1/paymentLinks/list"
 
     response = await post(api_url, request_payload, None, meta_info)
     return mask_fields(response, PAYMENT_LINK_PII_KEYS)

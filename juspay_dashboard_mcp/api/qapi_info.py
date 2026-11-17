@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote
 import ast
 import hashlib
 import json
@@ -122,7 +123,7 @@ _schema_cache: dict[tuple[str, str, str], tuple[list, float]] = {}
 
 def _schema_cache_key(headers: dict, domain: str) -> tuple[str, str, str]:
     token = headers.get("x-web-logintoken") or ""
-    return (hashlib.sha256(token.encode()).hexdigest()[:16], headers.get("x-tenant-id") or "", domain)
+    return (hashlib.sha256(token.encode()).hexdigest()[:16], domain)
 
 
 def _cache_dimensions(key: tuple[str, str, str], dimensions: list) -> None:
@@ -144,7 +145,7 @@ async def _get_domain_dimensions(domain: str, meta_info: dict = None) -> list | 
         return cached[0]
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(f"{JUSPAY_BASE_URL}/api/q/{domain}/info", headers=headers)
+            resp = await client.get(f"{JUSPAY_BASE_URL}/api/q/{quote(str(domain), safe='')}/info", headers=headers)
             resp.raise_for_status()
             dimensions = resp.json().get("dimension", [])
     except Exception as e:
@@ -227,7 +228,7 @@ async def qapi_info(payload: dict, meta_info: dict = None) -> dict:
     """
     domain = payload.get("domain", "kvorders")
     headers = _get_headers(meta_info)
-    url = f"{JUSPAY_BASE_URL}/api/q/{domain}/info"
+    url = f"{JUSPAY_BASE_URL}/api/q/{quote(str(domain), safe='')}/info"
 
     dimensions: list = []
     filters: list = []
@@ -287,7 +288,7 @@ async def qapi_field_value_discovery(payload: dict, meta_info: dict = None) -> d
     headers = _get_headers(meta_info)
 
     # Fetch domain info to validate dimensions
-    info_url = f"{JUSPAY_BASE_URL}/api/q/{domain}/info"
+    info_url = f"{JUSPAY_BASE_URL}/api/q/{quote(str(domain), safe='')}/info"
     info_fields: set[str] = set()
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:

@@ -24,9 +24,6 @@ else:
     JUSPAY_BASE_URL = os.getenv("JUSPAY_SANDBOX_BASE_URL", "https://sandbox.juspay.in")
     logger.info("Using Juspay Sandbox Environment")
 
-TENANT_HOST_MAP_ENV = "JUSPAY_TENANT_HOST_MAP"
-
-
 def _normalize_base_url(value: str) -> str:
     """Turn a bare host or a full URL into a scheme-qualified base URL."""
     value = value.strip().rstrip("/")
@@ -35,75 +32,8 @@ def _normalize_base_url(value: str) -> str:
     return value
 
 
-def _load_tenant_host_map() -> dict[str, str]:
-    """Parse the tenant-id -> host mapping from the environment.
-
-    Expected shape: JUSPAY_TENANT_HOST_MAP='{"juspay":"api.juspay.in"}'
-    Values may be bare hosts (https:// is assumed) or full URLs. A missing or
-    malformed value yields an empty map, which makes `resolve_base_url` fall
-    back to JUSPAY_BASE_URL.
-    """
-    raw = os.getenv(TENANT_HOST_MAP_ENV)
-    if not raw or not raw.strip():
-        logger.info("%s not set; all requests use %s", TENANT_HOST_MAP_ENV, JUSPAY_BASE_URL)
-        return {}
-
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        logger.error("%s is not valid JSON (%s); ignoring it", TENANT_HOST_MAP_ENV, e)
-        return {}
-
-    if not isinstance(parsed, dict):
-        logger.error("%s must be a JSON object, got %s; ignoring it", TENANT_HOST_MAP_ENV, type(parsed).__name__)
-        return {}
-
-    mapping: dict[str, str] = {}
-    for tenant_id, host in parsed.items():
-        tenant_id = str(tenant_id).strip()
-        if not tenant_id or not isinstance(host, str) or not host.strip():
-            logger.error("%s: skipping malformed entry %r -> %r", TENANT_HOST_MAP_ENV, tenant_id, host)
-            continue
-        mapping[tenant_id] = _normalize_base_url(host)
-
-    logger.info("Loaded tenant host map for tenants: %s", sorted(mapping))
-    return mapping
-
-
-TENANT_HOST_MAP = _load_tenant_host_map()
-
-
-def resolve_base_url(juspay_creds: dict | None = None) -> str:
-    """Resolve the base URL for the current request.
-
-    Precedence:
-      1. `x-tenant-id` looked up in JUSPAY_TENANT_HOST_MAP.
-      2. JUSPAY_BASE_URL, derived from JUSPAY_ENV.
-    """
-    tenant_id = ((juspay_creds or {}).get("tenant_id") or "").strip()
-
-    if tenant_id:
-        host = TENANT_HOST_MAP.get(tenant_id)
-        if host:
-            return host
-        if TENANT_HOST_MAP:
-            logger.warning(
-                "Tenant '%s' is not present in %s; falling back to the default host",
-                tenant_id,
-                TENANT_HOST_MAP_ENV,
-            )
-        else:
-            logger.warning(
-                "Received tenant '%s' but %s is not configured; falling back to the default host",
-                tenant_id,
-                TENANT_HOST_MAP_ENV,
-            )
-
-    return JUSPAY_BASE_URL
-
-
-def build_api_url(path: str, juspay_creds: dict | None = None) -> str:
-    """Join an ENDPOINTS path onto the base URL resolved for this request.
+def build_api_url(path: str) -> str:
+    """Join an ENDPOINTS path onto JUSPAY_BASE_URL.
 
     Absolute URLs are passed through untouched.
     """
@@ -111,11 +41,10 @@ def build_api_url(path: str, juspay_creds: dict | None = None) -> str:
         return path
     if not path.startswith("/"):
         path = f"/{path}"
-    return f"{resolve_base_url(juspay_creds)}{path}"
+    return f"{JUSPAY_BASE_URL}{path}"
 
 
-# Paths only — the base URL is resolved per request by `build_api_url`, because
-# a tenant supplied via `x-tenant-id` can change the host on every call.
+# Paths only — `build_api_url` prefixes them with JUSPAY_BASE_URL.
 ENDPOINTS = {
     "session": "/session",
     "refund": "/orders/{order_id}/refunds",

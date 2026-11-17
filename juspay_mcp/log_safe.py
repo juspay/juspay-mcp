@@ -45,7 +45,7 @@ def safe_exc(exc: BaseException) -> str:
     return type(exc).__name__
 
 
-# Upstream error bodies are shown to the model (and stored in analytics), and
+# Upstream error bodies are shown to the model, and
 # they often echo the request. Keep them useful for self-correction, but strip
 # secrets and cap the size.
 _SECRET_KEY_PARTS = (
@@ -121,3 +121,28 @@ def safe_upstream_error(response) -> str:
     if len(text) > _MAX_ERROR_CHARS:
         text = text[:_MAX_ERROR_CHARS] + "...[truncated]"
     return text
+
+
+_URL_IN_TEXT = re.compile(r"https?://[^\s'\"<>)]+")
+_INLINE_SECRET = re.compile(
+    r"(?i)\b(authorization|x-web-logintoken|cookie|x-api-key|juspay_token|api[_-]?key|password|secret|token)\b(\s*[:=]\s*)(Bearer\s+|Basic\s+)?[^\s,;'\"}&]+"
+)
+_MAX_TOOL_ERROR_CHARS = 800
+
+
+def safe_tool_error(exc: BaseException) -> str:
+    """Error text that is safe to return to the model.
+
+    Keeps the message useful (validation errors, redacted upstream error bodies)
+    but replaces URLs with ``host/path`` (query strings and ids dropped), masks
+    inline credentials, and caps the length.
+    """
+    try:
+        text = str(exc)
+    except Exception:
+        return type(exc).__name__
+    text = _URL_IN_TEXT.sub(lambda m: safe_url(m.group(0)), text)
+    text = _INLINE_SECRET.sub(lambda m: f"{m.group(1)}{m.group(2)}{_REDACTED}", text)
+    if len(text) > _MAX_TOOL_ERROR_CHARS:
+        text = text[:_MAX_TOOL_ERROR_CHARS] + "...[truncated]"
+    return text or type(exc).__name__

@@ -6,10 +6,9 @@
 """
 Guard for request-supplied routing hints.
 
-`x-base-url` / `x-mcp-server-url` decide where credentials get sent (the OAuth
-upstream client secret, a caller's dashboard token), so they are only honoured
-for hosts listed in `ALLOWED_BASE_URL_HOSTS`. When it is unset the headers are
-ignored and the configured defaults are used: an unlisted host must never
+`x-base-url` decides where credentials get sent (a caller's dashboard token),
+so it is only honoured for hosts listed in `ALLOWED_BASE_URL_HOSTS`. When it is
+unset the header is ignored and the configured defaults are used: an unlisted host must never
 receive credentials just because a request asked for it.
 """
 

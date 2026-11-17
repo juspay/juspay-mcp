@@ -1,3 +1,4 @@
+from urllib.parse import quote
 # Copyright 2025 Juspay
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +40,7 @@ async def list_beneficiaries_per_customerId(payload: dict, meta_info: dict = Non
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
     additional_headers = make_payout_additional_headers(meta_info)
-    api_url = f"{host}/api/payout/batch/dashboard/v2/benedetails/{customerId}"
+    api_url = f"{host}/api/payout/batch/dashboard/v2/benedetails/{quote(str(customerId), safe='')}"
 
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)
 
@@ -78,5 +79,5 @@ async def get_beneficiary_details(payload: dict, meta_info: dict = None) -> dict
 
     host = await get_juspay_host_from_api(meta_info=meta_info)
     additional_headers = make_payout_additional_headers(meta_info)
-    api_url = f"{host}/api/payout/batch/dashboard/v2/benedetails/{customerId}/{beneId}"
+    api_url = f"{host}/api/payout/batch/dashboard/v2/benedetails/{quote(str(customerId), safe='')}/{quote(str(beneId), safe='')}"
     return await call(api_url, additional_headers=additional_headers, meta_info=meta_info)

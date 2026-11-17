@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 import os
 import dotenv
-from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api
+from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resolve_merchant_id
 
 dotenv.load_dotenv()
 
@@ -27,6 +27,11 @@ async def get_integration_monitoring_status(payload: dict, meta_info: dict = Non
     Returns:
         dict: Integration monitoring status data
     """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
+    if not merchant_id:
+        raise ValueError("'merchant_id' is required in the payload")
+
     platform = payload.get("platform")
     
     api_payload_obj = {
@@ -36,7 +41,7 @@ async def get_integration_monitoring_status(payload: dict, meta_info: dict = Non
         },
         "groupByNames": ["stage"],
         "filters": {
-            "merchant_id": [payload["merchant_id"]],
+            "merchant_id": [merchant_id],
             "product_integrated": [payload["product_integrated"]]
         },
         "source": "REALTIME",
@@ -50,7 +55,6 @@ async def get_integration_monitoring_status(payload: dict, meta_info: dict = Non
     
     api_payload = [api_payload_obj]
     
-    host = await get_juspay_host_from_api(meta_info=meta_info)
     domain = "agnostic" if platform == "Backend" else "nonagnostic"
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/{domain}/status"
     
@@ -71,6 +75,11 @@ async def get_x_mid_monitoring(payload: dict, meta_info: dict = None) -> dict:
     Returns:
         dict: Contains validation status for each API endpoint
     """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
+    if not merchant_id:
+        raise ValueError("'merchant_id' is required in the payload")
+
 
     api_payload = [{
         "timeRange": {
@@ -79,14 +88,13 @@ async def get_x_mid_monitoring(payload: dict, meta_info: dict = None) -> dict:
         },
         "groupByNames": ["api_shortcode"],
         "filters": {
-            "merchant_id": [payload["merchant_id"]],
+            "merchant_id": [merchant_id],
             "status_code": [200]
         },
         "source": "REALTIME",
         "metrics": ["validate_xmid"]
     }]
     
-    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/xmerchant/metrics"
 
     return await post(api_url, api_payload, None, meta_info)
@@ -107,6 +115,11 @@ async def get_integration_platform_metrics(payload: dict, meta_info: dict = None
     Returns:
         dict: Platform-grouped product integration data with queryString, queryData, and metaData
     """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
+    if not merchant_id:
+        raise ValueError("'merchant_id' is required in the payload")
+
 
     api_payload = [{
         "timeRange": {
@@ -115,7 +128,7 @@ async def get_integration_platform_metrics(payload: dict, meta_info: dict = None
         },
         "groupByNames": ["platform"],
         "filters": {
-            "merchant_id": [payload["merchant_id"]]
+            "merchant_id": [merchant_id]
         },
         "source": "REALTIME",
         "metrics": ["product"],
@@ -132,7 +145,6 @@ async def get_integration_platform_metrics(payload: dict, meta_info: dict = None
         ]
     }]
     
-    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/integrations/metrics"
 
     return await post(api_url, api_payload, None, meta_info)
@@ -154,6 +166,11 @@ async def get_integration_product_count_metrics(payload: dict, meta_info: dict =
     Returns:
         dict: Product-grouped integration count data with queryString, queryData, and metaData
     """
+    host = await get_juspay_host_from_api(meta_info=meta_info)
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access integration data for this merchant_id")
+    if not merchant_id:
+        raise ValueError("'merchant_id' is required in the payload")
+
     
     api_payload = [{
         "timeRange": {
@@ -162,7 +179,7 @@ async def get_integration_product_count_metrics(payload: dict, meta_info: dict =
         },
         "groupByNames": ["product_integrated"],
         "filters": {
-            "merchant_id": [payload["merchant_id"]],
+            "merchant_id": [merchant_id],
             "platform": [payload["platform"]]
         },
         "source": "REALTIME",
@@ -179,6 +196,5 @@ async def get_integration_product_count_metrics(payload: dict, meta_info: dict =
         ]
     }]
     
-    host = await get_juspay_host_from_api(meta_info=meta_info)
     api_url = f"{host}/{integrationSuffix}/integration-monitoring/v1/integrations/metrics"
     return await post(api_url, api_payload, None, meta_info)

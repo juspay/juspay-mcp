@@ -12,7 +12,6 @@ from contextvars import ContextVar
 from urllib.parse import urlparse
 from juspay_dashboard_mcp.config import (
     get_common_headers,
-    set_tenant_account_id,
     set_token_merchant_id,
     get_token_merchant_id,
     JUSPAY_BASE_URL,
@@ -134,17 +133,9 @@ def _normalize_host(value: str | None) -> str | None:
     return (urlparse(value).hostname or "").lower() or None
 
 
-def bind_tenant_from_auth_response(data: dict, juspay_creds: dict | None) -> None:
-    """Reject the request if the token's tenant/host disagrees with the edge routing."""
+def verify_token_host(data: dict, juspay_creds: dict | None) -> None:
+    """Reject the request if the token's host disagrees with the requested base URL."""
     creds = juspay_creds or {}
-    resolved_tenant = data.get("tenantAccountId")
-
-    expected_tenant = creds.get("tenant_id")
-    if expected_tenant and resolved_tenant and expected_tenant != resolved_tenant:
-        raise Exception(
-            "Tenant mismatch: token belongs to a different tenant than the one this request was routed as."
-        )
-
     expected_host = _normalize_host(creds.get("base_url"))
     actual_host = _normalize_host(data.get("validHost"))
     if expected_host and actual_host and expected_host != actual_host:
@@ -152,8 +143,6 @@ def bind_tenant_from_auth_response(data: dict, juspay_creds: dict | None) -> Non
             f"Host mismatch: token resolved to '{actual_host}', expected '{expected_host}'."
         )
 
-    if resolved_tenant:
-        set_tenant_account_id(resolved_tenant)
 
 async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
     # Get Juspay credentials from context or use meta_info for backward compatibility
@@ -249,6 +238,12 @@ async def put(api_url: str, payload: dict, additional_headers: dict = None, meta
             raise Exception(f"Failed to call Juspay API: {e}") from e
         
 
+def uses_authorize_endpoint(token: str | None) -> bool:
+    """Static `auth_...` tokens are validated at /ec/v2/authorize (token sent
+    raw in the Authorization header); all other tokens use /api/ec/v1/validate/token."""
+    return bool(token) and token.startswith("auth_")
+
+
 async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta_info: dict = None) -> str:
     """
     Returns the Juspay host URL based on token validation.
@@ -269,34 +264,30 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
         raise Exception("Juspay token not provided.")
 
     
-    token_response = (meta_info or {}).get("token_response") or {}
-    auth_type = token_response.get("auth_type")
-    # Fall back to the request-scoped creds dict — OAuth bearer middleware
-    # tags it with auth_type="oauth" so tools don't have to receive meta_info
-    # explicitly to choose the OAuth validation endpoint.
-    if not auth_type and juspay_creds:
-        auth_type = juspay_creds.get("auth_type")
+    use_authorize = uses_authorize_endpoint(token_to_use)
 
     base_url = (juspay_creds or {}).get("base_url") or JUSPAY_BASE_URL
 
     try:
-        if auth_type == "oauth":
+        if use_authorize:
             resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
             url = f"{base_url}/ec/v2/authorize?resource={resource_param}"
-            oauth_headers = {
+            authorize_headers = {
                 "Authorization": token_to_use,
             }
 
-            logger.info(f"OAuth authorization - Request URL: GET {safe_url(url)}")
+            logger.info(f"Authorize request: GET {safe_url(url)}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, headers=oauth_headers)
+                resp = await client.get(url, headers=authorize_headers)
                 resp.raise_for_status()
-                bind_tenant_from_auth_response(resp.json(), juspay_creds)
-                logger.info(f"OAuth auth_type detected, returning {base_url}")
+                data = resp.json()
+                verify_token_host(data, juspay_creds)
+                set_token_merchant_id(data.get("merchantId"))
+                logger.info(f"Static token validated via authorize, returning {base_url}")
                 return base_url
         else:
-            # For non-OAuth, use regular token validation endpoint
+            # Other tokens: regular token validation endpoint
             validate_url = f"{base_url}/api/ec/v1/validate/token"
             json_payload = {"token": token_to_use}
             juspay_creds = get_juspay_credentials()
@@ -312,7 +303,8 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                bind_tenant_from_auth_response(data, juspay_creds)
+                verify_token_host(data, juspay_creds)
+                set_token_merchant_id(data.get("merchantId"))
                 valid_host = data.get("validHost")
                 if not valid_host:
                     raise Exception("validHost not found in Juspay token validation response.")
@@ -324,94 +316,6 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
         logger.error(f"Token validation failed: {safe_exc(e)}")
         raise
 
-async def get_admin_host(token: str = None, headers: dict = None ,meta_info: dict = None) -> tuple[str, bool]:
-    """
-    Returns the Juspay host URL based on token validation and a boolean indicating if context is JUSPAY.
-    Calls the validate API and uses the 'validHost' field from the response.
-    
-    Returns:
-        tuple: (valid_host, isadmin)
-            - valid_host: The host URL string
-            - isadmin: True if context is "JUSPAY", False otherwise
-    """
-    # Get token from header credentials context first, then fallback to other sources
-    juspay_creds = get_juspay_credentials()
-    token_to_use = token
-    if not token_to_use and juspay_creds:
-        token_to_use = juspay_creds.get("dashboard_token")
-    if not token_to_use:
-        token_to_use = os.environ.get("JUSPAY_WEB_LOGIN_TOKEN")
-    if not token_to_use and meta_info:
-        token_to_use = meta_info.get("x-web-logintoken")
-        
-    if not token_to_use:
-        raise Exception("Juspay token not provided.")
-
-
-    token_response = (meta_info or {}).get("token_response") or {}
-    auth_type = token_response.get("auth_type")
-    # Fall back to the request-scoped creds dict — OAuth bearer middleware
-    # tags it with auth_type="oauth" so tools don't have to receive meta_info
-    # explicitly to choose the OAuth validation endpoint.
-    if not auth_type and juspay_creds:
-        auth_type = juspay_creds.get("auth_type")
-
-    base_url = (juspay_creds or {}).get("base_url") or JUSPAY_BASE_URL
-
-    try:
-        if auth_type == "oauth":
-            resource_param = '{%22COMMON%22%20%3A%20%22R%22}'
-            url = f"{base_url}/ec/v2/authorize?resource={resource_param}"
-            oauth_headers = {
-                "Authorization": token_to_use,
-            }
-
-            logger.info(f"OAuth authorization - Request URL: GET {safe_url(url)}")
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, headers=oauth_headers)
-                resp.raise_for_status()
-                data = resp.json()
-                bind_tenant_from_auth_response(data, juspay_creds)
-                set_token_merchant_id(data.get("merchantId"))
-                context = data.get("context")
-                # Check if context is JUSPAY
-                isadmin = context == "JUSPAY"
-                logger.info(f"OAuth auth_type detected, context: {context}, isadmin: {isadmin}, returning {base_url}")
-                return base_url, isadmin
-        else:
-            # For non-OAuth, use regular token validation endpoint
-            validate_url = f"{base_url}/api/ec/v1/validate/token"
-            json_payload = {"token": token_to_use}
-            # Pass juspay_creds to get_common_headers to avoid environment variable verification
-            juspay_creds = get_juspay_credentials()
-            request_api_headers = get_common_headers(json_payload, meta_info, juspay_creds)
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    validate_url,
-                    headers=request_api_headers,
-                    json=json_payload
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                bind_tenant_from_auth_response(data, juspay_creds)
-                set_token_merchant_id(data.get("merchantId"))
-                context = data.get("context")
-                # Check if context is JUSPAY
-                isadmin = context == "JUSPAY"
-
-                valid_host = data.get("validHost")
-                if not valid_host:
-                    raise Exception("validHost not found in Juspay token validation response.")
-                if not valid_host.startswith("http"):
-                    valid_host = f"https://{valid_host}"
-                
-                return valid_host, isadmin
-    except Exception as e:
-        logger.error(f"Token validation failed: {safe_exc(e)}")
-        raise
-    
 def ist_to_utc(ist_time_string, format="%Y-%m-%dT%H:%M:%SZ"):
     """Convert IST time to UTC time.
 
@@ -473,23 +377,16 @@ MERCHANT_ID_PLACEHOLDERS = [
     None
 ]    
 
-def sanitize_merchant_id(merchant_id_from_payload: str, mid_from_meta: str) -> str:
+def _sanitize_merchant_id(merchant_id_from_payload: str | None) -> str | None:
+    """Return the merchantId to use for a request.
+
+    If the model sent a placeholder (or nothing), use the merchant from the
+    validated token. A real value is returned as-is, so call
+    `assert_merchant_access` on it first.
     """
-    Sanitizes merchantId by filtering out placeholder values.
-    If merchantId from payload is a placeholder, returns merchantId from meta_info.
-    
-    Args:
-        merchant_id_from_payload: The merchantId value from the request payload
-        mid_from_meta: The merchantId value from meta_info/token_response
-        
-    Returns:
-        The valid merchantId to use (from payload if valid, else from meta_info)
-    """
-    # Check if payload merchantId is a placeholder value
     if merchant_id_from_payload in MERCHANT_ID_PLACEHOLDERS:
-        logger.info("merchantId from payload is a placeholder, using meta_info value")
-        return mid_from_meta
-    return merchant_id_from_payload or mid_from_meta
+        return get_token_merchant_id()
+    return merchant_id_from_payload
 
 
 def make_payout_additional_headers(meta_info: dict = None) -> dict:
@@ -511,25 +408,17 @@ def make_payout_additional_headers(meta_info: dict = None) -> dict:
     return {"Authorization": token, "X-Token-Type": "Euler"}
 
 
-def assert_merchant_access(isadmin: bool, requested_merchant_id, mid_from_meta, message: str) -> None:
-    """Non-admin tokens may only act on their own merchant. Admins are not restricted.
+def _assert_merchant_access(requested_merchant_id, message: str) -> None:
+    """A token may only act on its own merchant.
 
     The token's merchant comes from the validated token (validate/authorize
-    response, or the OAuth login), never from the tool call. `mid_from_meta`
-    (client-supplied meta_info) is only a fallback when neither is available.
-    If a merchant is requested and the token's merchant can't be determined, the
-    request is refused rather than allowed.
+    response), never from the tool call. If a merchant is requested and the
+    token's merchant can't be determined, the request is refused.
     """
-    if isadmin or requested_merchant_id in MERCHANT_ID_PLACEHOLDERS:
+    if requested_merchant_id in MERCHANT_ID_PLACEHOLDERS:
         return
 
     token_mid = get_token_merchant_id()
-    if not token_mid:
-        creds = get_juspay_credentials() or {}
-        if creds.get("auth_type") == "oauth":
-            token_mid = creds.get("merchant_id")
-    token_mid = token_mid or mid_from_meta
-
     if not token_mid:
         raise ValueError(
             "Cannot verify which merchant this token belongs to. "
@@ -537,3 +426,15 @@ def assert_merchant_access(isadmin: bool, requested_merchant_id, mid_from_meta, 
         )
     if str(requested_merchant_id).strip() != str(token_mid).strip():
         raise ValueError(message)
+
+
+def resolve_merchant_id(requested_merchant_id, message: str) -> str | None:
+    """Validate a model-supplied merchant ID against the token and return the one to use.
+
+    Raises ValueError if a different merchant than the token's is requested.
+    A placeholder or missing value resolves to the token's own merchant.
+    This is the only way tools should handle a merchant ID: the check and the
+    fallback cannot be done separately.
+    """
+    _assert_merchant_access(requested_merchant_id, message)
+    return _sanitize_merchant_id(requested_merchant_id)

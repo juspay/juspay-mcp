@@ -4,11 +4,12 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote
 from juspay_dashboard_mcp.api.utils import (
     post,
     call,
-    get_admin_host,
-    sanitize_merchant_id, assert_merchant_access
+    get_juspay_host_from_api,
+    resolve_merchant_id
 )
 
 
@@ -17,8 +18,7 @@ async def get_offer_details(payload: dict, meta_info: dict = None) -> dict:
     Retrieves detailed information for a specific offer.
 
     The API endpoint is:
-        https://portal.juspay.in/api/offers/dashboard/detail (for non-admin users) 
-        https://portal.juspay.in/offers/dashboard/detail (for admin users)
+        https://portal.juspay.in/api/offers/dashboard/detail 
 
     The call uses URL parameters:
         - merchant_id: Merchant identifier
@@ -28,7 +28,6 @@ async def get_offer_details(payload: dict, meta_info: dict = None) -> dict:
         - merchant_id: Merchant identifier
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
         - x-web-logintoken from config
 
@@ -41,33 +40,20 @@ async def get_offer_details(payload: dict, meta_info: dict = None) -> dict:
         dict: The parsed JSON response containing offer details.
 
     Raises:
-        ValueError: If merchant_id is missing or non-admin tries to access another merchant's data.
+        ValueError: If merchant_id is missing or a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchant_id"), mid_from_meta, "You are not authorized to access offer details for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access offer details for this merchantId")
     
-    # Apply sanitize logic for admin users
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchant_id"), mid_from_meta)
-        if merchant_id:
-            payload["merchant_id"] = merchant_id
     
     # Get merchant_id from payload or meta_info
-    merchant_id = payload.get("merchant_id") or mid_from_meta
     if not merchant_id:
         raise ValueError("'merchant_id' is required in the payload")
 
-    # Both admin and non-admin use the /api/ prefix
-    api_url = f"{host}/api/offers/dashboard/detail?merchant_id={merchant_id}"
+    api_url = f"{host}/api/offers/dashboard/detail?merchant_id={quote(str(merchant_id), safe='')}"
     
     return await post(api_url, payload, None, meta_info)
 
@@ -77,8 +63,7 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
     status, PMT, offer code, start/end times, and benefit types.
 
     The API endpoint is:
-        https://portal.juspay.in/api/offers/dashboard/dashboard-list (for non-admin users)
-        https://portal.juspay.in/offers/dashboard/dashboard-list (for admin users)
+        https://portal.juspay.in/api/offers/dashboard/dashboard-list
 
     The call uses URL parameters:
         - merchant_id: Merchant identifier
@@ -89,7 +74,6 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
         - end_time: End time for filtering offers
 
     Headers include:
-        - x-tenant-id from payload
         - content-type: application/json
 
     Args:
@@ -102,31 +86,19 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
         dict: The parsed JSON response from the Juspay List Offers API.
 
     Raises:
-        ValueError: If required parameters are missing or non-admin tries to access another merchant's data.
+        ValueError: If required parameters are missing or a caller tries to access another merchant's data.
         Exception: If the API call fails.
     """
     if "start_time" not in payload or "end_time" not in payload:
         raise ValueError("Payload must contain 'start_time' and 'end_time'.")
 
-    host, isadmin = await get_admin_host(meta_info=meta_info)
+    host = await get_juspay_host_from_api(meta_info=meta_info)
     
-    # Get merchantId from meta_info for authorization check
-    mid_from_meta = None
-    if meta_info:
-        token_response = meta_info.get("token_response", {})
-        mid_from_meta = token_response.get("merchantId") or meta_info.get("merchantId")
     
-    # Authorization check - non-admin can't query other merchants
-    assert_merchant_access(isadmin, payload.get("merchant_id"), mid_from_meta, "You are not authorized to access offers for this merchantId")
+    merchant_id = resolve_merchant_id(payload.get("merchant_id"), "You are not authorized to access offers for this merchantId")
     
-    # Apply sanitize logic for admin users
-    if isadmin:
-        merchant_id = sanitize_merchant_id(payload.get("merchant_id"), mid_from_meta)
-        if merchant_id:
-            payload["merchant_id"] = merchant_id
     
     # Get merchant_id from payload or meta_info
-    merchant_id = payload.get("merchant_id") or mid_from_meta
     if not merchant_id:
         raise ValueError("Payload must contain 'merchant_id'.")
 
@@ -144,7 +116,6 @@ async def list_offers(payload: dict, meta_info: dict = None) -> dict:
         "sort_offers": payload.get("sort_offers") or {"field": "CREATED_AT", "order": "DESCENDING"},
     }
 
-    # Both admin and non-admin use the /api/ prefix
-    api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={merchant_id}"
+    api_url = f"{host}/api/offers/dashboard/dashboard-list?merchant_id={quote(str(merchant_id), safe='')}"
 
     return await post(api_url, payload_updated, None, meta_info)

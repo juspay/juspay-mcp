@@ -13,19 +13,6 @@ from contextvars import ContextVar
 logger = logging.getLogger(__name__)
 
 
-tenant_account_id: ContextVar[str | None] = ContextVar("tenant_account_id", default=None)
-
-
-def set_tenant_account_id(value: str | None):
-    """Set the resolved tenantAccountId for the current context."""
-    tenant_account_id.set(value)
-
-
-def get_tenant_account_id() -> str | None:
-    """Get the resolved tenantAccountId from the current context."""
-    return tenant_account_id.get()
-
-
 token_merchant_id: ContextVar[str | None] = ContextVar("token_merchant_id", default=None)
 
 
@@ -74,7 +61,7 @@ def get_base64_auth():
 
 
 # Header names a tool call must not be able to set; see get_common_headers.
-MODEL_BLOCKED_HEADER_KEYS = ("cookie", "tenant_id", "x-tenant-id", "x-source-id")
+MODEL_BLOCKED_HEADER_KEYS = ("cookie", "x-source-id")
 
 
 def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict = None):
@@ -96,9 +83,6 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
         else:
             token = JUSPAY_WEB_LOGIN_TOKEN
 
-    token_response = (meta_info or {}).get("token_response") or {}
-    auth_type = token_response.get("auth_type")
-
     default_headers = {
         "Content-Type": "application/json",
         "accept": "*/*",
@@ -106,8 +90,6 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
     }
 
     default_headers["x-web-logintoken"] = token
-
-    resolved_tenant_id = get_tenant_account_id() or (juspay_creds or {}).get("tenant_id")
 
     # Some Juspay endpoints (e.g. integration monitoring) take a list as the
     # request body. The header-from-payload extraction below only makes sense
@@ -119,8 +101,6 @@ def get_common_headers(payload: dict, meta_info: dict = None, juspay_creds: dict
         for key in MODEL_BLOCKED_HEADER_KEYS:
             payload.pop(key, None)
 
-    if resolved_tenant_id:
-        default_headers["x-tenant-id"] = resolved_tenant_id
     default_headers["x-source-id"] = "juspay-mcp"
 
     return default_headers
