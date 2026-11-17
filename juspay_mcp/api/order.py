@@ -4,6 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.txt
 
+from urllib.parse import quote, urlencode
 import httpx
 from juspay_mcp.config import ENDPOINTS 
 from juspay_mcp.api.utils import call, post
@@ -36,7 +37,7 @@ async def order_status_api_juspay(payload: dict) -> dict:
 
     customer_id = payload.get("customer_id")
 
-    api_url = ENDPOINTS["order_status"].format(order_id=order_id)
+    api_url = ENDPOINTS["order_status"].format(order_id=quote(str(order_id), safe=''))
     return await call(api_url, customer_id)
 
 async def create_order_juspay(payload: dict) -> dict:
@@ -124,7 +125,7 @@ async def update_order_juspay(payload: dict) -> dict:
     # Get routing ID if provided
     routing_id = payload.get("routing_id", payload.get("customer_id"))
     
-    api_url = ENDPOINTS["update_order"].format(order_id=order_id)
+    api_url = ENDPOINTS["update_order"].format(order_id=quote(str(order_id), safe=''))
     return await post(api_url, update_data, routing_id)
 
 async def order_fulfillment_sync(payload: dict) -> dict:
@@ -165,5 +166,5 @@ async def order_fulfillment_sync(payload: dict) -> dict:
     if "routing_id" in payload:
         payload.pop("routing_id")
     
-    api_url = ENDPOINTS["order_fulfillment"].format(order_id=order_id)
+    api_url = ENDPOINTS["order_fulfillment"].format(order_id=quote(str(order_id), safe=''))
     return await post(api_url, payload, routing_id)

@@ -21,6 +21,22 @@ from juspay_mcp.log_safe import safe_exc, safe_upstream_error, safe_url
 
 logger = logging.getLogger(__name__)
 
+PAYOUT_SECRET_KEYS = {
+    "privatekey",
+    "sslcert",
+    "certificate",
+    "password",
+    "secret",
+    "hashkey",
+    "apikey",
+    "api_key",
+    "token",
+    "encryptionkey",
+    "signaturekey",
+    "authorization",
+}
+
+
 def mask_fields(value, sensitive_keys: set):
     """Recursively mask dict values whose key contains any of `sensitive_keys`.
 
@@ -134,11 +150,17 @@ def _normalize_host(value: str | None) -> str | None:
 
 
 def verify_token_host(data: dict, juspay_creds: dict | None) -> None:
-    """Reject the request if the token's host disagrees with the requested base URL."""
+    """Reject the request unless the token's validHost matches the base URL in use.
+
+    Fails closed: a missing validHost is an error, and the comparison is always made
+    against the base URL actually used (header override, else JUSPAY_BASE_URL).
+    """
     creds = juspay_creds or {}
-    expected_host = _normalize_host(creds.get("base_url"))
+    expected_host = _normalize_host(creds.get("base_url") or JUSPAY_BASE_URL)
     actual_host = _normalize_host(data.get("validHost"))
-    if expected_host and actual_host and expected_host != actual_host:
+    if not actual_host:
+        raise Exception("Invalid host.")
+    if actual_host != expected_host:
         raise Exception(
             f"Host mismatch: token resolved to '{actual_host}', expected '{expected_host}'."
         )
@@ -283,6 +305,8 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                 resp.raise_for_status()
                 data = resp.json()
                 verify_token_host(data, juspay_creds)
+                if not data.get("merchantId"):
+                    raise Exception("Unknown merchantId.")
                 set_token_merchant_id(data.get("merchantId"))
                 logger.info(f"Static token validated via authorize, returning {base_url}")
                 return base_url
@@ -304,6 +328,8 @@ async def get_juspay_host_from_api(token: str = None, headers: dict = None, meta
                 resp.raise_for_status()
                 data = resp.json()
                 verify_token_host(data, juspay_creds)
+                if not data.get("merchantId"):
+                    raise Exception("Unknown merchantId.")
                 set_token_merchant_id(data.get("merchantId"))
                 valid_host = data.get("validHost")
                 if not valid_host:
