@@ -21,14 +21,25 @@ jobs:
 
       - name: "Install Nix"
         uses: DeterminateSystems/nix-installer-action@main
-      - name: "Install omnix"
-        run: |
-          nix profile install nixpkgs#omnix
+      - name: Check flake
+        env:
+          NIX_CONFIG: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+        run: nix flake check --accept-flake-config --print-build-logs
 
-      - name: Build all flake outputs
+      - name: Build flake outputs
+        env:
+          NIX_CONFIG: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
         run: |
-          om ci run \
-            --extra-access-tokens ${{ secrets.GITHUB_TOKEN }} \
-            --systems "${{ matrix.system }}" \
-            --results=$HOME/omci.json \
-            -- --accept-flake-config
+          # Keep this list in sync with the packages/devShells defined under ./nix.
+          system="${{ matrix.system }}"
+          nix build --accept-flake-config --print-build-logs --no-link \
+            ".#packages.${system}.default" \
+            ".#packages.${system}.stdio" \
+            ".#packages.${system}.test" \
+            ".#packages.${system}.docker" \
+            ".#packages.${system}.docker-sse" \
+            ".#packages.${system}.docker-dashboard" \
+            ".#packages.${system}.docker-dashboard-sse" \
+            ".#devShells.${system}.default"
