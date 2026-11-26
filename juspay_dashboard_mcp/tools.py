@@ -13,6 +13,8 @@ from mcp.server.sse import SseServerTransport
 
 from juspay_dashboard_mcp import response_schema
 from juspay_dashboard_mcp.api import *
+from juspay_dashboard_mcp.api.utils import set_juspay_credentials
+from juspay_dashboard_mcp.config import set_token_merchant_id
 import juspay_dashboard_mcp.api_schema as api_schema
 import juspay_dashboard_mcp.utils as util
 from juspay_mcp.tool_annotations import apply_annotations
@@ -859,10 +861,8 @@ async def list_my_tools() -> list[types.Tool]:
 @app.call_tool()
 async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextContent]:
     logger.info("Tool called: %s", name)
+    set_token_merchant_id(None)
     try:
-        # Import here to avoid circular imports
-        from juspay_dashboard_mcp.api.utils import set_juspay_credentials
-
         tool_entry = next((t for t in AVAILABLE_TOOLS if t["name"] == name), None)
         if not tool_entry:
             raise ValueError(f"Unknown tool: {name}")
@@ -919,3 +919,6 @@ async def handle_tool_calls(name: str, arguments: dict) -> list[types.TextConten
     except Exception as e:
         logger.error(f"Error in tool execution: {safe_exc(e)}")
         return [types.TextContent(type="text", text=f"ERROR: Tool execution failed: {safe_tool_error(e)}")]
+    finally:
+        set_juspay_credentials(None)
+        set_token_merchant_id(None)

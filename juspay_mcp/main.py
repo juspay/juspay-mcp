@@ -37,19 +37,13 @@ MCP_APPS = {}
 
 if JUSPAY_MCP_TYPE == "DASHBOARD":
     from juspay_dashboard_mcp.tools import app as dashboard_app
-    from juspay_docs_mcp.server import (
-        app as docs_app,
-        refresh_catalog,
-    )
+    from juspay_docs_mcp.server import app as docs_app
 
     MCP_APPS["dashboard"] = dashboard_app
     MCP_APPS["docs"] = docs_app
 elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
     from juspay_ai_studio_mcp.tools import app as ai_studio_app
-    from juspay_docs_mcp.server import (
-        app as docs_app,
-        refresh_catalog,
-    )
+    from juspay_docs_mcp.server import app as docs_app
 
     MCP_APPS["ai_studio"] = ai_studio_app
     MCP_APPS["docs"] = docs_app
@@ -355,21 +349,13 @@ def main(host: str, port: int, mode: str):
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for multiple MCP apps."""
-            docs_refresh = None
-            try:
-                async with contextlib.AsyncExitStack() as stack:
-                    await stack.enter_async_context(dashboard_session_mgr.run())
-                    logger.info("Dashboard StreamableHTTP session manager started")
-                    await stack.enter_async_context(docs_session_mgr.run())
-                    logger.info("Docs StreamableHTTP session manager started")
-                    logger.info("All StreamableHTTP session managers started successfully")
-                    docs_refresh = asyncio.create_task(refresh_catalog())
-                    yield
-            finally:
-                if docs_refresh is not None:
-                    docs_refresh.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await docs_refresh
+            async with contextlib.AsyncExitStack() as stack:
+                await stack.enter_async_context(dashboard_session_mgr.run())
+                logger.info("Dashboard StreamableHTTP session manager started")
+                await stack.enter_async_context(docs_session_mgr.run())
+                logger.info("Docs StreamableHTTP session manager started")
+                logger.info("All StreamableHTTP session managers started successfully")
+                yield
             logger.info("StreamableHTTP session managers stopped")
     elif JUSPAY_MCP_TYPE in AI_STUDIO_MCP_TYPES:
         ai_studio_sse_handler = make_sse_handler("ai_studio", sse_transport_handler)
@@ -401,21 +387,13 @@ def main(host: str, port: int, mode: str):
         @contextlib.asynccontextmanager
         async def lifespan(app):
             """Application lifespan context manager for multiple MCP apps."""
-            docs_refresh = None
-            try:
-                async with contextlib.AsyncExitStack() as stack:
-                    await stack.enter_async_context(ai_studio_session_mgr.run())
-                    logger.info("AI Studio StreamableHTTP session manager started")
-                    await stack.enter_async_context(docs_session_mgr.run())
-                    logger.info("Docs StreamableHTTP session manager started")
-                    logger.info("All StreamableHTTP session managers started successfully")
-                    docs_refresh = asyncio.create_task(refresh_catalog())
-                    yield
-            finally:
-                if docs_refresh is not None:
-                    docs_refresh.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await docs_refresh
+            async with contextlib.AsyncExitStack() as stack:
+                await stack.enter_async_context(ai_studio_session_mgr.run())
+                logger.info("AI Studio StreamableHTTP session manager started")
+                await stack.enter_async_context(docs_session_mgr.run())
+                logger.info("Docs StreamableHTTP session manager started")
+                logger.info("All StreamableHTTP session managers started successfully")
+                yield
             logger.info("StreamableHTTP session managers stopped")
 
     else:
