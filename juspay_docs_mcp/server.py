@@ -25,7 +25,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from juspay_docs_mcp.discovery import load_snapshot_sources, refresh_and_save
+from juspay_docs_mcp.discovery import load_snapshot_sources
 from juspay_docs_mcp.genius import ask_genius
 from juspay_docs_mcp.instructions import INSTRUCTIONS
 
@@ -38,13 +38,15 @@ logger = logging.getLogger(__name__)
 
 _ALLOWED_SUFFIXES = (".juspay.io", ".juspay.in")
 _ALLOWED_EXACT = frozenset({"juspay.io", "juspay.in", "dth95m2xtyv8v.cloudfront.net"})
-_ALLOWED_SCHEMES = frozenset({"http", "https"})
+_ALLOWED_SCHEMES = frozenset({"https"})
 _ALLOWED_DOMAINS_DISPLAY = "*.juspay.io, *.juspay.in, dth95m2xtyv8v.cloudfront.net"
 
 
 def _url_allowed(url: str) -> bool:
     parsed = urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
+        return False
+    if parsed.username is not None or parsed.password is not None:
         return False
     # hostname is lowercased and strips the port.
     host = parsed.hostname or ""
@@ -130,29 +132,6 @@ def _rebuild_indexes() -> None:
 
 
 _rebuild_indexes()
-
-
-async def refresh_catalog() -> None:
-    """Replace the snapshot catalog with freshly discovered sources.
-
-    Runs after the server is already listening, so a slow or failing juspay.io
-    delays the refresh rather than the boot. Never raises.
-    """
-    global _ENRICHED_SOURCES
-    try:
-        sources = await refresh_and_save()
-    except Exception as e:
-        logger.warning(
-            "Catalog refresh failed: %s. Continuing with the snapshot catalog.", e
-        )
-        return
-    _ENRICHED_SOURCES = sources
-    _rebuild_indexes()
-    logger.info(
-        "Catalog refreshed: %d products across %d categories",
-        len(_ENRICHED_SOURCES),
-        len(_CATEGORIES),
-    )
 
 
 logger.info(
@@ -381,7 +360,7 @@ async def doc_fetch_tool(
     url = url.strip()
     if not _url_allowed(url):
         return (
-            f"Error: URL not on an allowed domain. "
+            f"Error: URL must use https and be on an allowed domain, without credentials. "
             f"Allowed: {_ALLOWED_DOMAINS_DISPLAY}"
         )
     return await _fetch(url)

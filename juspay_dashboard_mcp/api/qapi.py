@@ -26,7 +26,7 @@ from juspay_dashboard_mcp.api_schema.qapi import (
 from juspay_dashboard_mcp.config import JUSPAY_BASE_URL, get_common_headers
 from juspay_dashboard_mcp.api.utils import get_juspay_credentials
 from juspay_dashboard_mcp.api.qapi_info import validate_schema_signature, get_domain_fields, DOMAIN_METRICS, DOMAIN_TIMESTAMP_COLUMNS
-from juspay_mcp.log_safe import safe_exc, safe_url
+from juspay_mcp.log_safe import safe_exc, safe_tool_error, safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ async def call_query_api(payload: QApiPayload, meta_info: dict = None) -> dict:
     except Exception as e:
         logging.error(f"Error calling query API: {safe_exc(e)}")
         return QApiErrorResponse(
-            error=f"Failed to execute query: {str(e)}",
+            error=f"Failed to execute query: {safe_tool_error(e)}",
             payload_attempted=serialized_payload or payload.model_dump(),
         ).dict()
 
@@ -116,12 +116,14 @@ _MAX_FILTER_DEPTH = 10
 _MAX_FILTER_CONDITIONS = 30
 _MAX_FILTER_VALUES = 200
 _MAX_DIMENSIONS = 10
+_MAX_METRICS = 20
 
 
-def validate_query_structure(domain: str, filters, dimensions, sorted_on, allowed_dimensions: set, allowed_filter_fields: set) -> str | None:
+def validate_query_structure(domain: str, filters, dimensions, sorted_on, allowed_dimensions: set, allowed_filter_fields: set, metric=None) -> str | None:
     """Check a query's filter tree and dimensions against what qapi_info offered.
 
-    `filters` / `dimensions` / `sorted_on` are the serialized (plain dict/list) forms.
+    `filters` / `dimensions` / `sorted_on` are the serialized (plain dict/list) forms;
+    `metric` is a metric name or a list of them.
     Returns an error message, or None if the query is acceptable. When qapi_info
     offered no field names at all, field-name checks are skipped (operator, size
     and shape checks still apply).
@@ -158,6 +160,22 @@ def validate_query_structure(domain: str, filters, dimensions, sorted_on, allowe
         if isinstance(val, list) and len(val) > _MAX_FILTER_VALUES:
             return f"Too many filter values (max {_MAX_FILTER_VALUES})."
         return None
+
+    if metric is not None:
+        names = metric if isinstance(metric, list) else [metric]
+        if not names or len(names) > _MAX_METRICS:
+            return f"Give between 1 and {_MAX_METRICS} metrics."
+        for m in names:
+            if not isinstance(m, str) or m not in metrics:
+                return f"Metric '{str(m)[:60]}' is not offered by qapi_info for domain '{domain}'."
+
+    if sorted_on is not None:
+        sort_field = sorted_on.get("sortDimension") if isinstance(sorted_on, dict) else None
+        if not isinstance(sort_field, str):
+            return "sortedOn must have a 'sortDimension' field name."
+        sortable = metrics | (groupable if have_fields else {sort_field})
+        if sort_field not in sortable:
+            return f"Sort field '{sort_field[:60]}' is not offered by qapi_info for domain '{domain}'."
 
     if filters:
         err = walk(filters, 1)
@@ -242,9 +260,10 @@ async def q_api(payload: dict, meta_info: dict = None) -> QApiResponse:
         domain,
         q_api_payload.filters.model_dump(mode="json", by_alias=True) if q_api_payload.filters else None,
         q_api_payload.dimensions.model_dump(mode="json", by_alias=True) if q_api_payload.dimensions else [],
-        q_api_payload.sortedOn,
+        q_api_payload.sortedOn.model_dump(mode="json", by_alias=True) if q_api_payload.sortedOn else None,
         fields[0],
         fields[1],
+        metric=q_api_payload.metric,
     )
     if structure_error:
         return {
