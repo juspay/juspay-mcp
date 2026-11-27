@@ -161,9 +161,8 @@ def verify_token_host(data: dict, juspay_creds: dict | None) -> None:
     if not actual_host:
         raise Exception("Invalid host.")
     if actual_host != expected_host:
-        raise Exception(
-            f"Host mismatch: token resolved to '{actual_host}', expected '{expected_host}'."
-        )
+        logger.warning("Host mismatch: token resolved to '%s', expected '%s'.", actual_host, expected_host)
+        raise Exception("Invalid host.")
 
 
 async def call(api_url: str, additional_headers: dict = None, meta_info: dict = None) -> dict:
