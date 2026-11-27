@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower()
+JUSPAY_ENV = os.getenv("JUSPAY_ENV", "sandbox").lower()
 PP_AI_STUDIO_BASE_URL = (
     os.getenv("PP_AI_STUDIO_BASE_URL")
     or os.getenv("JUSPAY_AI_STUDIO_BASE_URL")

@@ -292,36 +292,6 @@ Use this tool to verify webhook configurations and troubleshoot notification del
         handler=settings.get_webhook_settings,
         response_schema=response_schema.get_webhook_settings_response_schema,
     ),
-#     util.make_api_config(
-#         name="update_webhook_settings",
-#         description="""Update the merchant's webhook URL and event subscriptions.
-
-# Key features:
-# - Sets the URL Juspay will POST event notifications to.
-# - Selects which events the merchant subscribes to (e.g. ORDER_SUCCEEDED, ORDER_FAILED, TXN_CHARGED, MANDATE_CREATED).
-# - Optionally configures HTTP basic-auth credentials Juspay should use when calling the webhook URL.
-
-# Important caveats — warn the user before calling this:
-# - `webhookEvents` REPLACES the current subscription map. Events the caller doesn't include get unsubscribed. To preserve existing events, fetch them first with `get_webhook_settings` and merge.
-# - Advanced webhook config fields (custom webhook URL routes, JWT key references, full-gateway-response toggle, SSL-cert-based webhooks) are reset to defaults by this tool. Don't use it on merchants that depend on those — modify those via the dashboard instead.
-
-# Use this when the user asks to configure webhooks, set their webhook URL, or change which Juspay events they receive.""",
-#         model=api_schema.settings.UpdateWebhookSettingsPayload,
-#         handler=settings.update_webhook_settings,
-#     ),
-#     util.make_api_config(
-#         name="update_general_settings",
-#         description="""Update the merchant's general settings.
-
-# Key features:
-# - Currently updates the payment redirect URL (`returnUrl`) — the URL the customer is sent back to after the Juspay-hosted payment flow completes.
-# - Pass an empty string to clear/unset the redirect URL.
-# - No client-side validation on the value.
-
-# Use this when the user asks to set, change, or clear the payment redirect URL / return URL for their merchant account.""",
-#         model=api_schema.settings.UpdateGeneralSettingsPayload,
-#         handler=settings.update_general_settings,
-#     ),
     util.make_api_config(
         name="alert_details",
         description="""Provides detailed information for a specific alert ID, including source, monitored metrics, and applied filters.

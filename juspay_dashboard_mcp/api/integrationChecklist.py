@@ -9,7 +9,7 @@ from juspay_dashboard_mcp.api.utils import post, get_juspay_host_from_api, resol
 
 dotenv.load_dotenv()
 
-JUSPAY_ENV = os.getenv("JUSPAY_ENV", "production").lower() 
+JUSPAY_ENV = os.getenv("JUSPAY_ENV", "sandbox").lower() 
 integrationSuffix = "ic-api" if JUSPAY_ENV == "production" else "ic"
     
 async def get_integration_monitoring_status(payload: dict, meta_info: dict = None) -> dict:
